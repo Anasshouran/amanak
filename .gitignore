@@ -1,0 +1,39 @@
+# Dependencies
+node_modules/
+vendor/
+.pnpm-store/
+
+# Environment variables
+.env*
+*.env*
+
+# Logs
+logs/
+*.log
+
+# Runtime artifacts
+dist/
+build/
+coverage/
+*.pyc
+__pycache__/
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+
+# Expo / React Native
+.expo/
+apps/mobile/.expo/
+
+# OS
+.DS_Store
+
+# Docker
+.dockerignore
+
+# Monorepo
+.pnpm-lock.yaml
+yarn.lock
+package-lock.json

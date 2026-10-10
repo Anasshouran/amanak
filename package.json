@@ -1,0 +1,16 @@
+{
+  "name": "amanak",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "typecheck": "npm run typecheck -ws",
+    "dev:web": "npm run dev -w @amanak/web",
+    "dev:mobile": "npm run start -w @amanak/mobile"
+  },
+  "overrides": {
+    "react-native": "0.74.5"
+  }
+}

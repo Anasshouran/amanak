@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "AMANAK أمانك",
+    "slug": "amanak",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "amanak",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0f172a",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "local.amanak.app"
+    },
+    "android": {
+      "package": "local.amanak.app"
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": ["expo-router", "expo-secure-store"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

@@ -1,0 +1,426 @@
+openapi: 3.1.0
+info:
+  title: AMANAK API
+  description: |
+    Defensive personal cybersecurity companion. User data is strictly
+    scoped: every authenticated request only ever touches the calling
+    user's own rows.
+  version: 0.1.0
+servers:
+  - url: http://127.0.0.1:8000/api/v1
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register/:
+    post:
+      summary: Create an account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, username, password]
+              properties:
+                email: { type: string, format: email }
+                username: { type: string }
+                password: { type: string, format: password, minLength: 8 }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: AuthResponse
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/login/:
+    post:
+      summary: Sign in and receive JWT tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: AuthResponse
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /auth/refresh-token/:
+    post:
+      summary: Exchange a refresh token for a new access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh]
+              properties:
+                refresh: { type: string }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access: { type: string }
+
+  /auth/verify-email/:
+    post:
+      summary: Mark the authenticated user's email as verified
+      responses:
+        "200":
+          description: OK
+
+  /auth/password-reset-request/:
+    post:
+      summary: Request a password reset (dev: console email, no account leak)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email: { type: string, format: email }
+      responses:
+        "200":
+          description: OK
+
+  /me/:
+    get:
+      summary: Current authenticated user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: User
+
+  /dashboard/:
+    get:
+      summary: Dashboard overview counts and score
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: DashboardOverview
+
+  /dashboard/security-score/:
+    get:
+      summary: Get the user's security score
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: SecurityScore
+    post:
+      summary: Recompute and persist the user's security score
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: SecurityScore
+
+  /accounts/:
+    get:
+      summary: List the user's accounts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Account" }
+    post:
+      summary: Create an account (metadata only; never passwords/MFA)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+
+  /accounts/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Get one account (404 if not owned by caller)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+        "404":
+          description: Not found or not owned
+    patch:
+      summary: Update one account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AccountInput" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Account" }
+        "404":
+          description: Not found or not owned
+    delete:
+      summary: Delete one account
+      responses:
+        "204":
+          description: Deleted
+        "404":
+          description: Not found or not owned
+
+  /devices/:
+    get:
+      summary: List the user's devices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Device" }
+    post:
+      summary: Create a device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeviceInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Device" }
+
+  /devices/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Get one device
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Device" } } } }
+        "404": { description: Not found or not owned }
+    patch:
+      summary: Update one device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeviceInput" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Device" } } } }
+        "404": { description: Not found or not owned }
+    delete:
+      summary: Delete one device
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found or not owned }
+
+  /incidents/:
+    get:
+      summary: List the user's incidents
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Incident" }
+    post:
+      summary: Create an incident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentInput" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Incident" }
+
+  /incidents/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Get one incident
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Incident" } } } }
+        "404": { description: Not found or not owned }
+    patch:
+      summary: Update one incident
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentInput" }
+      responses:
+        "200": { description: OK, content: { application/json: { schema: { $ref: "#/components/schemas/Incident" } } } }
+        "404": { description: Not found or not owned }
+    delete:
+      summary: Delete one incident
+      responses:
+        "204": { description: Deleted }
+        "404": { description: Not found or not owned }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: string }
+              message: { type: string }
+              details: { type: object, additionalProperties: true }
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        username: { type: string }
+        is_verified: { type: boolean }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AuthTokens:
+      type: object
+      properties:
+        access: { type: string }
+        refresh: { type: string }
+
+    AuthResponse:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/User" }
+        tokens: { $ref: "#/components/schemas/AuthTokens" }
+
+    SecurityScore:
+      type: object
+      properties:
+        id: { type: integer }
+        score: { type: integer, minimum: 0, maximum: 100 }
+        computed_at: { type: string, format: date-time }
+        last_scanned: { type: [string, "null"], format: date-time }
+
+    DashboardOverview:
+      type: object
+      properties:
+        accounts: { type: integer }
+        devices: { type: integer }
+        open_incidents: { type: integer }
+        security_score: { type: integer }
+
+    Account:
+      type: object
+      properties:
+        id: { type: integer }
+        service_name: { type: string }
+        username: { type: string }
+        notes: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    AccountInput:
+      type: object
+      required: [service_name]
+      properties:
+        service_name: { type: string }
+        username: { type: string }
+        notes: { type: string }
+
+    Device:
+      type: object
+      properties:
+        id: { type: integer }
+        device_name: { type: string }
+        device_type: { type: string }
+        platform: { type: string }
+        last_reported: { type: [string, "null"], format: date-time }
+        notes: { type: string }
+
+    DeviceInput:
+      type: object
+      required: [device_name]
+      properties:
+        device_name: { type: string }
+        device_type: { type: string }
+        platform: { type: string }
+        notes: { type: string }
+
+    Incident:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        incident_type: { type: string }
+        reported_at: { type: string, format: date-time }
+        resolved: { type: boolean }
+
+    IncidentInput:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        incident_type: { type: string }

@@ -1,0 +1,16 @@
+{
+  "name": "@amanak/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "types": "index.ts",
+  "main": "index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@amanak/shared-types": "0.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
