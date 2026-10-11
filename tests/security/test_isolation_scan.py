@@ -1,3 +1,6 @@
+# Mirror of backend/tests/test_scanner_isolation.py for gate-path compatibility.
+# Canonical isolation suite lives in backend/tests/test_scanner_isolation.py.
+
 """Scanner isolation: a user must never read another user's scan history.
 
 Mirrors backend/tests/test_scanner_isolation.py and is the suite named by the
