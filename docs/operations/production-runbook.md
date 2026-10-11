@@ -74,6 +74,21 @@ docker compose -f docker-compose.prod.yml down        # keeps volumes
 | Throttle cache | `... exec redis redis-cli -n 1 ping` | `PONG` |
 | AI disabled | `POST /api/v1/ai/guidance` | `503` while `AI_ENABLED=false` |
 
+### API path conventions (trailing slashes)
+
+Path definitions are **mixed**, so match them exactly. `APPEND_SLASH` only
+redirects when appending a slash resolves to a route, and its `301` carries no
+body — some HTTP clients then replay the redirected `POST` as a `GET`.
+
+- **Trailing slash required:** `/healthz/`, `/admin/`, every
+  `/api/v1/auth/*` route (`register/`, `login/`, `refresh-token/`, `logout/`,
+  `verify-email/`, `password-reset-request/`, `password-reset-confirm/`),
+  `/api/v1/me/`, `/api/v1/dashboard/`, `/api/v1/dashboard/security-score/`,
+  `/api/v1/accounts/` (`.../{id}/`), `/api/v1/devices/` (`.../{id}/`),
+  `/api/v1/incidents/` (`.../{id}/`). Omitting the slash returns `301`.
+- **No trailing slash:** `/api/v1/scan/{url,message,history}`,
+  `/api/v1/ai/{explain-scan,guidance}`. Adding one returns `404`.
+
 ## 4. Logs
 
 Access/error logs for nginx go to stdout/stderr; backend logs likewise. Read
