@@ -39,3 +39,4 @@ apps/mobile/.expo/
 .pnpm-lock.yaml
 yarn.lock
 package-lock.json
+*.bundle
