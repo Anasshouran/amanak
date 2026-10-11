@@ -289,6 +289,9 @@ def _production_security_settings(app_env, cors_allowed_origins):
         return {}
     return {
         "SECURE_SSL_REDIRECT": True,
+        # The container healthcheck probes gunicorn over plain HTTP directly
+        # (bypassing nginx), so /healthz/ must not be redirected to HTTPS.
+        "SECURE_REDIRECT_EXEMPT": [r"^/?healthz/?$"],
         "SECURE_PROXY_SSL_HEADER": ("HTTP_X_FORWARDED_PROTO", "https"),
         "SESSION_COOKIE_SECURE": True,
         "CSRF_COOKIE_SECURE": True,

@@ -65,10 +65,13 @@ services:
     environment:
       APP_ENV: production
       DEBUG: "False"
-    command: >
-      sh -c "python backend/manage.py migrate --no-input
-             && python backend/manage.py collectstatic --no-input
-             && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60"
+    command:
+      - sh
+      - -c
+      - |
+        python backend/manage.py migrate --no-input &&
+        python backend/manage.py collectstatic --no-input &&
+        gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 60
     volumes:
       - staticfiles:/srv/amanak/backend/staticfiles
       - media:/srv/amanak/backend/media
