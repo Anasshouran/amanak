@@ -121,3 +121,24 @@ export type ScanResultRecord = {
   preview: string
   created_at: string
 }
+
+export type AIKind = "explain_scan" | "guidance"
+
+export type AITopic = "phishing" | "passwords" | "2fa" | "general"
+
+export type AILocale = "ar" | "en"
+
+export type AIRequest = {
+  scan_id?: string
+  locale?: AILocale
+  topic?: AITopic
+}
+
+export type AIProviderName = "null" | "fake" | "openai" | "anthropic"
+
+export type AIResponse = {
+  text: string
+  provider: AIProviderName
+  model: string
+  tokens_used: number
+}

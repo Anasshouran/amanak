@@ -367,6 +367,66 @@ paths:
                 type: array
                 items: { $ref: "#/components/schemas/ScanResultRecord" }
 
+  /ai/explain-scan:
+    post:
+      summary: Explain one of the caller's scans (AI; disabled by default)
+      description: |
+        Requires authentication. Returns 503 `{"code": "ai_disabled"}` unless
+        AI_ENABLED is true. The prompt is built from scan metadata only (never
+        raw input or scan history) and is redacted before any provider call.
+        Per-user limit 10/min and a global daily cap apply; exceeding a limit
+        returns 429. A provider failure returns a generic 502.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AIExplainScanRequest" }
+      responses:
+        "200":
+          description: Generated explanation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AIResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          description: Scan not found or not owned by the caller
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: Provider unavailable (no input content in body)
+        "503":
+          $ref: "#/components/responses/AIDisabled"
+
+  /ai/guidance:
+    post:
+      summary: Defensive safety guidance for a topic (AI; disabled by default)
+      description: |
+        Requires authentication. Returns 503 `{"code": "ai_disabled"}` unless
+        AI_ENABLED is true. Guidance is grounded in the curated offline
+        knowledge base; prompts are redacted before any provider call. Per-user
+        limit 10/min and a global daily cap apply; exceeding a limit returns
+        429. A provider failure returns a generic 502.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AIGuidanceRequest" }
+      responses:
+        "200":
+          description: Generated guidance
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AIResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: Provider unavailable (no input content in body)
+        "503":
+          $ref: "#/components/responses/AIDisabled"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -385,6 +445,15 @@ components:
               code: { type: string }
               message: { type: string }
               details: { type: object, additionalProperties: true }
+
+    AIDisabled:
+      description: AI is disabled by configuration
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: string, enum: [ai_disabled] }
 
   schemas:
     User:
@@ -519,3 +588,24 @@ components:
         ruleset_version: { type: string }
         preview: { type: string }
         created_at: { type: string, format: date-time }
+
+    AIExplainScanRequest:
+      type: object
+      required: [scan_id]
+      properties:
+        scan_id: { type: string, description: "Scan identifier (integer primary key, sent as a string)" }
+        locale: { type: string, enum: [ar, en], default: ar }
+
+    AIGuidanceRequest:
+      type: object
+      required: [topic]
+      properties:
+        topic: { type: string, enum: [phishing, passwords, 2fa, general] }
+
+    AIResponse:
+      type: object
+      properties:
+        text: { type: string }
+        provider: { type: string, enum: [null, fake, openai, anthropic] }
+        model: { type: string }
+        tokens_used: { type: integer }

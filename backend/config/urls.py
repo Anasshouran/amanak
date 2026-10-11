@@ -12,4 +12,5 @@ urlpatterns = [
     path("api/v1/devices/", include("devices.urls")),
     path("api/v1/incidents/", include("incidents.urls")),
     path("api/v1/scan/", include("scanner.urls")),
+    path("api/v1/ai/", include("apps.ai_assistant.urls")),
 ]

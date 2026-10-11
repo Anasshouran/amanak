@@ -31,6 +31,13 @@ SECURITY_ENGINE_DIR = BASE_DIR.parent / "security-engine"
 if str(SECURITY_ENGINE_DIR) not in sys.path:
     sys.path.insert(0, str(SECURITY_ENGINE_DIR))
 
+# Make the AI package importable (`ai.gateway`, `ai.prompts`, ...). Appended
+# (not prepended) so `backend/` keeps precedence when resolving the `apps`
+# namespace used by Django app configs.
+PROJECT_ROOT = BASE_DIR.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.append(str(PROJECT_ROOT))
+
 
 def _env_bool(name, default="false"):
     """Parse a boolean environment variable (accepts 1/true/yes/on)."""
@@ -69,6 +76,7 @@ INSTALLED_APPS = [
     "devices",
     "incidents",
     "scanner",
+    "apps.ai_assistant",
 ]
 
 MIDDLEWARE = [
@@ -224,6 +232,18 @@ CORS_ORIGIN_ALLOW_ALL = False
 CORS_ORIGIN_WHITELIST = os.environ.get("CORS_ORIGIN_WHITELIST", "").split(",") if os.environ.get("CORS_ORIGIN_WHITELIST") else []
 CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else ""
 
+# AI Assistant (P3). Disabled by default: nothing leaves the system and no
+# provider is contacted unless AI_ENABLED is explicitly turned on.
+AI_ENABLED = _env_bool("AI_ENABLED", "false")
+AI_FAKE_PROVIDER = _env_bool("AI_FAKE_PROVIDER", "false")
+AI_PROVIDER = os.environ.get("AI_PROVIDER", "").strip()
+AI_API_KEY = os.environ.get("AI_API_KEY", "")
+AI_BASE_URL = os.environ.get("AI_BASE_URL", "")
+AI_MODEL = os.environ.get("AI_MODEL", "")
+AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", "15"))
+AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "1024"))
+AI_DAILY_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", "100"))
+
 # REST Framework settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -242,6 +262,8 @@ REST_FRAMEWORK = {
         "scan_user": "30/min",
         "scan_ip": "60/min",
         "scan_global": "1000/min",
+        "ai_user": "10/min",
+        "ai_daily": f"{AI_DAILY_LIMIT}/day",
     },
 }
 

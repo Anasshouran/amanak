@@ -8,6 +8,8 @@
 import type {
   Account,
   AccountInput,
+  AIResponse,
+  AITopic,
   ApiError,
   AuthResponse,
   AuthTokens,
@@ -196,5 +198,14 @@ export class ApiClient {
 
   scanHistory() {
     return this.request<ScanResultRecord[]>("GET", "/scan/history")
+  }
+
+  // ---- ai assistant ----
+  aiExplainScan(scanId: string, locale: "ar" | "en" = "ar") {
+    return this.request<AIResponse>("POST", "/ai/explain-scan", { scan_id: scanId, locale })
+  }
+
+  aiGuidance(topic: AITopic) {
+    return this.request<AIResponse>("POST", "/ai/guidance", { topic })
   }
 }

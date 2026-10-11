@@ -1,0 +1,29 @@
+- id: two-factor-why
+  title: Two-factor authentication blocks most account takeovers
+  body: >-
+    Enabling a second factor means a stolen password alone is not enough to log
+    in. Turn it on for email, banking, and any account that can reset the
+    others, starting with your primary email.
+  source: AMANAK security baseline
+  last_reviewed: "2026-10-01"
+  tags: [two-factor, authentication]
+
+- id: two-factor-prefer-apps
+  title: Prefer authenticator apps or hardware keys over SMS
+  body: >-
+    App-based codes and hardware security keys are resistant to SIM-swap and
+    interception. SMS codes are better than nothing but should be your fallback,
+    not your default.
+  source: AMANAK security baseline
+  last_reviewed: "2026-10-01"
+  tags: [two-factor, authentication, sms]
+
+- id: two-factor-recovery
+  title: Store recovery codes offline
+  body: >-
+    Save backup/recovery codes somewhere offline and private. If you lose your
+    second factor and the recovery codes, regaining access can be difficult and
+    attackers will try to convince support to bypass MFA.
+  source: AMANAK security baseline
+  last_reviewed: "2026-10-01"
+  tags: [two-factor, recovery]

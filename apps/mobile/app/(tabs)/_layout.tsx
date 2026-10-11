@@ -30,6 +30,7 @@ function TabsNavigator() {
       <Tabs.Screen name="devices" options={{ title: "Devices" }} />
       <Tabs.Screen name="incidents" options={{ title: "Incidents" }} />
       <Tabs.Screen name="scanner" options={{ title: "Scanner" }} />
+      <Tabs.Screen name="ai" options={{ title: "AI" }} />
     </Tabs>
   )
 }

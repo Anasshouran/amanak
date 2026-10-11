@@ -1,0 +1,63 @@
+# Golden Q/A evaluation set for the AI assistant.
+# Each item: an offline prompt plus expected terms the response should contain.
+# The runner never calls the network unless an explicit provider is supplied.
+- id: eval-01
+  prompt: Explain why I should not reuse passwords across sites.
+  expected_terms: [unique, reuse, breach]
+- id: eval-02
+  prompt: How do I spot a phishing email?
+  expected_terms: [domain, urgency, link]
+- id: eval-03
+  prompt: What is the safest form of two-factor authentication?
+  expected_terms: [app, hardware, sms]
+- id: eval-04
+  prompt: Someone on the phone asked for my one-time code. What do I do?
+  expected_terms: [never, code, takeover]
+- id: eval-05
+  prompt: My account was in a data breach. What steps should I take?
+  expected_terms: [password, rotate, two-factor]
+- id: eval-06
+  prompt: Are short passwords with symbols safer than long passphrases?
+  expected_terms: [length, passphrase]
+- id: eval-07
+  prompt: What should I do about an unexpected email attachment?
+  expected_terms: [attachment, unsolicited, suspicious]
+- id: eval-08
+  prompt: How can I protect my primary email account?
+  expected_terms: [two-factor, recovery, password]
+- id: eval-09
+  prompt: What is a SIM-swap attack and how do I reduce the risk?
+  expected_terms: [sim, sms, authenticator]
+- id: eval-10
+  prompt: Is it safe to save passwords in a browser?
+  expected_terms: [password-manager, master, unique]
+- id: eval-11
+  prompt: A link says my account will close in 24 hours. Is it a scam?
+  expected_terms: [urgency, verify, directly]
+- id: eval-12
+  prompt: How do I store two-factor recovery codes?
+  expected_terms: [offline, private, recovery]
+- id: eval-13
+  prompt: Why is my email account the most important to secure?
+  expected_terms: [reset, email, primary]
+- id: eval-14
+  prompt: What signs indicate a website is not legitimate?
+  expected_terms: [domain, certificate, brand]
+- id: eval-15
+  prompt: How often should I change my passwords?
+  expected_terms: [breach, rotate, reuse]
+- id: eval-16
+  prompt: Someone asked for my recovery code. Is that normal?
+  expected_terms: [never, recovery, secret]
+- id: eval-17
+  prompt: How do homoglyph domains trick people?
+  expected_terms: [look-alike, characters, domain]
+- id: eval-18
+  prompt: What is credential stuffing?
+  expected_terms: [reuse, breached, automated]
+- id: eval-19
+  prompt: How can I check if a link is safe before clicking?
+  expected_terms: [domain, hover, bookmark]
+- id: eval-20
+  prompt: What is a passphrase and why is it strong?
+  expected_terms: [words, length, memorable]

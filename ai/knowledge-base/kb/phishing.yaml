@@ -1,0 +1,31 @@
+- id: phishing-tell-domain
+  title: Check the domain, not the display name
+  body: >-
+    Phishing links frequently use a look-alike or hyphenated domain such as
+    "paypal-secure.example" while the visible text claims to be the real brand.
+    Always read the registrable domain (the part immediately before the TLD)
+    from right to left before entering any credentials.
+  source: AMANAK security baseline
+  last_reviewed: "2026-10-01"
+  tags: [phishing, urls, domains]
+
+- id: phishing-tell-urgency
+  title: Urgency and threats are pressure tactics
+  body: >-
+    Messages demanding immediate action ("your account will be closed in 24
+    hours") are designed to short-circuit careful thinking. Slow down, open the
+    service directly from a bookmark or typed address, and never act from the
+    link in the message.
+  source: AMANAK security baseline
+  last_reviewed: "2026-10-01"
+  tags: [phishing, social-engineering, urgency]
+
+- id: phishing-tell-attachment
+  title: Unexpected attachments and credential prompts
+  body: >-
+    Treat unsolicited attachments and any message that asks you to "confirm",
+    "verify", or "re-authenticate" with suspicion. Legitimate providers do not
+    ask for passwords, one-time codes, or card numbers over email or chat.
+  source: AMANAK security baseline
+  last_reviewed: "2026-10-01"
+  tags: [phishing, credentials, attachments]

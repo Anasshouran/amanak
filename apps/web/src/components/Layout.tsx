@@ -27,6 +27,7 @@ export function Layout() {
             <Link to="/devices" style={{ color: "#e2e8f0" }}>Devices</Link>
             <Link to="/incidents" style={{ color: "#e2e8f0" }}>Incidents</Link>
             <Link to="/scanner" style={{ color: "#e2e8f0" }}>Scanner</Link>
+            <Link to="/ai" style={{ color: "#e2e8f0" }}>AI</Link>
             <span style={{ color: "#94a3b8", fontSize: "0.875rem" }}>{user.email}</span>
             <button onClick={() => void logout()} style={{ cursor: "pointer" }}>
               Log out
