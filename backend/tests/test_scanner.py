@@ -83,6 +83,23 @@ class TestInputSafety:
         )
         assert resp.status_code == status.HTTP_200_OK
 
+    def test_validate_input_rejects_lone_surrogate(self):
+        from scanner.services import validate_input
+
+        sanitized, error = validate_input("\ud800")
+        assert sanitized is None
+        assert error
+
+    def test_lone_surrogate_rejected_not_500(self, client_a):
+        resp = client_a.generic(
+            "POST",
+            "/api/v1/scan/message",
+            data='{"input": "\\ud800"}',
+            content_type="application/json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.json()["code"] == "invalid_input"
+
 
 class TestPersistence:
     def test_scan_is_persisted(self, client_a, user_a):

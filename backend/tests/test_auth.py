@@ -34,6 +34,14 @@ class TestAuthFlow:
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
 
+    def test_register_rejects_oversized_password(self, api_client):
+        resp = api_client.post(
+            "/api/v1/auth/register/",
+            {"email": "big@example.com", "username": "big", "password": "A1!" * 200},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
     def test_login_returns_tokens(self, api_client, user_a):
         resp = api_client.post(
             "/api/v1/auth/login/",

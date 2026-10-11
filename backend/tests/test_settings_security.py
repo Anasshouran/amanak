@@ -52,3 +52,50 @@ def test_postgres_path_builds_with_credentials(monkeypatch):
     assert default["ENGINE"] == "django.db.backends.postgresql"
     assert default["NAME"] == "amanak"
     assert default["PORT"] == "5433"
+
+
+# ---- P4: production hardening guard (SECRET_KEY / ALLOWED_HOSTS / CORS) -----
+
+
+def test_production_requires_explicit_secret_key():
+    with pytest.raises(ImproperlyConfigured) as exc:
+        settings._enforce_production_hardening(
+            "production",
+            settings._INSECURE_SECRET_KEY,
+            ["api.example.com"],
+            ["https://app.example.com"],
+            [],
+        )
+    assert "DJANGO_SECRET_KEY" in str(exc.value)
+
+
+def test_production_requires_allowed_hosts():
+    with pytest.raises(ImproperlyConfigured) as exc:
+        settings._enforce_production_hardening(
+            "production", "a-strong-unique-key", ["*"], ["https://app.example.com"], []
+        )
+    assert "DJANGO_ALLOWED_HOSTS" in str(exc.value)
+
+
+def test_production_requires_cors_origins():
+    with pytest.raises(ImproperlyConfigured) as exc:
+        settings._enforce_production_hardening(
+            "production", "a-strong-unique-key", ["api.example.com"], [], []
+        )
+    assert "CORS" in str(exc.value)
+
+
+def test_production_passes_with_hardening():
+    settings._enforce_production_hardening(
+        "production",
+        "a-strong-unique-key",
+        ["api.example.com"],
+        ["https://app.example.com"],
+        [],
+    )
+
+
+def test_non_production_is_not_enforced():
+    settings._enforce_production_hardening(
+        "local", settings._INSECURE_SECRET_KEY, ["*"], [], []
+    )

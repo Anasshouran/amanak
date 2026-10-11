@@ -172,3 +172,55 @@ def test_unauthenticated_cannot_access_scoped_resources(api_client, rows):
     assert api_client.get("/api/v1/accounts/").status_code == status.HTTP_401_UNAUTHORIZED
     assert api_client.get("/api/v1/devices/").status_code == status.HTTP_401_UNAUTHORIZED
     assert api_client.get("/api/v1/incidents/").status_code == status.HTTP_401_UNAUTHORIZED
+
+
+# ------------------------------------------- adversarial ID probing (P4)
+
+def test_adjacent_id_probing_never_leaks(client_a, user_a, user_b):
+    """Guessing a neighbour/off-by-one PK must never expose another user's row."""
+    b_account = Account.objects.create(user=user_b, service_name="B-Bank")
+    b_device = Device.objects.create(user=user_b, device_name="B-Phone")
+    b_incident = Incident.objects.create(user=user_b, title="B incident")
+
+    for base, template in (
+        (b_account.id, "/api/v1/accounts/{}/"),
+        (b_device.id, "/api/v1/devices/{}/"),
+        (b_incident.id, "/api/v1/incidents/{}/"),
+    ):
+        for guess in {base - 1, base, base + 1, base + 4242}:
+            if guess < 1:
+                continue
+            resp = client_a.get(template.format(guess))
+            assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
+def test_scanresult_queryset_is_owner_scoped(user_a, user_b):
+    from scanner.models import ScanResult
+
+    ScanResult.objects.create(
+        user=user_b,
+        kind="url",
+        verdict="safe",
+        score=0,
+        matches=[],
+        ruleset_version="test",
+        preview="",
+    )
+    assert not ScanResult.objects.filter(user=user_a).exists()
+    assert ScanResult.objects.filter(user=user_b).count() == 1
+
+
+def test_aiconversation_queryset_is_owner_scoped(user_a, user_b):
+    from apps.ai_assistant.models import AIConversation
+
+    AIConversation.objects.create(
+        user=user_b,
+        kind="guidance",
+        prompt_hash="a" * 64,
+        response_hash="b" * 64,
+        provider="fake",
+        model="fake-model-1",
+        tokens_used=1,
+    )
+    assert not AIConversation.objects.filter(user=user_a).exists()
+    assert AIConversation.objects.filter(user=user_b).count() == 1

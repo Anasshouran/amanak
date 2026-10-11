@@ -32,3 +32,31 @@
 - GDPR-friendly: No personal data transmitted without consent
 - No third-party credential collection
 - Persistent storage encrypted at rest
+
+## P4 additions (Security Acceptance)
+
+- **Authorization**: every API endpoint requires authentication except the six
+  intentional public auth routes (register/login/refresh/verify-email/
+  password-reset-request/password-reset-confirm). Cross-user access always
+  returns 404, never 403.
+- **JWT**: currently library defaults (HS256, 5-min access, 1-day refresh). No
+  rotation and no blacklist/revocation yet — see `P4-security-audit.md`.
+- **Production fail-fast**: with `APP_ENV=production`, startup is refused unless
+  `DJANGO_SECRET_KEY` is strong and non-default, `DJANGO_ALLOWED_HOSTS` lists
+  explicit hosts (not `*`), and at least one CORS origin is configured.
+- **Input bounds**: scan input limited to 8192 (chars at API, bytes in service);
+  passwords limited to 128; malformed UTF-8 / lone surrogates rejected as 400.
+- **AI**: disabled by default (`AI_ENABLED=False` → 503); prompts redacted before
+  any provider call; only hashes/metadata persisted; logs are content-free.
+- **Token storage**: mobile uses `expo-secure-store`; web uses `localStorage`
+  (pending hardening to httpOnly cookies).
+- **Containers**: db/redis/backend ports bound to `127.0.0.1`; healthchecks on
+  db/redis; non-root container user pending.
+- **Dependencies**: tracked by `pip-audit` (Python) and `npm audit` (Node) — see
+  `dependency-audit.md`.
+
+### Configuration security (enforced)
+
+- `DEBUG` defaults to `False`.
+- `.env` is gitignored; `.env.example` is tracked and contains no real values.
+- `.env.example` template un-ignored (P4): `.gitignore` no longer hides it.

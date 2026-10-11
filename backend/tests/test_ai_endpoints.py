@@ -130,6 +130,17 @@ def test_ai_isolation_between_users(client_a, client_b, user_a, user_b, enabled,
     assert AIConversation.objects.filter(user=user_a).count() == 0
 
 
+def test_ai_adjacent_scan_id_probing_404(client_a, user_b, enabled, fake_provider):
+    scan_b = _make_scan(user_b)
+    for guess in {scan_b.id - 1, scan_b.id, scan_b.id + 1, scan_b.id + 4242}:
+        if guess < 1:
+            continue
+        resp = client_a.post(
+            "/api/v1/ai/explain-scan", {"scan_id": str(guess)}, format="json"
+        )
+        assert resp.status_code == status.HTTP_404_NOT_FOUND
+
+
 def test_conversation_stores_only_hashes(client_a, user_a, enabled, fake_provider):
     client_a.post("/api/v1/ai/guidance", {"topic": "passwords"}, format="json")
     convo = AIConversation.objects.get(user=user_a)

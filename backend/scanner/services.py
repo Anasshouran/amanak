@@ -41,7 +41,10 @@ def validate_input(raw):
         return None, "input is required"
     if not isinstance(raw, str):
         return None, "input must be a string"
-    encoded = raw.encode("utf-8", errors="strict")
+    try:
+        encoded = raw.encode("utf-8", errors="strict")
+    except UnicodeEncodeError:
+        return None, "input is not valid UTF-8"
     if _BINARY_BYTES_RE.search(encoded):
         return None, "input contains binary control bytes"
     if len(encoded) > MAX_INPUT_LEN:

@@ -48,7 +48,8 @@ def _env_bool(name, default="false"):
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-key-do-not-use-in-production")
+_INSECURE_SECRET_KEY = "django-insecure-dev-key-do-not-use-in-production"
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", _INSECURE_SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Safe default: production-like unless explicitly opted into debug.
@@ -229,8 +230,41 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS settings
 CORS_ORIGIN_ALLOW_ALL = False
-CORS_ORIGIN_WHITELIST = os.environ.get("CORS_ORIGIN_WHITELIST", "").split(",") if os.environ.get("CORS_ORIGIN_WHITELIST") else []
-CORS_ALLOWED_ORIGINS = os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if os.environ.get("CORS_ALLOWED_ORIGINS") else ""
+CORS_ORIGIN_WHITELIST = [o for o in os.environ.get("CORS_ORIGIN_WHITELIST", "").split(",") if o]
+CORS_ALLOWED_ORIGINS = [o for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o]
+
+# Production environment marker. Only APP_ENV=production triggers the hardening
+# guard below; local development (default) and the test suite are unaffected.
+APP_ENV = os.environ.get("APP_ENV", "local").strip().lower()
+
+
+def _enforce_production_hardening(app_env, secret_key, allowed_hosts, cors_allowed_origins, cors_origin_whitelist):
+    """Fail fast when APP_ENV=production is missing required secure settings.
+
+    Guards against shipping with the insecure dev SECRET_KEY, a wildcard
+    ALLOWED_HOSTS, or no configured CORS origins. No-op outside production.
+    """
+    if str(app_env).strip().lower() != "production":
+        return
+    problems = []
+    if not secret_key or secret_key == _INSECURE_SECRET_KEY:
+        problems.append("DJANGO_SECRET_KEY must be set to a strong, unique value")
+    hosts = [h for h in (allowed_hosts or []) if h and h != "*"]
+    if not hosts:
+        problems.append("DJANGO_ALLOWED_HOSTS must list explicit hostnames (not '*')")
+    origins = [o for o in list(cors_allowed_origins or []) + list(cors_origin_whitelist or []) if o]
+    if not origins:
+        problems.append("CORS_ALLOWED_ORIGINS (or DJANGO_CORS_ORIGIN_WHITELIST) must be set")
+    if problems:
+        raise ImproperlyConfigured(
+            "Refusing to start: APP_ENV=production with insecure configuration: "
+            + "; ".join(problems)
+        )
+
+
+_enforce_production_hardening(
+    APP_ENV, SECRET_KEY, ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, CORS_ORIGIN_WHITELIST
+)
 
 # AI Assistant (P3). Disabled by default: nothing leaves the system and no
 # provider is contacted unless AI_ENABLED is explicitly turned on.
