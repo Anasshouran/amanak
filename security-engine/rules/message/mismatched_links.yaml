@@ -1,0 +1,19 @@
+# Mismatched link heuristics.
+
+- id: MSG-MISM-001
+  severity: high
+  description: "Displayed hostname of a link differs from the hostname of its href target."
+  component: link
+  pattern: "mismatch"
+  tags: [link-decoration, mismatch]
+  rationale: "Showing one domain while linking to a different one is the core of link-text phishing."
+  reference: "https://www.ncsc.gov.uk/guidance/suspicious-email-actions"
+
+- id: MSG-MISM-002
+  severity: medium
+  description: "Link display text names a brand but the href target is a shortener or IP."
+  component: link
+  pattern: "shortener-or-ip"
+  tags: [link-decoration, brand-spoof]
+  rationale: "Brand-named link text masking a shortener/IP destination indicates spoofing."
+  reference: null

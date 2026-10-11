@@ -1,0 +1,11 @@
+# Defanged phishing message corpus (safe to commit).
+# One message per line. Lines starting with # are comments.
+
+URGENT! Your account will be suspended within 24 hours if you do not act immediately.
+Your password has expired. Please verify your account now. [Update Now](http://fake-login.example.com/verify)
+Kindly confirm your bank card number and pin code to reactivate your account.
+Dear customer, click here: hxxp://tinyurl.com/abc123 to update your one-time code.
+Final notice: Your 2fa code is needed to complete the transfer.
+IMPORTANT!!! Verify your login details at [PayPal Support](hxxp://paypal-secure.com/signin)
+Visit [Apple](hxxp://192.168.1.10/verify) to restore your Apple ID.
+Enter your social security number and national id to qualify for the prize!???

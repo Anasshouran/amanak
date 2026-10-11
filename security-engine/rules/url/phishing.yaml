@@ -1,0 +1,39 @@
+# URL phishing heuristics.
+# Components: host, path, query, url (parsed), tld.
+# Rules are regex patterns, RE2-compatible, no nested quantifiers.
+
+- id: URL-PHISH-001
+  severity: high
+  description: "Hostname imitates a well-known brand to trick users."
+  component: host
+  pattern: "(paypal|apple|microsoft|google|facebook|netflix|amazon|visa|chase|wellsfargo|appleid|binance|payoneer)[.-](secure|verify|login|update|account|help|support|confirm)"
+  tags: [phishing, brand-impersonation]
+  rationale: "Scammers register look-alike domains combining a brand with security wording."
+  reference: "https://www.ncsc.gov.uk/guidance/suspicious-email-actions"
+
+- id: URL-PHISH-002
+  severity: high
+  description: "URL path contains credential-access keywords such as login or signin."
+  component: path
+  pattern: "(signin|sign-in|sign_in|login|log-in|log_in|verify|verification|password-reset|account-disable|unlock|update-card|confirm-billing)"
+  tags: [phishing, credential-access, path]
+  rationale: "Phishing links funnel victims toward fake sign-in pages."
+  reference: "https://www.ncsc.gov.uk/guidance/recognising-and-countering-phishing"
+
+- id: URL-PHISH-003
+  severity: medium
+  description: "Uniformly-encoded or escaped URL used to evade detection."
+  component: url
+  pattern: "(%[0-9a-f]{2}){3,}|%u[0-9a-f]{4}"
+  tags: [phishing, url-encoding, evasion]
+  rationale: "Excessive percent-encoding obscures the real destination from scanners and users."
+  reference: null
+
+- id: URL-PHISH-004
+  severity: medium
+  description: "Suspicious credential/security keywords embedded directly in the hostname."
+  component: host
+  pattern: "(login|log-in|verify|verification|secure|secure-|signin|sign-in|webscr|account-|update-account|password)"
+  tags: [phishing, keywords, hostname]
+  rationale: "Brand-neutral security wording in the domain is common in mass phishing kits."
+  reference: null

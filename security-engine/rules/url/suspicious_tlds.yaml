@@ -1,0 +1,37 @@
+# Suspicious TLD and host heuristics.
+
+- id: URL-TLD-001
+  severity: medium
+  description: "TLD is in the high-abuse list used by phishing campaigns."
+  component: tld
+  pattern: "\\b(tk|ml|ga|cf|gq|top|xyz|club|online|site|live|click|link|zip|mov|cam|icu|buzz|work|download)\\b"
+  tags: [tld, high-abuse]
+  rationale: "These TLDs are cheap/abused and disproportionately appear in phishing URLs."
+  reference: "https://www.spamhaus.org/statistics/tlds/"
+
+- id: URL-TLD-002
+  severity: low
+  description: "Free dynamic-DNS or all-digital TLD is used for a host."
+  component: host
+  pattern: "(ddns\\.net|no-ip\\.org|duckdns\\.org|freemyip\\.com|zapto\\.org|hopto\\.org|redirectme\\.net|dynu\\.com)"
+  tags: [tld, dynamic-dns, free-hosting]
+  rationale: "Dynamic DNS hosts are often used by malware C2 and phishing to evade takedown."
+  reference: null
+
+- id: URL-TLD-003
+  severity: medium
+  description: "Numeric-only host separated by dots/appears to be an IP address literal."
+  component: host
+  pattern: "^\\d{1,3}(?:\\.\\d{1,3}){3}$"
+  tags: [tld, ip-as-host]
+  rationale: "Raw IP hosts bypass brand reputation filters and are common in direct phishing."
+  reference: null
+
+- id: URL-PORT-001
+  severity: low
+  description: "Host is served on a non-standard port for the scheme."
+  component: port
+  pattern: "^(?!80$|443$|\\s$)\\d{2,5}$"
+  tags: [port, anomaly]
+  rationale: "Unusual ports may indicate self-hosted phishing infrastructure on a consumer ISP."
+  reference: null

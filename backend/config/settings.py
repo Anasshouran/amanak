@@ -12,9 +12,29 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
+
+try:
+    from dotenv import load_dotenv
+
+    dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
+    if dotenv_path.exists():
+        load_dotenv(dotenv_path)
+except ImportError:
+    pass
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Make the security engine importable as a top-level package (loader, analyzers, ...).
+SECURITY_ENGINE_DIR = BASE_DIR.parent / "security-engine"
+if str(SECURITY_ENGINE_DIR) not in sys.path:
+    sys.path.insert(0, str(SECURITY_ENGINE_DIR))
+
+
+def _env_bool(name, default="false"):
+    """Parse a boolean environment variable (accepts 1/true/yes/on)."""
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "yes", "on")
 
 
 # Quick-start development settings - unsuitable for production
@@ -24,7 +44,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "django-insecure-dev-key-do-not-use-in-production")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() == "true"
+# Safe default: production-like unless explicitly opted into debug.
+DEBUG = _env_bool("DJANGO_DEBUG", "false")
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
 
@@ -47,6 +68,7 @@ INSTALLED_APPS = [
     "security_score",
     "devices",
     "incidents",
+    "scanner",
 ]
 
 MIDDLEWARE = [
@@ -98,13 +120,80 @@ AUTH_PASSWORD_VALIDATORS = [
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
+#
+# There is NO silent SQLite fallback in production. SQLite is reachable only
+# for local development (DEBUG=True). Postgres is used whenever USE_POSTGRES is
+# set or a database host is configured. A misconfigured production deployment
+# fails fast at startup rather than silently running on an ephemeral file DB.
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
-    }
-}
+from django.core.exceptions import ImproperlyConfigured  # noqa: E402
+
+
+def _resolve_use_postgres():
+    """Postgres is used when explicitly requested or a database host is set."""
+    if _env_bool("USE_POSTGRES", "false"):
+        return True
+    return bool(os.environ.get("POSTGRES_HOST") or os.environ.get("DB_HOST"))
+
+
+USE_POSTGRES = _resolve_use_postgres()
+
+
+def _build_database_config(use_postgres, debug):
+    """Return the DATABASES mapping, or raise ImproperlyConfigured.
+
+    Rules:
+      * use_postgres=True  -> Postgres; all credentials are required.
+      * use_postgres=False and debug=True  -> SQLite (local dev only).
+      * use_postgres=False and debug=False -> refuse to start.
+    """
+    if use_postgres:
+        name = os.environ.get("POSTGRES_DB") or os.environ.get("DB_DATABASE")
+        user = os.environ.get("POSTGRES_USER") or os.environ.get("DB_USERNAME")
+        password = os.environ.get("POSTGRES_PASSWORD") or os.environ.get("DB_PASSWORD")
+        missing = [
+            canonical
+            for canonical, value in (
+                ("POSTGRES_DB", name),
+                ("POSTGRES_USER", user),
+                ("POSTGRES_PASSWORD", password),
+            )
+            if not value
+        ]
+        if missing:
+            raise ImproperlyConfigured(
+                "USE_POSTGRES is enabled but required credentials are missing: "
+                + ", ".join(missing)
+            )
+        host = os.environ.get("POSTGRES_HOST") or os.environ.get("DB_HOST", "127.0.0.1")
+        port = os.environ.get("POSTGRES_PORT") or os.environ.get("DB_PORT", "5432")
+        return {
+            "default": {
+                "ENGINE": "django.db.backends.postgresql",
+                "NAME": name,
+                "USER": user,
+                "PASSWORD": password,
+                "HOST": host,
+                "PORT": port,
+            }
+        }
+
+    if debug:
+        return {
+            "default": {
+                "ENGINE": "django.db.backends.sqlite3",
+                "NAME": BASE_DIR / "db.sqlite3",
+            }
+        }
+
+    raise ImproperlyConfigured(
+        "Refusing to start: USE_POSTGRES=False while DJANGO_DEBUG=False. "
+        "Set USE_POSTGRES=True with Postgres credentials for production, or "
+        "DJANGO_DEBUG=True for local development."
+    )
+
+
+DATABASES = _build_database_config(USE_POSTGRES, DEBUG)
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -150,8 +239,37 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/day",
         "auth": "20/min",
+        "scan_user": "30/min",
+        "scan_ip": "60/min",
+        "scan_global": "1000/min",
     },
 }
+
+
+def _build_cache_config(use_postgres):
+    """Redis (DB 1) backs throttling in Postgres deployments; LocMem for dev.
+
+    Throttle counters must be shared across worker processes in production,
+    otherwise per-IP/user limits are enforced per-process and are trivially
+    bypassed. Redis DB 0 is reserved for the application/broker, so throttling
+    uses DB 1.
+    """
+    if use_postgres:
+        return {
+            "default": {
+                "BACKEND": "django.core.cache.backends.redis.RedisCache",
+                "LOCATION": os.environ.get("REDIS_URL", "redis://127.0.0.1:6380/1"),
+            }
+        }
+    return {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "amanak-locmem",
+        }
+    }
+
+
+CACHES = _build_cache_config(USE_POSTGRES)
 
 # Email configuration (dev: console backend)
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"

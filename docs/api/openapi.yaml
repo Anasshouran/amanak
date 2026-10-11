@@ -91,7 +91,7 @@ paths:
 
   /auth/password-reset-request/:
     post:
-      summary: Request a password reset (dev: console email, no account leak)
+      summary: "Request a password reset (dev: console email, no account leak)"
       security: []
       requestBody:
         required: true
@@ -312,6 +312,61 @@ paths:
         "204": { description: Deleted }
         "404": { description: Not found or not owned }
 
+  /scan/url:
+    post:
+      summary: Scan a URL (offline rules engine; no network calls)
+      description: |
+        Input is analyzed locally. Raw input is never stored; only a redacted,
+        length-capped preview is persisted. Throttled per user (30/min), per IP
+        (60/min), and globally (1000/min); exceeding a limit returns 429.
+        Input is capped at 8192 characters; binary input is rejected.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScanRequest" }
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScanResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: Rate limit exceeded
+
+  /scan/message:
+    post:
+      summary: Scan a message for social-engineering indicators
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScanRequest" }
+      responses:
+        "200":
+          description: Scan result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScanResponse" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: Rate limit exceeded
+
+  /scan/history:
+    get:
+      summary: List the caller's scan history (owner-scoped)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ScanResultRecord" }
+
 components:
   securitySchemes:
     bearerAuth:
@@ -424,3 +479,43 @@ components:
         title: { type: string }
         description: { type: string }
         incident_type: { type: string }
+
+    ScanRequest:
+      type: object
+      required: [input]
+      properties:
+        input: { type: string, maxLength: 8192 }
+        context: { type: [object, "null"], additionalProperties: true }
+
+    ScanMatch:
+      type: object
+      properties:
+        rule_id: { type: string }
+        severity: { type: string, enum: [low, medium, high, critical] }
+        description: { type: string }
+        evidence_redacted: { type: string }
+
+    ScanResponse:
+      type: object
+      properties:
+        verdict: { type: string, enum: [safe, suspicious, dangerous] }
+        score: { type: integer, minimum: 0, maximum: 100 }
+        matches:
+          type: array
+          items: { $ref: "#/components/schemas/ScanMatch" }
+        ruleset_version: { type: string }
+        scanned_at: { type: string, format: date-time }
+
+    ScanResultRecord:
+      type: object
+      properties:
+        id: { type: integer }
+        kind: { type: string, enum: [url, message] }
+        verdict: { type: string, enum: [safe, suspicious, dangerous] }
+        score: { type: integer }
+        matches:
+          type: array
+          items: { $ref: "#/components/schemas/ScanMatch" }
+        ruleset_version: { type: string }
+        preview: { type: string }
+        created_at: { type: string, format: date-time }

@@ -84,3 +84,40 @@ export type ApiError = {
   message: string
   details?: Record<string, unknown>
 }
+
+export type ScanVerdict = "safe" | "suspicious" | "dangerous"
+
+export type ScanSeverity = "low" | "medium" | "high" | "critical"
+
+export type ScanKind = "url" | "message"
+
+export type ScanMatch = {
+  rule_id: string
+  severity: ScanSeverity
+  description: string
+  evidence_redacted: string
+}
+
+export type ScanRequest = {
+  input: string
+  context?: Record<string, unknown> | null
+}
+
+export type ScanResponse = {
+  verdict: ScanVerdict
+  score: number
+  matches: ScanMatch[]
+  ruleset_version: string
+  scanned_at: string
+}
+
+export type ScanResultRecord = {
+  id: number
+  kind: ScanKind
+  verdict: ScanVerdict
+  score: number
+  matches: ScanMatch[]
+  ruleset_version: string
+  preview: string
+  created_at: string
+}

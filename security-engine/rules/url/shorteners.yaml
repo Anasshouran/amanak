@@ -1,0 +1,19 @@
+# URL shortener heuristics.
+
+- id: URL-SHORT-001
+  severity: medium
+  description: "Known URL shortener domain obscures the final destination."
+  component: host
+  pattern: "(bit\\.ly|tinyurl\\.com|t\\.co|goo\\.gl|is\\.gd|buff\\.ly|ow\\.ly|rb\\.gy|shorturl\\.at|cutt\\.ly|rebrand\\.ly|tiny\\.cc|q\\.gl)"
+  tags: [url, shortener, link-obfuscation]
+  rationale: "Shorteners hide the real host; attackers use them to mask phishing links."
+  reference: "https://www.ncsc.gov.uk/guidance/suspicious-email-actions"
+
+- id: URL-SHORT-002
+  severity: low
+  description: "Very short path typically produced by a URL shortener service."
+  component: path
+  pattern: "^/([a-zA-Z0-9_-]{1,6})$"
+  tags: [url, shortener, link-obfuscation]
+  rationale: "Single-word short paths are a characteristic of link-shortening services."
+  reference: null

@@ -16,6 +16,8 @@ import type {
   DeviceInput,
   Incident,
   IncidentInput,
+  ScanResponse,
+  ScanResultRecord,
   SecurityScore,
   User,
 } from "@amanak/shared-types"
@@ -181,5 +183,18 @@ export class ApiClient {
 
   deleteIncident(id: number) {
     return this.request<null>("DELETE", `/incidents/${id}/`)
+  }
+
+  // ---- scanner ----
+  scanUrl(input: string, context?: Record<string, unknown>) {
+    return this.request<ScanResponse>("POST", "/scan/url", { input, context })
+  }
+
+  scanMessage(input: string, context?: Record<string, unknown>) {
+    return this.request<ScanResponse>("POST", "/scan/message", { input, context })
+  }
+
+  scanHistory() {
+    return this.request<ScanResultRecord[]>("GET", "/scan/history")
   }
 }

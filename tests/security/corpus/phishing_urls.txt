@@ -1,0 +1,26 @@
+# Defanged phishing URL corpus (safe to commit - URLs are not clickable).
+# Format: one sample per line. Lines starting with # are comments.
+# Annotate expected property with "# EXPECT: <rule_id>" optionally.
+
+hxxp://paypal-secure.com/signin
+hxxp://apple-id-verify.net/login
+hxxp://paypal.com.example.net/account/update
+hxxp://microsoft-support-247.com/webscr?cmd=_login
+hxxp://amazon-billing-support.xyz/login
+hxxp://netflix-account-security.top/verify
+hxxp://wellsfargo-alert.ml/login
+hxxp://217.12.211.55/index.php
+hxxp://secure-paypal.com@220.215.14.42/login
+hxxp://bit.ly/3xYzAbC
+hxxp://tinyurl.com/yb3mtkvg
+hxxp://t.co/sample
+hxxp://ǝʌo⅃lɐƆɐɯɐ.com
+hxxp://www.рaypal.com/verify
+hxxp://www.αpple.com/update
+hxxp://xn--bcher-kva.example.com
+hxxp://finance.tk/win
+hxxp://account.club/promo
+hxxp://lnkd.ddns.net/dashboard
+hxxp://secured-2fa.duckdns.org/password
+hxxp://exams.redirectme.net/8587/login
+hxxp://example.com:8080/secure/login

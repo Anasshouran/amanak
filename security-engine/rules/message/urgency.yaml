@@ -1,0 +1,19 @@
+# Message urgency-push heuristics.
+
+- id: MSG-URG-001
+  severity: medium
+  description: "Urgency keywords push the receiver to act without thinking."
+  component: text_lower
+  pattern: "(act immediately|act now|as soon as possible|asap|don't delay|final warning|final notice|immediate action|last chance|limited time|respond now|urgent action required|your account will be closed|within 24 hours|without delay)"
+  tags: [social-engineering, urgency]
+  rationale: "Urgency is a hallmark of phishing; it suppresses critical thinking."
+  reference: "https://www.ncsc.gov.uk/guidance/phishing-suspicious-email-actions"
+
+- id: MSG-URG-002
+  severity: low
+  description: "Excessive punctuation (!!!, ???) indicates excited or fraudulent tone."
+  component: text_raw
+  pattern: "(?:!|\\?){3,}"
+  tags: [social-engineering, tone]
+  rationale: "All-caps or repeated punctuation correlates with scam and spam content."
+  reference: null

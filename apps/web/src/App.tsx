@@ -7,6 +7,7 @@ import { Dashboard } from "./pages/Dashboard"
 import { Accounts } from "./pages/Accounts"
 import { Devices } from "./pages/Devices"
 import { Incidents } from "./pages/Incidents"
+import { Scanner } from "./pages/Scanner"
 
 export function App() {
   return (
@@ -24,6 +25,7 @@ export function App() {
         <Route path="/accounts" element={<Accounts />} />
         <Route path="/devices" element={<Devices />} />
         <Route path="/incidents" element={<Incidents />} />
+        <Route path="/scanner" element={<Scanner />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

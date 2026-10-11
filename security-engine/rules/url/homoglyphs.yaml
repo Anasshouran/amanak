@@ -1,0 +1,39 @@
+# Homoglyph and mixed-script URL heuristics.
+# Scripts: detect Cyrillic / Greek letters that visually match Latin ones
+# inside otherwise-Latin hostnames.
+
+- id: URL-HOMO-001
+  severity: high
+  description: "Hostname contains Cyrillic letters (homoglyph trick against ASCII domains)."
+  component: host
+  pattern: "[а-яА-ЯёЁіІїЇ]"
+  tags: [homoglyph, cyrillic, spoofing]
+  rationale: "Cyrillic 'а', 'р', 'о' visually mimic Latin letters, enabling look-alike domains."
+  reference: "https://unicode.org/Public/security/revision-13/confusables.txt"
+
+- id: URL-HOMO-002
+  severity: high
+  description: "Hostname contains Greek letters (homoglyph trick against ASCII domains)."
+  component: host
+  pattern: "[α-ωΑ-Ω]"
+  tags: [homoglyph, greek, spoofing]
+  rationale: "Greek 'ο', 'τ', 'π' can visually mimic Latin letters in domain names."
+  reference: "https://unicode.org/Public/security/revision-13/confusables.txt"
+
+- id: URL-HOMO-003
+  severity: medium
+  description: "Hostname mixes Latin script with at least one other Unicode script."
+  component: host
+  pattern: "([a-zA-Z][\\u0400-\\u04FF\\u0370-\\u03FF\\u05D0-\\u05FF\\u0600-\\u06FF])|([\\u0400-\\u04FF\\u0370-\\u03FF\\u05D0-\\u05FF\\u0600-\\u06FF][a-zA-Z])"
+  tags: [homoglyph, mixed-script, spoofing]
+  rationale: "Mixed-script registrations are strongly correlated with phishing and typosquatting."
+  reference: "https://unicode.org/reports/tr39/"
+
+- id: URL-HOMO-004
+  severity: medium
+  description: "Punycode (xn--) hostname, the encoded form of a non-ASCII domain."
+  component: host
+  pattern: "^xn--"
+  tags: [homoglyph, punycode, spoofing]
+  rationale: "Punycode domains are often abused for look-alike phishing; require explicit review."
+  reference: "https://en.wikipedia.org/wiki/Internationalized_domain_name"

@@ -11,4 +11,5 @@ urlpatterns = [
     path("api/v1/accounts/", include("accounts.urls_accounts")),
     path("api/v1/devices/", include("devices.urls")),
     path("api/v1/incidents/", include("incidents.urls")),
+    path("api/v1/scan/", include("scanner.urls")),
 ]

@@ -1,9 +1,18 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
 User = get_user_model()
+
+
+@pytest.fixture(autouse=True)
+def _clear_throttle_cache():
+    """Throttle counters live in the cache; reset between tests."""
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture
