@@ -1,0 +1,22 @@
+# Optional monitoring overlay for the AMANAK production stack (P6).
+#
+#   docker compose -f docker-compose.prod.yml -f docker-compose.monitoring.yml up -d
+#
+# Reuses the `amanak` network from docker-compose.prod.yml. Uptime Kuma is the
+# chosen default monitor for a single-VPS deployment (see
+# infrastructure/monitoring/README.md). It is bound to 127.0.0.1 only, so it is
+# reachable through an SSH tunnel, never the public internet.
+
+services:
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime_kuma_data:/app/data
+    networks:
+      - amanak
+
+volumes:
+  uptime_kuma_data:

@@ -221,6 +221,11 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
+# User-uploaded media. Mounted as a shared volume and served by nginx in the
+# production stack (docker-compose.prod.yml / infrastructure/nginx).
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 # Reject oversized request bodies before they are buffered into memory.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
 

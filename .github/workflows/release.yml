@@ -1,0 +1,54 @@
+# Build and publish the AMANAK backend image to GHCR on version tags.
+#
+# Trigger: push of a tag matching `v*` (e.g. v1.0.0).
+# This workflow does NOT deploy anywhere and contains no hardcoded secrets —
+# authentication uses the runner-provided GITHUB_TOKEN.
+#
+# Published image: ghcr.io/swnamhmd/amanak-backend:<tag>
+
+name: release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Derive image tags/labels
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/swnamhmd/amanak-backend
+          tags: |
+            type=ref,event=tag
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: backend/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

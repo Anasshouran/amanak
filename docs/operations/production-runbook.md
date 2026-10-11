@@ -1,143 +1,150 @@
-# AMANAK — Production Runbook (P5)
+# AMANAK — Production Runbook
 
-Operational guide for running the AMANAK backend in production. It assumes the
-container image built from `backend/Dockerfile` (Python 3.11, non-root user
-`amanak`, UID 10001) and the staging overlay `docker-compose.staging.yml`.
+Day-2 operating guide for the production stack (`docker-compose.prod.yml`:
+`db`, `redis`, `backend`, `nginx`). It assumes the image built from
+`backend/Dockerfile` (Python 3.11, non-root user `amanak`, UID 10001). For
+first-time setup see `deployment.md`.
+
+## 0. Topology at a glance
+
+| Service | Image | Host ports | Reachable from |
+|---|---|---|---|
+| `nginx` | `nginx:1.27-alpine` | `80`, `443` | the internet (sole ingress) |
+| `backend` | `backend/Dockerfile` | none | nginx, on the `amanak` network |
+| `db` | `postgres:15-alpine` | none | the `amanak` network |
+| `redis` | `redis:7-alpine` | none | the `amanak` network |
+
+Secrets live only in `.env.production` (gitignored). `APP_ENV=production` makes
+`config.settings` fail fast when `DJANGO_SECRET_KEY`, explicit
+`DJANGO_ALLOWED_HOSTS`, or CORS origins are missing.
 
 ## 1. Pre-deploy checklist
 
-- [ ] `APP_ENV=production` (this activates `config.settings` fail-fast guards).
-- [ ] `DJANGO_DEBUG=false`.
-- [ ] `DJANGO_SECRET_KEY` set to a strong, unique value (not the dev key).
+- [ ] `APP_ENV=production`, `DEBUG=False`.
+- [ ] `DJANGO_SECRET_KEY` is strong and unique (never the dev key).
 - [ ] `DJANGO_ALLOWED_HOSTS` lists explicit hostnames (never `*`).
-- [ ] `CORS_ALLOWED_ORIGINS` lists explicit https origins (used for CORS and
+- [ ] `CORS_ALLOWED_ORIGINS` lists explicit https origins (also used for
       `CSRF_TRUSTED_ORIGINS`).
-- [ ] `POSTGRES_HOST`/`POSTGRES_PORT`/`POSTGRES_DB`/`POSTGRES_USER`/
-      `POSTGRES_PASSWORD` set.
+- [ ] `POSTGRES_*` set; `POSTGRES_PASSWORD` strong.
 - [ ] `REDIS_URL` points at Redis DB 1 (throttle counters).
-- [ ] `EMAIL_BACKEND`/`EMAIL_HOST*` set so verification and reset mail is sent
-      (default console backend is dev-only).
-- [ ] `FRONTEND_URL` set (used to build verification/reset links).
+- [ ] `EMAIL_BACKEND`/`EMAIL_HOST*` set (console backend is dev-only).
+- [ ] `DOMAIN` and every `your-domain.example` in `infrastructure/nginx/amanak.conf`
+      replaced.
 - [ ] `AI_ENABLED=false` unless AI is explicitly approved.
-- [ ] `pip-audit -r backend/requirements.txt` reviewed; image built on Python
-      3.11 so the patched dependency set is installed.
+- [ ] `pip-audit -r backend/requirements.txt` reviewed (Python 3.11 patched set).
 
-The settings module raises `ImproperlyConfigured` at import time and the
-container exits non-zero if any production guard above is unmet.
-
-## 2. First deploy
+## 2. Start / stop the stack
 
 ```bash
-DJANGO_SECRET_KEY=... \
-DJANGO_ALLOWED_HOSTS=amanak.example.com \
-CORS_ALLOWED_ORIGINS=https://amanak.example.com \
-POSTGRES_PASSWORD=... \
-  docker compose -f docker-compose.staging.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.prod.yml ps
+docker compose -f docker-compose.prod.yml logs --tail=100 backend
+docker compose -f docker-compose.prod.yml down        # keeps volumes
 ```
 
-The backend entrypoint runs `migrate` then `collectstatic` then gunicorn.
-Verify:
+## 3. Health checks
 
-```bash
-docker compose -f docker-compose.staging.yml ps
-docker compose -f docker-compose.staging.yml logs --tail=100 backend
-curl -fsS https://amanak.example.com/api/v1/health/   # if a health route exists
-```
-
-## 3. Routine deploy (rolling)
-
-1. Build the new image and run migrations as a one-shot:
-   `docker compose -f docker-compose.staging.yml run --rm backend python manage.py migrate --no-input`
-2. `docker compose -f docker-compose.staging.yml up -d --no-deps backend`
-3. Confirm readiness with the health endpoint and application logs.
-4. Keep the previous image tag until the new one has served traffic cleanly.
-
-## 4. Health checks
+`./infrastructure/scripts/healthcheck.sh` runs, in order: containers up/healthy,
+`GET /healthz/` → 200, unauthenticated `POST /api/v1/scan/url` → 401, Redis
+`PONG`, PostgreSQL `SELECT 1` → 1. It exits non-zero on any failure.
 
 | Check | Command | Expected |
 |---|---|---|
-| Containers up | `docker compose -f docker-compose.staging.yml ps` | `backend` running, `db`/`redis` healthy |
-| DB reachable | `... run --rm backend python manage.py check --database default` | `System check identified no issues` |
-| Migrations applied | `... run --rm backend python manage.py showmigrations --plan` | no unapplied |
-| Throttle cache | `redis-cli -n 1 ping` (inside network) | `PONG` |
-| Auth smoke | `POST /api/v1/auth/login/` | 200 + `Set-Cookie: amanak_refresh` |
-| AI disabled | `POST /api/v1/ai/guidance` | 503 while `AI_ENABLED=false` |
+| Containers | `docker compose -f docker-compose.prod.yml ps` | all running; health-checked services healthy |
+| Liveness | `curl -fsS https://$DOMAIN/healthz/` | `{"status": "ok"}` |
+| Auth enforced | unauthenticated `POST /api/v1/scan/url` | `401` |
+| DB reachable | `... run --rm backend python backend/manage.py check --database default` | no issues |
+| Migrations | `... run --rm backend python backend/manage.py showmigrations --plan` | none unapplied |
+| Throttle cache | `... exec redis redis-cli -n 1 ping` | `PONG` |
+| AI disabled | `POST /api/v1/ai/guidance` | `503` while `AI_ENABLED=false` |
 
-## 5. Rollback
+## 4. Logs
 
-Application rollback:
+Access/error logs for nginx go to stdout/stderr; backend logs likewise. Read
+them with `docker compose -f docker-compose.prod.yml logs -f <service>`. On the
+host, `journalctl` can aggregate container logs (see
+`infrastructure/monitoring/README.md`).
 
-```bash
-docker compose -f docker-compose.staging.yml up -d --no-deps <previous-image/tag>
-```
+## 5. Routine deploy (rolling)
 
-- Database migrations in this project are additive; a code rollback does not
-  require reverting migrations. If a migration must be reverted, take a backup
-  first (section 6) and use `python manage.py migrate <app> <previous>`.
-- Verify auth (login + one authenticated request) after rollback.
+1. `git fetch --tags && git checkout <new-tag>`
+2. `docker compose -f docker-compose.prod.yml build backend`
+3. `docker compose -f docker-compose.prod.yml run --rm backend python backend/manage.py migrate --no-input`
+4. `docker compose -f docker-compose.prod.yml up -d`
+5. Run `healthcheck.sh`; keep the previous image tag until traffic is clean.
 
-## 6. Backup and restore (PostgreSQL)
-
-Backup:
-
-```bash
-docker compose -f docker-compose.staging.yml exec -T db \
-  pg_dump -U "$POSTGRES_USER" -Fc "$POSTGRES_DB" > amanak_$(date +%F).dump
-```
-
-Restore:
+## 6. Rollback
 
 ```bash
-docker compose -f docker-compose.staging.yml stop backend
-cat amanak_2026-10-11.dump | docker compose -f docker-compose.staging.yml exec -T db \
-  pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" --clean --if-exists
-docker compose -f docker-compose.staging.yml start backend
+git checkout <previous-tag>
+docker compose -f docker-compose.prod.yml build backend
+docker compose -f docker-compose.prod.yml up -d
+./infrastructure/scripts/healthcheck.sh
 ```
 
-Back up the volume `pg_data_staging` before any destructive operation and store
-dumps encrypted off-host.
+Migrations are additive; a code rollback does not require reverting migrations.
+Take a backup before any destructive migration change.
 
-## 7. Secret rotation
+## 7. Backup and restore
 
-- **Django secret key**: changing `DJANGO_SECRET_KEY` invalidates all existing
-  JWTs (signed with it) and sessions. Rotate during a maintenance window; users
-  re-authenticate. Prefer a rollout where the old and new keys overlap only if a
-  key-rotation mechanism is added.
-- **Database password**: update the secret store, `ALTER USER ... PASSWORD`,
-  then redeploy `backend` with the new value.
-- **Email credentials**: update `EMAIL_HOST_PASSWORD` and restart `backend`.
+- Manual backup: `./infrastructure/scripts/backup.sh` → `/backups` (14 daily,
+  8 weekly). Scheduled via cron (see `deployment.md`).
+- Restore: `./infrastructure/scripts/restore.sh /backups/postgres/amanak-.....sql.gz`
+  (manual only; prompts for `yes`).
+- Details, off-host copy and encryption: `backup-restore.md`.
 
-## 8. Incident basics
+## 8. TLS renewal
 
-1. **Contain**: scale the backend to zero or take it out of the load balancer if
-   an active exploit is suspected.
-2. **Preserve evidence**: copy logs and a database snapshot before
-   redeploying.
-3. **Revoke**: rotate `DJANGO_SECRET_KEY` and the DB password; this invalidates
-   outstanding tokens. Any user whose password may be exposed should be reset
-   (a password reset also blacklists that user's refresh tokens).
-4. **Pivot on the scanner/ReDoS guard**: if a malicious rule pattern is
-   suspected, the loader rejects nested/overlapping quantifiers at startup; the
-   analyzers also cap input at 64 KiB. Inspect `rules/` changes before restart.
-5. **Communicate** status to stakeholders; record a timeline.
+Certificates renew via certbot (cron/systemd timer) and nginx is reloaded after
+renewal. Full procedure and verification in `tls-setup.md`.
 
-## 9. Auth / security invariants to preserve
+## 9. Monitoring
+
+Default: Uptime Kuma bound to `127.0.0.1:3001` via the monitoring overlay. See
+`infrastructure/monitoring/README.md`. Alert on `/healthz/`, the 401 scan
+probe, and certificate expiry.
+
+## 10. Secret rotation
+
+- **Django secret key**: changing `DJANGO_SECRET_KEY` invalidates all JWTs and
+  sessions; rotate in a maintenance window and expect re-authentication.
+- **Database password**: `ALTER USER <user> WITH PASSWORD ...`, update
+  `.env.production`, then
+  `docker compose -f docker-compose.prod.yml up -d --force-recreate db backend`.
+- **Email credentials**: update `EMAIL_HOST_PASSWORD`, restart `backend`.
+- **JWT invalidation for a user**: password reset blacklists that user's refresh
+  tokens; individual JTIs can be added to the blacklist table directly.
+
+## 11. Incident basics
+
+1. **Contain**: `docker compose -f docker-compose.prod.yml stop nginx` (or
+   scale backend) if an exploit is suspected.
+2. **Preserve evidence**: capture `docker compose logs` and a DB snapshot
+   before redeploying.
+3. **Revoke**: rotate `DJANGO_SECRET_KEY` and the DB password.
+4. **Pivot on the scanner/ReDoS guard**: the loader rejects nested/overlapping
+   quantifiers at startup and the analyzers cap input at 64 KiB.
+5. Full plan: `incident-response.md`.
+
+## 12. Auth / security invariants to preserve
 
 - Access tokens: 5 minutes, HS256, signed with `SECRET_KEY`.
-- Refresh tokens: 7 days, **rotated on every refresh**, old JTI blacklisted;
-  logout blacklists the presented refresh token. Applies to the
-  `token_blacklist` tables — ensure migrations are applied.
-- Web refresh token is transported in an `HttpOnly`, `SameSite=Strict`,
-  `Path=/api/v1/auth` cookie (`Secure` in production). Access token is held in
-  memory only; no refresh token is stored in `localStorage`.
-- Mobile clients continue to receive the refresh token in the JSON body and
-  store it in `expo-secure-store`.
-- The backend container must run as UID 10001, never root.
-- AI stays disabled until explicitly enabled and provider credentials are set.
+- Refresh tokens: 7 days, rotated on every refresh; old JTI blacklisted; logout
+  blacklists the presented refresh token (`token_blacklist` tables must be
+  migrated).
+- Web refresh token travels in an `HttpOnly`, `SameSite=Strict`,
+  `Path=/api/v1/auth` cookie (`Secure` in production); access token is held in
+  memory only.
+- Mobile clients receive the refresh token in the JSON body
+  (`expo-secure-store`).
+- The backend container runs as UID 10001, never root.
+- AI stays disabled until explicitly enabled with provider credentials.
 
-## 10. Related documents
+## 13. Related documents
 
-- `docs/security/security-baseline.md`
-- `docs/security/P4-security-audit.md`
-- `docs/security/dependency-audit.md`
-- `docs/operations/deployment.md`
+- `deployment.md` — first-time setup.
+- `tls-setup.md` — certbot / certificate renewal.
+- `backup-restore.md` — backup, restore, encryption.
+- `incident-response.md` — incident response plan.
+- `infrastructure/monitoring/README.md` — monitoring options.
+- `docs/security/dependency-audit.md`, `docs/security/P5-production-readiness.md`.

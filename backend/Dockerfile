@@ -24,7 +24,8 @@ COPY tests/ ./tests/
 COPY docker-compose.yml ./docker-compose.yml
 COPY docker-compose.staging.yml ./docker-compose.staging.yml
 
-RUN useradd --create-home --uid 10001 amanak \
+RUN mkdir -p /srv/amanak/backend/staticfiles /srv/amanak/backend/media \
+    && useradd --create-home --uid 10001 amanak \
     && chown -R amanak:amanak /srv/amanak
 
 USER amanak
