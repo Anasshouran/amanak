@@ -20,18 +20,34 @@ Secrets live only in `.env.production` (gitignored). `APP_ENV=production` makes
 
 ## 1. Pre-deploy checklist
 
+Environment — the real `/srv/amanak/.env.production`, **not**
+`.env.production.example`:
+
+- [ ] `.env.production` is populated (copy from `.env.production.example`).
 - [ ] `APP_ENV=production`, `DEBUG=False`.
-- [ ] `DJANGO_SECRET_KEY` is strong and unique (never the dev key).
-- [ ] `DJANGO_ALLOWED_HOSTS` lists explicit hostnames (never `*`).
-- [ ] `CORS_ALLOWED_ORIGINS` lists explicit https origins (also used for
-      `CSRF_TRUSTED_ORIGINS`).
+- [ ] `DJANGO_SECRET_KEY` is **at least 50 characters** and contains at least
+      5 unique characters (never the dev key). Generate with:
+      `python3 -c "import secrets; print(secrets.token_urlsafe(64))"`.
+- [ ] `DJANGO_ALLOWED_HOSTS` explicitly lists the production domain (never `*`).
+- [ ] `CORS_ALLOWED_ORIGINS` explicitly lists the web origin as https (also used
+      for `CSRF_TRUSTED_ORIGINS`).
 - [ ] `POSTGRES_*` set; `POSTGRES_PASSWORD` strong.
 - [ ] `REDIS_URL` points at Redis DB 1 (throttle counters).
 - [ ] `EMAIL_BACKEND`/`EMAIL_HOST*` set (console backend is dev-only).
 - [ ] `DOMAIN` and every `your-domain.example` in `infrastructure/nginx/amanak.conf`
       replaced.
 - [ ] `AI_ENABLED=false` unless AI is explicitly approved.
+
+Verification:
+
+- [ ] `python3 backend/manage.py check --deploy` returns **zero warnings**
+      (`W009` fires when the key is shorter than 50 characters).
 - [ ] `pip-audit -r backend/requirements.txt` reviewed (Python 3.11 patched set).
+- [ ] Backups enabled — the `backup.sh` cron entry from `deployment.md` is
+      installed and one run has been verified (`backup-restore.md`).
+- [ ] Monitoring reachable — Uptime Kuma probe green and/or
+      `infrastructure/scripts/healthcheck.sh` passes
+      (`infrastructure/monitoring/README.md`).
 
 ## 2. Start / stop the stack
 
