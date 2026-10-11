@@ -1,0 +1,74 @@
+# AMANAK staging overlay (P5).
+#
+# Usage:
+#   DJANGO_SECRET_KEY=... DJANGO_ALLOWED_HOSTS=staging.example.com \
+#   CORS_ALLOWED_ORIGINS=https://staging.example.com POSTGRES_PASSWORD=... \
+#     docker compose -f docker-compose.staging.yml up -d --build
+#
+# Hardening vs. docker-compose.yml:
+#   * db/redis publish NO host ports (internal network only)
+#   * backend runs migrate + collectstatic, then gunicorn as the unprivileged
+#     user baked into backend/Dockerfile
+#   * APP_ENV=production makes config.settings fail fast unless SECRET_KEY,
+#     ALLOWED_HOSTS and CORS origins are set
+#   * no privileged / host-network / extra capabilities anywhere
+
+services:
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-amanak}
+      POSTGRES_USER: ${POSTGRES_USER:-amanak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+    volumes:
+      - pg_data_staging:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-amanak} -d ${POSTGRES_DB:-amanak}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    command: >
+      bash -c "python backend/manage.py migrate --no-input
+               && python backend/manage.py collectstatic --no-input
+               && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"
+    environment:
+      APP_ENV: production
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-}
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-amanak}
+      POSTGRES_USER: ${POSTGRES_USER:-amanak}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
+      REDIS_URL: redis://redis:6379/1
+      AI_ENABLED: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    expose:
+      - "8000"
+    # No host port binding: put TLS / routing in front (nginx, ALB, ...) on the
+    # same docker network.
+
+volumes:
+  pg_data_staging:

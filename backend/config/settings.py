@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
 import os
 import sys
@@ -70,6 +71,7 @@ INSTALLED_APPS = [
     # Third party
     "rest_framework",
     "rest_framework.authtoken",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     # AMANAK apps
     "accounts",
@@ -217,6 +219,10 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.2/howto/static-files/
 
 STATIC_URL = "static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Reject oversized request bodies before they are buffered into memory.
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10 MB
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
@@ -230,6 +236,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # CORS settings
 CORS_ORIGIN_ALLOW_ALL = False
+CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = [o for o in os.environ.get("CORS_ORIGIN_WHITELIST", "").split(",") if o]
 CORS_ALLOWED_ORIGINS = [o for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o]
 
@@ -265,6 +272,53 @@ def _enforce_production_hardening(app_env, secret_key, allowed_hosts, cors_allow
 _enforce_production_hardening(
     APP_ENV, SECRET_KEY, ALLOWED_HOSTS, CORS_ALLOWED_ORIGINS, CORS_ORIGIN_WHITELIST
 )
+
+
+def _production_security_settings(app_env, cors_allowed_origins):
+    """Return transport/cookie hardening applied only when APP_ENV=production.
+
+    Returning a mapping (rather than mutating module globals inline) keeps the
+    policy unit-testable without reloading Django settings.
+    """
+    if str(app_env).strip().lower() != "production":
+        return {}
+    return {
+        "SECURE_SSL_REDIRECT": True,
+        "SECURE_PROXY_SSL_HEADER": ("HTTP_X_FORWARDED_PROTO", "https"),
+        "SESSION_COOKIE_SECURE": True,
+        "CSRF_COOKIE_SECURE": True,
+        "SECURE_HSTS_SECONDS": 31536000,
+        "SECURE_HSTS_INCLUDE_SUBDOMAINS": True,
+        "SECURE_HSTS_PRELOAD": True,
+        "SECURE_CONTENT_TYPE_NOSNIFF": True,
+        "SECURE_REFERRER_POLICY": "same-origin",
+        "X_FRAME_OPTIONS": "DENY",
+        "CSRF_TRUSTED_ORIGINS": [o for o in (cors_allowed_origins or []) if o],
+    }
+
+
+globals().update(_production_security_settings(APP_ENV, CORS_ALLOWED_ORIGINS))
+
+# JWT configuration (P5). Short-lived access tokens with rotating, revocable
+# refresh tokens. Old refresh tokens are blacklisted on rotation and logout.
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+    "UPDATE_LAST_LOGIN": True,
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
+
+# Refresh token transport: HttpOnly cookie scoped to the auth endpoints so the
+# browser never exposes it to JavaScript. The response body still carries the
+# refresh token for non-browser clients (mobile) and backwards compatibility.
+REFRESH_TOKEN_COOKIE_NAME = "amanak_refresh"
+REFRESH_TOKEN_COOKIE_PATH = "/api/v1/auth"
+REFRESH_TOKEN_COOKIE_MAX_AGE = int(timedelta(days=7).total_seconds())
+REFRESH_TOKEN_COOKIE_SECURE = APP_ENV == "production"
 
 # AI Assistant (P3). Disabled by default: nothing leaves the system and no
 # provider is contacted unless AI_ENABLED is explicitly turned on.
@@ -327,9 +381,20 @@ def _build_cache_config(use_postgres):
 
 CACHES = _build_cache_config(USE_POSTGRES)
 
-# Email configuration (dev: console backend)
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "ama-nak@local.io"
+# Email configuration. Defaults to the console backend in development; set
+# EMAIL_BACKEND + EMAIL_HOST* for a real SMTP backend in production.
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend"
+)
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "25"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", "false")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "ama-nak@local.io")
+
+# Base URL used to build email links (verification / password reset).
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8000")
 
 
 # ============================================================

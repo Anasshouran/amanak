@@ -25,10 +25,22 @@ STRUCTURAL_COMPONENTS = {"link"}
 
 # Innermost group containing a repetition quantifier, itself quantified.
 _NESTED_QUANTIFIER_RE = re.compile(r"\([^()]*(?:[*+])[^()]*\)(?:[*+?]|\{\d+(?:,\d*)?\})")
+# A group (no nested parens) that contains an alternation and is quantified.
+# Only rejected when the alternatives can match the same input (overlap).
+_ALT_GROUP_RE = re.compile(r"\(([^()]*)\)(?:[*+]|\{\d+(?:,\d*)?\})")
+_NONCAPTURING_PREFIX_RE = re.compile(r"^\?(?::|P<\w+>|P=\w+|#.*|\()")
+
+# Hard cap on analyzer input size (bytes). Enforced inside the analyzers so no
+# caller can bypass the limit by calling them directly.
+MAX_INPUT_BYTES = 64 * 1024
 
 
 class RuleValidationError(ValueError):
     """Raised when a rule file fails schema or safety validation."""
+
+
+class InputTooLargeError(ValueError):
+    """Raised when analyzer input exceeds MAX_INPUT_BYTES."""
 
 
 @dataclass(frozen=True)
@@ -59,6 +71,62 @@ def _strip_regex(regex: str) -> str:
     return s
 
 
+def _split_alternation(body: str) -> List[str]:
+    """Split a paren-free group body on unescaped top-level '|'."""
+    parts: List[str] = []
+    current = ""
+    i = 0
+    while i < len(body):
+        char = body[i]
+        if char == "\\" and i + 1 < len(body):
+            current += body[i : i + 2]
+            i += 2
+            continue
+        if char == "|":
+            parts.append(current)
+            current = ""
+            i += 1
+            continue
+        current += char
+        i += 1
+    parts.append(current)
+    return parts
+
+
+def _first_char_set(alternative: str):
+    """Return the set of possible first characters, or None if it matches any/empty.
+
+    None (wildcard or empty) is treated as overlapping with everything, which
+    makes the guard fail closed on ambiguous patterns.
+    """
+    if not alternative:
+        return None
+    head = alternative[0]
+    if head == "\\":
+        if len(alternative) >= 2 and alternative[1] in "dDwWsSbBAZz":
+            return None
+        return {alternative[1]} if len(alternative) >= 2 else None
+    if head in "*+?{.|[^$(":
+        return None
+    return {head}
+
+
+def _alternatives_overlap(body: str) -> bool:
+    """True when a quantified group's alternatives can match the same prefix."""
+    body = _NONCAPTURING_PREFIX_RE.sub("", body, count=1)
+    if "|" not in body:
+        return False
+    first_sets = [_first_char_set(alt) for alt in _split_alternation(body)]
+    for i in range(len(first_sets)):
+        for j in range(i + 1, len(first_sets)):
+            left, right = first_sets[i], first_sets[j]
+            if left is None or right is None:
+                return True
+            if left & right:
+                return True
+    return False
+
+
 def _reject_nested_quantifiers(regex: str, label: str) -> None:
     """Reject patterns that are vulnerable to ReDoS via nested quantifiers."""
     stripped = _strip_regex(regex)
@@ -67,6 +135,12 @@ def _reject_nested_quantifiers(regex: str, label: str) -> None:
     # consecutive repetition operators like a*+ or a** are also dangerous
     if re.search(r"[*+]\?|\{\d+(?:,\d*)?\}\+", stripped):
         raise RuleValidationError(f"{label}: ambiguous/nested repetition (ReDoS risk): {regex}")
+    # quantified alternations with overlapping alternatives, e.g. (a|a)+
+    for match in _ALT_GROUP_RE.finditer(regex):
+        if _alternatives_overlap(match.group(1)):
+            raise RuleValidationError(
+                f"{label}: overlapping quantified alternation (ReDoS risk): {regex}"
+            )
 
 
 def _validate_entry(entry: dict, source_file: str, category: str, index: int) -> Rule:

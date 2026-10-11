@@ -10,7 +10,7 @@ import time
 from typing import List, Optional
 from urllib.parse import parse_qs, urlparse
 
-from loader import Rule
+from loader import InputTooLargeError, MAX_INPUT_BYTES, Rule
 from models import ScanMatch
 from redact import cap, redact
 
@@ -92,6 +92,10 @@ class UrlAnalyzer:
         """Run all URL rules and return redacted matches."""
         if not raw or not raw.strip():
             return []
+        if len(raw.encode("utf-8", "ignore")) > MAX_INPUT_BYTES:
+            raise InputTooLargeError(
+                f"url input exceeds {MAX_INPUT_BYTES} bytes"
+            )
         parsed = self.parse(raw)
         self._deadline = time.monotonic() + self.total_deadline_s
         matches: List[ScanMatch] = []

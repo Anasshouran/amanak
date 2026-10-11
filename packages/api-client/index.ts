@@ -33,19 +33,38 @@ export type TokenStore = {
   clear: () => Promise<void>
 }
 
+export type ApiClientOptions = {
+  /**
+   * Fetch credentials mode. Web uses "include" so the HttpOnly refresh
+   * cookie is sent to (and set by) the auth endpoints.
+   */
+  credentials?: RequestCredentials
+  /**
+   * Obtain a fresh access token when a request is rejected with 401. Web
+   * implements this via the HttpOnly refresh cookie; mobile omits it.
+   */
+  refreshAccess?: () => Promise<string | null>
+  /** Called when refreshing fails so the app can redirect to login. */
+  onUnauthorized?: () => void
+}
+
 export class ApiClient {
   private readonly baseUrl: string
   private readonly tokens: TokenStore
+  private readonly options: ApiClientOptions
+  private refreshing: Promise<string | null> | null = null
 
-  constructor(baseUrl: string, tokens: TokenStore) {
+  constructor(baseUrl: string, tokens: TokenStore, options: ApiClientOptions = {}) {
     this.baseUrl = baseUrl.replace(/\/+$/, "")
     this.tokens = tokens
+    this.options = options
   }
 
   private async request<T>(
     method: string,
     path: string,
     body?: unknown,
+    retried = false,
   ): Promise<T> {
     const access = await this.tokens.getAccessToken()
     const headers: Record<string, string> = {
@@ -59,6 +78,7 @@ export class ApiClient {
       method,
       headers,
       body: body === undefined ? undefined : JSON.stringify(body),
+      credentials: this.options.credentials,
     })
 
     let data: unknown = null
@@ -69,6 +89,17 @@ export class ApiClient {
     }
 
     if (!res.ok) {
+      // On an expired access token, try a single transparent refresh + retry.
+      if (res.status === 401 && !retried && this.options.refreshAccess) {
+        const newAccess = await this.refreshOnce()
+        if (newAccess) {
+          return this.request<T>(method, path, body, true)
+        }
+        this.options.onUnauthorized?.()
+      } else if (res.status === 401) {
+        this.options.onUnauthorized?.()
+      }
+
       const error = (data ?? {}) as Partial<ApiError> & {
         detail?: string
         [key: string]: unknown
@@ -86,6 +117,17 @@ export class ApiClient {
     }
 
     return data as T
+  }
+
+  private refreshOnce(): Promise<string | null> {
+    if (!this.refreshing) {
+      this.refreshing = this.options
+        .refreshAccess!()
+        .finally(() => {
+          this.refreshing = null
+        })
+    }
+    return this.refreshing
   }
 
   // ---- auth ----
@@ -106,16 +148,17 @@ export class ApiClient {
     return res
   }
 
-  async refresh() {
-    const refresh = await this.tokens.getRefreshToken()
-    if (!refresh) throw { code: "NO_REFRESH_TOKEN", message: "No refresh token" }
-    const res = await this.request<{ access: string }>("POST", "/auth/refresh-token/", {
-      refresh,
-    })
-    return res.access
-  }
-
   async logout() {
+    const refresh = await this.tokens.getRefreshToken()
+    try {
+      await this.request<{ status: string }>(
+        "POST",
+        "/auth/logout/",
+        refresh ? { refresh } : undefined,
+      )
+    } catch {
+      // Logout must be best-effort: still clear local state on failure.
+    }
     await this.tokens.clear()
   }
 

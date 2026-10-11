@@ -8,7 +8,8 @@ urlpatterns = [
     path("register/", UserViewSet.as_view({"post": "register"}), name="register"),
     path("login/", UserViewSet.as_view({"post": "login"}), name="login"),
     path("refresh-token/", UserViewSet.as_view({"post": "refresh_token"}), name="refresh-token"),
-    path("verify-email/", UserViewSet.as_view({"post": "verify_email"}), name="verify-email"),
+    path("logout/", UserViewSet.as_view({"post": "logout"}), name="logout"),
+    path("verify-email/", UserViewSet.as_view({"get": "verify_email", "post": "verify_email"}), name="verify-email"),
     path(
         "password-reset-request/",
         UserViewSet.as_view({"post": "password_reset_request"}),

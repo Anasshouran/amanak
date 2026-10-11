@@ -99,3 +99,30 @@ def test_non_production_is_not_enforced():
     settings._enforce_production_hardening(
         "local", settings._INSECURE_SECRET_KEY, ["*"], [], []
     )
+
+
+# ---- P5: production transport hardening + static root ----------------------
+
+
+def test_production_sets_secure_cookies_and_redirect():
+    hardened = settings._production_security_settings(
+        "production", ["https://app.example.com"]
+    )
+    assert hardened["SESSION_COOKIE_SECURE"] is True
+    assert hardened["CSRF_COOKIE_SECURE"] is True
+    assert hardened["SECURE_SSL_REDIRECT"] is True
+    assert hardened["SECURE_HSTS_SECONDS"] == 31536000
+    assert hardened["SECURE_HSTS_INCLUDE_SUBDOMAINS"] is True
+    assert hardened["CSRF_TRUSTED_ORIGINS"] == ["https://app.example.com"]
+
+
+def test_non_production_has_no_forced_redirect():
+    assert settings._production_security_settings("local", []) == {}
+
+
+def test_static_root_is_configured():
+    assert settings.STATIC_ROOT == settings.BASE_DIR / "staticfiles"
+
+
+def test_upload_size_cap_configured():
+    assert settings.DATA_UPLOAD_MAX_MEMORY_SIZE == 10 * 1024 * 1024

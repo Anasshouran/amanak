@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import List
 from urllib.parse import urlparse
 
-from loader import Rule
+from loader import InputTooLargeError, MAX_INPUT_BYTES, Rule
 from models import ScanMatch
 from redact import cap, redact
 
@@ -78,6 +78,10 @@ class MessageAnalyzer:
         """Run all message rules and structural checks, returning redacted matches."""
         if not text or not text.strip():
             return []
+        if len(text.encode("utf-8", "ignore")) > MAX_INPUT_BYTES:
+            raise InputTooLargeError(
+                f"message input exceeds {MAX_INPUT_BYTES} bytes"
+            )
         text_lower = text.lower()
         self._deadline = time.monotonic() + self.total_deadline_s
         matches: List[ScanMatch] = []

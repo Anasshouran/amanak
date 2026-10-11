@@ -144,3 +144,49 @@ build/runtime tooling from the Expo SDK 51 / React Native 0.74.5 / Metro stack
 pip-audit -r backend/requirements.txt
 for d in . apps/web packages/shared-types packages/api-client; do (cd "$d" && npm audit --omit=dev); done
 ```
+
+## P5 update — fixed versions are now published
+
+Re-running `pip-audit 2.7.3` on 2026-10-11 now reports a `fix_version` for every
+Python advisory that previously said "none published". All eight packages can be
+remediated by moving to the patched releases below.
+
+The production runtime is Python 3.11 (`backend/Dockerfile`), but the local
+developer/CI interpreter is Python 3.8. Several patched releases require
+`>=3.10`, so `backend/requirements.txt` now uses environment markers: Python
+`>=3.10` selects the security-fixed release, while the 3.8 branch keeps the last
+installable release. Consequence: the local acceptance run (`pytest`) is
+unaffected, and the production image installs the patched set.
+
+Before → after (production / Python 3.11):
+
+| Package | Before | Advisories (before) | Pinned for py≥3.10 | Advisories (after, prod) |
+|---|---|---:|---|---:|
+| Django | 4.2.30 | 8 | `>=5.2.17,<6` | 0 |
+| djangorestframework | 3.15.2 | 2 | `>=3.17.2` | 0 |
+| djangorestframework-simplejwt | 5.3.1 | 1 | `>=5.5.1` | 0 |
+| Pillow | 10.4.0 | 17 | `>=12.1.1` | 0 |
+| PyJWT | 2.9.0 | 16 | `>=2.12.0` | 0 |
+| sqlparse | 0.5.5 | 5 | `>=0.6.0` | 0 |
+| python-dotenv | 1.0.1 | 1 | `>=1.2.2` | 0 |
+| pytest (dev) | 8.3.5 | 1 | `>=9.0.3` | 0 |
+| **Total** | | **51** | | **0** |
+
+Local Python 3.8 re-run after the requirements change: **51 advisories
+(unchanged)** — the markers deliberately keep 3.8 on the last installable
+release. Django 4.2 is end-of-support and has no patched 4.2 release, so clearing
+the remaining 3.8 findings requires running on Python 3.11, which the production
+image already does.
+
+### Python 3.8 is the residual risk
+
+The only reason any advisory remains is the local Python 3.8 interpreter. The
+production image (`python:3.11-slim`) resolves the `>=3.10` markers and installs
+a clean set. Recommended follow-up: bump local dev/CI to Python 3.11 so the
+local toolchain matches production and the 3.8 markers can be dropped.
+
+### Node (web)
+
+`react-router-dom` → `7.18.4` and the transitive `postcss` fix remain planned
+breaking upgrades; they do not affect the backend auth work in this phase.
+

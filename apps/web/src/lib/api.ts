@@ -3,10 +3,11 @@ import { ApiClient } from "@amanak/api-client"
 const BASE_URL =
   (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL ?? "http://127.0.0.1:8000"
 
-export type StoredTokens = { access: string; refresh: string }
+// The access token is held in memory only. The refresh token lives in an
+// HttpOnly cookie set by the backend and is never readable by JavaScript.
+let accessToken: string | null = null
 
-const ACCESS_KEY = "amanak.access"
-const REFRESH_KEY = "amanak.refresh"
+export type StoredTokens = { access: string; refresh: string }
 
 export const tokens: {
   getAccessToken: () => Promise<string | null>
@@ -15,19 +16,43 @@ export const tokens: {
   clear: () => Promise<void>
 } = {
   async getAccessToken() {
-    return localStorage.getItem(ACCESS_KEY)
+    return accessToken
   },
   async getRefreshToken() {
-    return localStorage.getItem(REFRESH_KEY)
+    return null
   },
   async setTokens(t: StoredTokens) {
-    localStorage.setItem(ACCESS_KEY, t.access)
-    localStorage.setItem(REFRESH_KEY, t.refresh)
+    accessToken = t.access
   },
   async clear() {
-    localStorage.removeItem(ACCESS_KEY)
-    localStorage.removeItem(REFRESH_KEY)
+    accessToken = null
   },
 }
 
-export const api = new ApiClient(BASE_URL, tokens)
+async function refreshAccess(): Promise<string | null> {
+  try {
+    const res = await fetch(`${BASE_URL}/api/v1/auth/refresh-token/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+    })
+    if (!res.ok) return null
+    const data = (await res.json()) as { access?: string }
+    if (!data.access) return null
+    accessToken = data.access
+    return data.access
+  } catch {
+    return null
+  }
+}
+
+export const api = new ApiClient(BASE_URL, tokens, {
+  credentials: "include",
+  refreshAccess,
+  onUnauthorized: () => {
+    void tokens.clear()
+    if (typeof window !== "undefined" && window.location.pathname !== "/login") {
+      window.location.assign("/login")
+    }
+  },
+})

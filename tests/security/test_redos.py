@@ -9,7 +9,12 @@ import time
 import pytest
 
 from analyzers import MessageAnalyzer, UrlAnalyzer
-from loader import load_ruleset
+from loader import (
+    InputTooLargeError,
+    RuleValidationError,
+    _reject_nested_quantifiers,
+    load_ruleset,
+)
 
 BUDGET_MS = 50
 
@@ -66,3 +71,31 @@ def test_full_message_scan_budget_on_adversarial_input():
     for sample in ADVERSARIAL:
         elapsed = _timed(analyzer.analyze, sample)
         assert elapsed < 500, f"full message scan took {elapsed:.1f}ms"
+
+
+# ---- P5: load-time ReDoS guard + analyzer input bound ----------------------
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [r"(a|a)+", r"(a|ab)+", r"(ab|ab)+", r"(\d|\d)*", r"(p|p){2,}"],
+)
+def test_overlapping_alternation_is_rejected(pattern):
+    with pytest.raises(RuleValidationError):
+        _reject_nested_quantifiers(pattern, "test-rule")
+
+
+@pytest.mark.parametrize(
+    "pattern",
+    [r"a+", r"(ab)+", r"[a-z]{2,5}", r"(?:ab)+", r"(foo|bar)+", r"(?:!|\?){3,}"],
+)
+def test_safe_patterns_are_accepted(pattern):
+    _reject_nested_quantifiers(pattern, "test-rule")
+
+
+@pytest.mark.parametrize("analyzer_cls", [UrlAnalyzer, MessageAnalyzer])
+def test_analyzer_rejects_oversized_input(analyzer_cls):
+    analyzer = analyzer_cls(RULESET["rules"])
+    oversized = "a" * (70 * 1024)
+    with pytest.raises(InputTooLargeError):
+        analyzer.analyze(oversized)

@@ -1,14 +1,31 @@
-Django>=4.2,<5.0
-djangorestframework>=3.15
-djangorestframework-simplejwt>=5.3
+# AMANAK backend dependencies.
+#
+# Production runtime is Python 3.11 (see backend/Dockerfile). Several patched
+# releases require >=3.10, so pins are environment-marked: Python 3.10+ gets
+# the security-fixed releases, while the Python 3.8 developer/CI interpreter
+# keeps the last installable release. The advisories still present on the 3.8
+# branch (Django 4.2 is end-of-support) are tracked in
+# docs/security/dependency-audit.md with the upgrade path to 3.11.
+
+Django>=5.2.17,<6.0; python_version >= "3.10"
+Django>=4.2,<5.0; python_version < "3.10"
+djangorestframework>=3.17.2; python_version >= "3.10"
+djangorestframework>=3.15; python_version < "3.10"
+djangorestframework-simplejwt>=5.5.1; python_version >= "3.9"
+djangorestframework-simplejwt>=5.3; python_version < "3.9"
 django-cors-headers>=4.4
 psycopg2-binary>=2.9
 redis>=5.0
 celery>=5.3
-Pillow>=10.0
-python-dotenv>=1.0
+Pillow>=12.1.1; python_version >= "3.10"
+Pillow>=10.0; python_version < "3.10"
+python-dotenv>=1.2.2; python_version >= "3.10"
+python-dotenv>=1.0; python_version < "3.10"
 gunicorn>=21.2
+PyJWT>=2.12.0; python_version >= "3.9"
+sqlparse>=0.6.0; python_version >= "3.10"
 # Testing
-pytest>=8.0
+pytest>=9.0.3; python_version >= "3.10"
+pytest>=8.0; python_version < "3.10"
 pytest-django>=4.8
 pytest-cov>=5.0
