@@ -23,3 +23,7 @@ This is a monorepo structure with clearly separated packages and applications. S
 - [Security Baseline](docs/security/security-baseline.md)
 - [Development Guide](docs/operations/local-development.md)
 - [Deployment Guide](docs/operations/deployment.md)
+
+## Arabic Documentation
+
+See `docs/README.ar.md` for the full Arabic index.
