@@ -42,7 +42,3 @@ apps/mobile/.expo/
 yarn.lock
 package-lock.json
 *.bundle
-
-# Local prod-style smoke-test overrides (environment-specific)
-docker-compose.local-prod.yml
-infrastructure/nginx/amanak.local.conf
