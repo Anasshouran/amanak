@@ -1,11 +1,18 @@
-# Overrides for running the prod stack locally (no TLS, HTTP only).
+# LOCAL PRODUCTION-STYLE TESTING ONLY
 #
-# Use with a distinct project name so it never collides with the dev stack
-# (docker-compose.yml), which shares the default project name "amanak":
+# This override is for running the production-shaped stack on a local
+# machine without TLS or a real domain.
+#
+# It is NOT for deployment. Production uses docker-compose.prod.yml alone,
+# with real TLS termination by nginx and a real domain.
+#
+# Usage:
 #   docker compose -p amanak-local \
 #     -f docker-compose.prod.yml -f docker-compose.local-prod.yml up -d
 #
-# Requires infrastructure/nginx/amanak.local.conf (HTTP only, port 80).
+# Tear down:
+#   docker compose -p amanak-local \
+#     -f docker-compose.prod.yml -f docker-compose.local-prod.yml down
 
 services:
   nginx:
