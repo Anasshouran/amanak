@@ -37,9 +37,9 @@ apps/mobile/.expo/
 # Docker
 .dockerignore
 docker-compose.local-prod.ports.yml
+docker-compose.local-prod.cors.yml
 
 # Monorepo
 .pnpm-lock.yaml
 yarn.lock
-package-lock.json
 *.bundle

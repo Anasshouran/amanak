@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom"
+import { Routes, Route } from "react-router-dom"
 import { Layout } from "./components/Layout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { Login } from "./pages/Login"
@@ -10,6 +10,8 @@ import { Incidents } from "./pages/Incidents"
 import { Scanner } from "./pages/Scanner"
 import { AIAssistant } from "./pages/AIAssistant"
 import { BreachMonitor } from "./pages/BreachMonitor"
+import { Settings } from "./pages/Settings"
+import { NotFound } from "./pages/NotFound"
 
 export function App() {
   return (
@@ -30,8 +32,9 @@ export function App() {
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/ai" element={<AIAssistant />} />
         <Route path="/breach" element={<BreachMonitor />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   )
 }

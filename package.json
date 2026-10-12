@@ -12,5 +12,8 @@
   },
   "overrides": {
     "react-native": "0.74.5"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.7"
   }
 }

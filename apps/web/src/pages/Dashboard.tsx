@@ -1,36 +1,188 @@
-import { useEffect, useState } from "react"
+import type { BreachHit, DashboardOverview, ScanResultRecord } from "@amanak/shared-types"
+import { useNavigate } from "react-router-dom"
+import { Badge, Button, Card, EmptyState, ErrorState, ProgressRing, Skeleton } from "../design/components"
+import { IconPlus, IconScanner, IconShield } from "../design/icons"
+import { useT } from "../design/i18n"
+import { useTheme } from "../design/ThemeProvider"
 import { api } from "../lib/api"
-import type { DashboardOverview } from "@amanak/shared-types"
+import { formatDateTime } from "../lib/format"
+import { verdictVariant } from "../lib/labels"
+import { errorMessage, useAsync } from "../lib/useAsync"
+
+type DashboardData = {
+  overview: DashboardOverview
+  scans: ScanResultRecord[]
+  hits: BreachHit[]
+}
+
+function Kpi({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="amk-kpi">
+      <span className="amk-kpi__value">{value}</span>
+      <span className="amk-kpi__label">{label}</span>
+    </div>
+  )
+}
 
 export function Dashboard() {
-  const [data, setData] = useState<DashboardOverview | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const t = useT()
+  const { locale } = useTheme()
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    void api.dashboard().then(setData).catch((e) => setError(e.message))
-  }, [])
+  const { data, loading, error, reload } = useAsync<DashboardData>(() =>
+    Promise.all([api.dashboard(), api.scanHistory(), api.listHits().catch(() => [])]).then(
+      ([overview, scans, hits]) => ({ overview, scans, hits }),
+    ),
+  )
 
-  if (error) return <p style={{ color: "#f87171" }}>{error}</p>
-  if (!data) return <div>Loading dashboard…</div>
+  if (loading) {
+    return (
+      <div className="amk-page">
+        <div className="amk-page-head">
+          <div>
+            <h1>{t("dashboard.title")}</h1>
+            <p>{t("dashboard.subtitle")}</p>
+          </div>
+        </div>
+        <div className="amk-grid amk-grid--two">
+          <Card padded elevated>
+            <div style={{ display: "grid", justifyItems: "center", gap: 12 }}>
+              <Skeleton width={160} height={160} radius="50%" />
+              <Skeleton width={220} height={14} />
+            </div>
+          </Card>
+          <Card padded elevated>
+            <div className="amk-grid amk-grid--kpi">
+              {[0, 1, 2, 3].map((i) => (
+                <div className="amk-kpi" key={i}>
+                  <Skeleton width={48} height={28} />
+                  <Skeleton width={80} height={13} />
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+        <Card padded elevated title={t("dashboard.recentActivity")}>
+          <div className="amk-stack">
+            <Skeleton height={44} />
+            <Skeleton height={44} />
+            <Skeleton height={44} />
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
-  const cards = [
-    { label: "Security score", value: `${data.security_score}/100` },
-    { label: "Accounts tracked", value: data.accounts },
-    { label: "Devices", value: data.devices },
-    { label: "Open incidents", value: data.open_incidents },
-  ]
+  if (error || !data) {
+    return (
+      <div className="amk-page">
+        <ErrorState
+          title={t("common.error")}
+          message={errorMessage(error, t("common.error"))}
+          onRetry={reload}
+          retryLabel={t("actions.retry")}
+        />
+      </div>
+    )
+  }
+
+  const { overview, scans, hits } = data
+  const isEmpty =
+    overview.accounts === 0 &&
+    overview.devices === 0 &&
+    overview.open_incidents === 0 &&
+    scans.length === 0
 
   return (
-    <div>
-      <h2>Dashboard</h2>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "1rem" }}>
-        {cards.map((c) => (
-          <div key={c.label} style={{ background: "#1e293b", padding: "1rem", borderRadius: 8 }}>
-            <div style={{ color: "#94a3b8", fontSize: "0.875rem" }}>{c.label}</div>
-            <div style={{ fontSize: "1.5rem", fontWeight: 700 }}>{c.value}</div>
-          </div>
-        ))}
+    <div className="amk-page">
+      <div className="amk-page-head">
+        <div>
+          <h1>{t("dashboard.title")}</h1>
+          <p>{t("dashboard.subtitle")}</p>
+        </div>
       </div>
+
+      {isEmpty ? (
+        <EmptyState
+          icon={<IconShield size={30} />}
+          title={t("dashboard.empty.title")}
+          description={t("dashboard.empty.description")}
+          action={
+            <Button icon={<IconScanner size={16} />} onClick={() => navigate("/scanner")}>
+              {t("dashboard.action.scanUrl")}
+            </Button>
+          }
+        />
+      ) : (
+        <>
+          <div className="amk-grid amk-grid--two">
+            <Card padded elevated title={t("dashboard.securityScore")}>
+              <div style={{ display: "grid", justifyItems: "center", gap: 12 }}>
+                <ProgressRing value={overview.security_score} caption={`${t("common.of")} 100`} />
+                <p className="amk-muted" style={{ textAlign: "center" }}>
+                  {t("dashboard.scoreDescription")}
+                </p>
+              </div>
+            </Card>
+
+            <Card padded elevated>
+              <div className="amk-grid amk-grid--kpi">
+                <Kpi label={t("dashboard.accounts")} value={overview.accounts} />
+                <Kpi label={t("dashboard.devices")} value={overview.devices} />
+                <Kpi label={t("dashboard.openIncidents")} value={overview.open_incidents} />
+                <Kpi label={t("dashboard.breachHits")} value={hits.length} />
+              </div>
+            </Card>
+          </div>
+
+          <div className="amk-grid amk-grid--two">
+            <Card padded elevated title={t("dashboard.quickActions")}>
+              <div className="amk-row">
+                <Button icon={<IconScanner size={16} />} onClick={() => navigate("/scanner")}>
+                  {t("dashboard.action.scanUrl")}
+                </Button>
+                <Button variant="secondary" onClick={() => navigate("/scanner?tab=message")}>
+                  {t("dashboard.action.scanMessage")}
+                </Button>
+                <Button
+                  variant="secondary"
+                  icon={<IconPlus size={16} />}
+                  onClick={() => navigate("/accounts")}
+                >
+                  {t("dashboard.action.addAccount")}
+                </Button>
+              </div>
+            </Card>
+
+            <Card padded elevated title={t("dashboard.recentActivity")}>
+              {scans.length === 0 ? (
+                <p className="amk-muted">{t("dashboard.noActivity")}</p>
+              ) : (
+                <ul className="amk-list">
+                  {scans.slice(0, 5).map((scan) => (
+                    <li className="amk-listitem" key={scan.id}>
+                      <div style={{ display: "grid", gap: 2, minWidth: 0, flex: 1 }}>
+                        <span
+                          className="amk-mono"
+                          style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        >
+                          {scan.preview}
+                        </span>
+                        <span className="amk-muted" style={{ fontSize: 12 }}>
+                          {formatDateTime(scan.created_at, locale)}
+                        </span>
+                      </div>
+                      <Badge variant={verdictVariant(scan.verdict)}>
+                        {t(`scanner.verdict.${scan.verdict}`)}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   )
 }

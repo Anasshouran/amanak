@@ -1,5 +1,5 @@
 import { createContext, useContext, useCallback, useState, type ReactNode } from "react"
-import { api } from "../lib/api"
+import { api, tokens } from "../lib/api"
 import type { User } from "@amanak/shared-types"
 
 type AuthState = {
@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(async (email: string, username: string, password: string) => {
     const res = await api.register(email, username, password)
-    await api.logout() // clear seed tokens, force sign-in
+    await tokens.setTokens(res.tokens)
     setUser(res.user)
   }, [])
 

@@ -1,195 +1,331 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react"
+import type {
+  BreachHit,
+  CheckSummary,
+  MonitoredEmail,
+} from "@amanak/shared-types"
+import { useMemo, useState, type FormEvent } from "react"
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  Input,
+  Modal,
+  Skeleton,
+} from "../design/components"
+import { IconPlus, IconShield, IconTrash } from "../design/icons"
+import { useT } from "../design/i18n"
+import { useTheme } from "../design/ThemeProvider"
 import { api } from "../lib/api"
-import type { BreachHit, CheckSummary, MonitoredEmail } from "@amanak/shared-types"
+import { formatDate } from "../lib/format"
+import { errorMessage, useAsync } from "../lib/useAsync"
 
-function errorCode(err: unknown): string | undefined {
-  return (err as { code?: string } | undefined)?.code
+function isDisabled(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | undefined
+  const code = (e?.code ?? "").toLowerCase()
+  const message = (e?.message ?? "").toLowerCase()
+  return code.includes("disabled") || message.includes("disabled")
 }
 
 export function BreachMonitor() {
-  const [emails, setEmails] = useState<MonitoredEmail[]>([])
-  const [hits, setHits] = useState<BreachHit[]>([])
+  const t = useT()
+  const { locale } = useTheme()
+
+  const emails = useAsync<MonitoredEmail[]>(() => api.listMonitoredEmails())
+  const hits = useAsync<BreachHit[]>(() => api.listHits())
+
   const [email, setEmail] = useState("")
   const [label, setLabel] = useState("")
   const [consent, setConsent] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
+  const [adding, setAdding] = useState(false)
+  const [pendingRemove, setPendingRemove] = useState<MonitoredEmail | null>(null)
+  const [removing, setRemoving] = useState(false)
+  const [checking, setChecking] = useState(false)
   const [summary, setSummary] = useState<CheckSummary | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [disabled, setDisabled] = useState(false)
-  const [busy, setBusy] = useState(false)
 
-  const refresh = useCallback(async () => {
-    const [list, allHits] = await Promise.all([api.listMonitoredEmails(), api.listHits()])
-    setEmails(list)
-    setHits(allHits)
-  }, [])
-
-  useEffect(() => {
-    void refresh().catch(() => setError("Could not load breach monitor data."))
-  }, [refresh])
-
-  function handleError(err: unknown) {
-    const code = errorCode(err)
-    if (code === "breach_monitor_disabled") {
-      setDisabled(true)
-    } else if (code === "consent_required") {
-      setError("Explicit consent is required to monitor an email.")
-    } else if (code === "max_emails_reached") {
-      setError("You have reached the maximum number of monitored emails.")
-    } else if (code === "already_monitored") {
-      setError("That email is already being monitored.")
-    } else {
-      setError("The breach monitor is unavailable right now.")
+  const hitsByEmail = useMemo(() => {
+    const map = new Map<number, BreachHit[]>()
+    for (const hit of hits.data ?? []) {
+      const list = map.get(hit.monitored_email) ?? []
+      list.push(hit)
+      map.set(hit.monitored_email, list)
     }
-  }
+    return map
+  }, [hits.data])
 
-  async function onAdd(e: FormEvent) {
-    e.preventDefault()
-    if (busy) return
-    setBusy(true)
-    setError(null)
+  async function onAdd(event: FormEvent) {
+    event.preventDefault()
+    if (!consent) {
+      setFormError(t("breach.consentRequired"))
+      return
+    }
+    if (!email.trim()) return
+    setAdding(true)
+    setFormError(null)
     try {
-      await api.addMonitoredEmail({ email, label: label || undefined, consent })
+      await api.addMonitoredEmail({ email, label, consent })
       setEmail("")
       setLabel("")
       setConsent(false)
-      await refresh()
+      emails.reload()
     } catch (err) {
-      handleError(err)
+      if (isDisabled(err)) {
+        emails.reload()
+      } else {
+        setFormError(errorMessage(err, t("common.error")))
+      }
     } finally {
-      setBusy(false)
+      setAdding(false)
+    }
+  }
+
+  async function onRemove() {
+    if (!pendingRemove) return
+    setRemoving(true)
+    try {
+      await api.removeMonitoredEmail(pendingRemove.id)
+      setPendingRemove(null)
+      emails.reload()
+      hits.reload()
+    } finally {
+      setRemoving(false)
     }
   }
 
   async function onCheck() {
-    if (busy) return
-    setBusy(true)
-    setError(null)
+    setChecking(true)
     try {
-      setSummary(await api.checkBreaches())
-      await refresh()
+      const result = await api.checkBreaches()
+      setSummary(result)
+      hits.reload()
     } catch (err) {
-      handleError(err)
+      if (isDisabled(err)) emails.reload()
     } finally {
-      setBusy(false)
+      setChecking(false)
     }
   }
 
-  async function onRemove(id: number) {
-    try {
-      await api.removeMonitoredEmail(id)
-      await refresh()
-    } catch (err) {
-      handleError(err)
-    }
-  }
+  const disabled = isDisabled(emails.error) || isDisabled(hits.error)
 
   if (disabled) {
     return (
-      <div>
-        <h2>Breach Monitor</h2>
-        <p style={{ color: "#94a3b8" }}>Breach monitoring is disabled by configuration.</p>
+      <div className="amk-page">
+        <div className="amk-page-head">
+          <div>
+            <h1>{t("breach.title")}</h1>
+            <p>{t("breach.subtitle")}</p>
+          </div>
+        </div>
+        <EmptyState
+          icon={<IconShield size={30} />}
+          title={t("breach.disabled.title")}
+          description={t("breach.disabled.description")}
+        />
       </div>
     )
   }
 
-  const grouped = hits.reduce<Record<string, BreachHit[]>>((acc, hit) => {
-    ;(acc[hit.email] ??= []).push(hit)
-    return acc
-  }, {})
-
   return (
-    <div>
-      <h2>Breach Monitor</h2>
-      <p style={{ color: "#94a3b8" }}>
-        Opt-in only: an email is checked against the breach provider only while monitoring is enabled and after
-        you explicitly consent. Provide a label, tick consent, and add the address.
-      </p>
-
-      <form onSubmit={onAdd} style={{ display: "flex", flexWrap: "wrap", gap: "0.5rem", marginBottom: "1rem" }}>
-        <input
-          style={{ flex: 2, minWidth: 200 }}
-          type="email"
-          placeholder="name@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          style={{ flex: 1, minWidth: 120 }}
-          placeholder="Label (optional)"
-          value={label}
-          onChange={(e) => setLabel(e.target.value)}
-        />
-        <label style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#e2e8f0" }}>
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          I consent
-        </label>
-        <button type="submit" disabled={busy}>
-          Add email
-        </button>
-      </form>
-
-      <button onClick={() => void onCheck()} disabled={busy} style={{ marginBottom: "1rem" }}>
-        {busy ? "Working…" : "Check now"}
-      </button>
+    <div className="amk-page">
+      <div className="amk-page-head">
+        <div>
+          <h1>{t("breach.title")}</h1>
+          <p>{t("breach.subtitle")}</p>
+        </div>
+        <Button
+          variant="secondary"
+          loading={checking}
+          onClick={() => void onCheck()}
+          disabled={(emails.data?.length ?? 0) === 0}
+        >
+          {t("actions.checkNow")}
+        </Button>
+      </div>
 
       {summary && (
-        <p style={{ color: "#38bdf8" }}>
-          Checked {summary.checked} · new {summary.hits_new} · total {summary.hits_total}
-        </p>
+        <Card padded>
+          <span className="amk-muted">
+            {t("breach.summary", {
+              checked: summary.checked,
+              new: summary.hits_new,
+              total: summary.hits_total,
+            })}
+          </span>
+        </Card>
       )}
 
-      {error && <p style={{ color: "#f87171" }}>{error}</p>}
-
-      <h3>Monitored emails</h3>
-      {emails.length === 0 ? (
-        <p style={{ color: "#94a3b8" }}>No emails are being monitored.</p>
-      ) : (
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {emails.map((m) => (
-            <li
-              key={m.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                background: "#1e293b",
-                borderRadius: 8,
-                padding: "0.6rem 0.9rem",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <span>
-                {m.email} {m.label && <span style={{ color: "#94a3b8" }}>· {m.label}</span>}
-              </span>
-              <button onClick={() => void onRemove(m.id)}>Remove</button>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <h3>Breach hits</h3>
-      {hits.length === 0 ? (
-        <p style={{ color: "#94a3b8" }}>No breaches found.</p>
-      ) : (
-        Object.entries(grouped).map(([address, group]) => (
-          <div key={address} style={{ marginBottom: "1rem" }}>
-            <strong style={{ color: "#38bdf8" }}>{address}</strong>
-            <ul style={{ paddingLeft: "1.25rem" }}>
-              {group.map((h) => (
-                <li key={h.id} style={{ marginTop: "0.35rem" }}>
-                  <span style={{ color: "#f87171", fontWeight: 600 }}>{h.name}</span>
-                  {h.domain && <span style={{ color: "#94a3b8" }}> ({h.domain})</span>} — {h.breach_date}
-                  <div style={{ color: "#cbd5e1", fontSize: "0.875rem" }}>
-                    {h.data_classes.join(", ")}
-                    {h.is_verified ? " · verified" : " · unverified"}
-                  </div>
-                </li>
-              ))}
-            </ul>
+      <Card padded elevated title={t("breach.add.title")}>
+        <form className="amk-stack" onSubmit={(e) => void onAdd(e)} noValidate>
+          <div className="amk-grid amk-grid--two">
+            <Input
+              label={t("breach.email")}
+              type="email"
+              dir="ltr"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              error={formError ?? undefined}
+            />
+            <Input
+              label={`${t("breach.label")} (${t("common.optional")})`}
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+            />
           </div>
-        ))
-      )}
+          <label className="amk-check">
+            <input
+              type="checkbox"
+              checked={consent}
+              onChange={(e) => {
+                setConsent(e.target.checked)
+                if (e.target.checked) setFormError(null)
+              }}
+            />
+            <span>{t("breach.consent")}</span>
+          </label>
+          {!consent && formError && (
+            <span className="amk-field-error" role="alert">
+              {formError}
+            </span>
+          )}
+          <div className="amk-row">
+            <Button
+              type="submit"
+              icon={<IconPlus size={16} />}
+              loading={adding}
+              disabled={!consent || !email.trim()}
+            >
+              {t("actions.addEmail")}
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      <Card padded elevated title={t("breach.list.title")}>
+        {emails.loading ? (
+          <div className="amk-stack">
+            <Skeleton height={48} />
+            <Skeleton height={48} />
+          </div>
+        ) : emails.error ? (
+          <ErrorState
+            title={t("common.error")}
+            message={errorMessage(emails.error, t("common.error"))}
+            onRetry={emails.reload}
+            retryLabel={t("actions.retry")}
+          />
+        ) : (emails.data?.length ?? 0) === 0 ? (
+          <EmptyState
+            icon={<IconShield size={30} />}
+            title={t("breach.list.empty.title")}
+            description={t("breach.list.empty.description")}
+          />
+        ) : (
+          <ul className="amk-list">
+            {emails.data!.map((item) => (
+              <li className="amk-listitem" key={item.id}>
+                <div style={{ display: "grid", gap: 2 }}>
+                  <span style={{ fontWeight: 600 }}>{item.label || item.email}</span>
+                  <span className="amk-muted" dir="ltr">
+                    {item.email}
+                  </span>
+                </div>
+                <div className="amk-row">
+                  <Badge variant={(hitsByEmail.get(item.id)?.length ?? 0) > 0 ? "danger" : "neutral"}>
+                    {t("breach.hit.count", { count: hitsByEmail.get(item.id)?.length ?? 0 })}
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={<IconTrash size={16} />}
+                    aria-label={t("actions.remove")}
+                    onClick={() => setPendingRemove(item)}
+                  />
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card padded elevated title={t("breach.hits.title")}>
+        {hits.loading ? (
+          <div className="amk-stack">
+            <Skeleton height={64} />
+            <Skeleton height={64} />
+          </div>
+        ) : hits.error ? (
+          <ErrorState
+            title={t("common.error")}
+            message={errorMessage(hits.error, t("common.error"))}
+            onRetry={hits.reload}
+            retryLabel={t("actions.retry")}
+          />
+        ) : (hits.data?.length ?? 0) === 0 ? (
+          <EmptyState
+            icon={<IconShield size={30} />}
+            title={t("breach.hits.empty.title")}
+            description={t("breach.hits.empty.description")}
+          />
+        ) : (
+          <div className="amk-stack">
+            {emails.data!
+              .filter((item) => (hitsByEmail.get(item.id)?.length ?? 0) > 0)
+              .map((item) => (
+                <div key={item.id}>
+                  <h4 className="amk-muted" style={{ marginBottom: 8 }}>
+                    {t("breach.hits.for", { email: item.email })}
+                  </h4>
+                  <ul className="amk-list">
+                    {hitsByEmail.get(item.id)!.map((hit) => (
+                      <li className="amk-listitem" key={hit.id} style={{ alignItems: "flex-start" }}>
+                        <div style={{ display: "grid", gap: 6, flex: 1 }}>
+                          <div className="amk-row" style={{ justifyContent: "space-between" }}>
+                            <span style={{ fontWeight: 600 }}>{hit.name}</span>
+                            <Badge variant={hit.is_verified ? "danger" : "warning"}>
+                              {hit.is_verified ? t("breach.verified") : t("breach.unverified")}
+                            </Badge>
+                          </div>
+                          <span className="amk-muted" style={{ fontSize: 12 }}>
+                            {formatDate(hit.breach_date, locale)} · {hit.domain}
+                          </span>
+                          {hit.data_classes.length > 0 && (
+                            <div className="amk-row">
+                              {hit.data_classes.map((dc) => (
+                                <Badge key={dc} variant="neutral">
+                                  {dc}
+                                </Badge>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+          </div>
+        )}
+      </Card>
+
+      <Modal
+        open={pendingRemove !== null}
+        onClose={() => setPendingRemove(null)}
+        title={t("breach.removeConfirm.title")}
+        actions={
+          <>
+            <Button variant="ghost" onClick={() => setPendingRemove(null)}>
+              {t("actions.cancel")}
+            </Button>
+            <Button variant="danger" loading={removing} onClick={() => void onRemove()}>
+              {t("actions.remove")}
+            </Button>
+          </>
+        }
+      >
+        <p className="amk-muted">{t("breach.removeConfirm.description")}</p>
+      </Modal>
     </div>
   )
 }
