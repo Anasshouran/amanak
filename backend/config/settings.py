@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     "scanner",
     "apps.ai_assistant",
     "apps.breach_monitor",
+    "apps.two_factor",
 ]
 
 MIDDLEWARE = [
@@ -392,6 +393,9 @@ REST_FRAMEWORK = {
         "breach_check_user": "2/min",
         "breach_check_ip": "5/min",
         "breach_add_user": "10/min",
+        "two_factor_entries_user": "120/min",
+        "two_factor_profile_user": "30/min",
+        "two_factor_list_user": "240/min",
     },
 }
 

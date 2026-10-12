@@ -77,6 +77,20 @@ share one stylesheet.
 - Live regions (`role="status"` toasts, `aria-live`) announce async results.
 - `prefers-reduced-motion` disables transitions and animations.
 
+## 2FA vault (P8)
+
+The `/vault` route (`src/pages/TwoFactor.tsx`) is a server-blind TOTP manager.
+Secrets are encrypted in the browser with `AES-256-GCM` under a key derived
+from a master password via `PBKDF2-HMAC-SHA256` (310,000 iterations); the
+server only stores ciphertext. The crypto lives in `src/crypto/`
+(`base32`, `totp`, `kdf`, `aes`, `unlock`, `bytes`) and is covered by Vitest
+against RFC 4648, RFC 6238 and GCM vectors. A vault opens on both web and
+mobile because the blob format is identical (see
+`docs/security/2fa-privacy.md` and ADR-0006).
+
+QR import uses an uploaded image decoded with `jsqr`; manual base32 entry is
+always available. The vault auto-locks after 5 minutes of inactivity.
+
 ## Tests
 
 Vitest runs against a jsdom environment with React Testing Library and

@@ -27,6 +27,7 @@ function TabsNavigator() {
         options={{ title: `Dashboard — ${user.email}`, headerRight: () => <Button title="Log out" onPress={() => void logout()} /> }}
       />
       <Tabs.Screen name="accounts" options={{ title: "Accounts" }} />
+      <Tabs.Screen name="vault" options={{ title: "2FA Vault" }} />
       <Tabs.Screen name="devices" options={{ title: "Devices" }} />
       <Tabs.Screen name="incidents" options={{ title: "Incidents" }} />
       <Tabs.Screen name="scanner" options={{ title: "Scanner" }} />

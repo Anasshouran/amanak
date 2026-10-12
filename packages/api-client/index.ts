@@ -25,6 +25,10 @@ import type {
   ScanResponse,
   ScanResultRecord,
   SecurityScore,
+  TwoFactorCreateEntryInput,
+  TwoFactorEntry,
+  TwoFactorProfile,
+  TwoFactorUpdateEntryInput,
   User,
 } from "@amanak/shared-types"
 
@@ -275,5 +279,34 @@ export class ApiClient {
 
   listHits() {
     return this.request<BreachHit[]>("GET", "/breach/hits/")
+  }
+
+  // ---- two-factor manager (P8) ----
+  getTwoFactorProfile() {
+    return this.request<TwoFactorProfile>("GET", "/two-factor/profile/")
+  }
+
+  createTwoFactorProfile(input: { kdf_salt: string }) {
+    return this.request<TwoFactorProfile>("POST", "/two-factor/profile/", input)
+  }
+
+  deleteTwoFactorProfile() {
+    return this.request<null>("DELETE", "/two-factor/profile/")
+  }
+
+  listTwoFactorEntries() {
+    return this.request<TwoFactorEntry[]>("GET", "/two-factor/entries/")
+  }
+
+  createTwoFactorEntry(input: TwoFactorCreateEntryInput) {
+    return this.request<TwoFactorEntry>("POST", "/two-factor/entries/", input)
+  }
+
+  updateTwoFactorEntry(id: number, input: TwoFactorUpdateEntryInput) {
+    return this.request<TwoFactorEntry>("PATCH", `/two-factor/entries/${id}/`, input)
+  }
+
+  deleteTwoFactorEntry(id: number) {
+    return this.request<null>("DELETE", `/two-factor/entries/${id}/`)
   }
 }

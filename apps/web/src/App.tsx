@@ -10,6 +10,7 @@ import { Incidents } from "./pages/Incidents"
 import { Scanner } from "./pages/Scanner"
 import { AIAssistant } from "./pages/AIAssistant"
 import { BreachMonitor } from "./pages/BreachMonitor"
+import { TwoFactor } from "./pages/TwoFactor"
 import { Settings } from "./pages/Settings"
 import { NotFound } from "./pages/NotFound"
 
@@ -32,6 +33,7 @@ export function App() {
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/ai" element={<AIAssistant />} />
         <Route path="/breach" element={<BreachMonitor />} />
+        <Route path="/vault" element={<TwoFactor />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<NotFound />} />

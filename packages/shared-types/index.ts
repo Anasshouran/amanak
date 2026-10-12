@@ -180,3 +180,38 @@ export type BreachConsentPayload = {
   label?: string
   consent: boolean
 }
+
+// ---- Two-factor manager (P8). Server-blind: blobs are opaque base64. ----
+
+export type TwoFactorProfile = {
+  id: number
+  kdf_salt: string
+  kdf_iterations: number
+  kdf_algorithm: string
+  created_at: string
+  updated_at: string
+}
+
+export type TwoFactorEntry = {
+  id: number
+  label: string
+  issuer: string
+  ciphertext: string
+  iv: string
+  created_at: string
+  updated_at: string
+}
+
+export type TwoFactorCreateEntryInput = {
+  label: string
+  issuer?: string
+  ciphertext: string
+  iv: string
+}
+
+export type TwoFactorUpdateEntryInput = Partial<{
+  label: string
+  issuer: string
+  ciphertext: string
+  iv: string
+}>

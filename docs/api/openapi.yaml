@@ -536,6 +536,151 @@ paths:
         "401":
           description: Authentication required
 
+  /two-factor/profile/:
+    get:
+      summary: Get the caller's 2FA vault profile
+      description: |
+        Requires authentication. A profile holds the KDF parameters (salt,
+        iterations, algorithm) needed to derive the vault key client-side; the
+        server can never derive it. Returns 404 not_found when the caller has
+        not created a vault yet.
+      responses:
+        "200":
+          description: Vault profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TwoFactorProfile" }
+        "401":
+          description: Authentication required
+        "404":
+          description: No vault for this user (code not_found)
+    post:
+      summary: Create the caller's 2FA vault profile
+      description: |
+        Requires authentication. The client generates a fresh 32-byte salt and
+        sends it base64-encoded. Returns 409 profile_exists when a profile
+        already exists. Throttled at 30/min per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TwoFactorCreateProfilePayload" }
+      responses:
+        "201":
+          description: Vault profile created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TwoFactorProfile" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+        "409":
+          description: A vault already exists (code profile_exists)
+    delete:
+      summary: Delete the caller's vault and every entry in it
+      description: |
+        Requires authentication. Cascades all entries. Returns 404 not_found
+        when no profile exists.
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Authentication required
+        "404":
+          description: No vault for this user (code not_found)
+
+  /two-factor/entries/:
+    get:
+      summary: List the caller's vault entries
+      description: |
+        Requires authentication. Returns only the calling user's entries. The
+        ciphertext and iv are opaque base64 blobs the server never decrypts.
+        Throttled at 240/min per user. Requires a profile (404 not_found
+        without one).
+      responses:
+        "200":
+          description: Vault entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/TwoFactorEntry" }
+        "401":
+          description: Authentication required
+        "404":
+          description: No vault for this user (code not_found)
+    post:
+      summary: Add an encrypted entry to the caller's vault
+      description: |
+        Requires authentication. The body carries the plaintext label/issuer and
+        the base64 ciphertext/iv. On creation, clients that bind the entry's id
+        as AES-GCM additional authenticated data must PATCH the ciphertext with
+        the real id afterwards. Throttled at 120/min per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TwoFactorCreateEntryPayload" }
+      responses:
+        "201":
+          description: Entry created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TwoFactorEntry" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+        "404":
+          description: No vault for this user (code not_found)
+
+  /two-factor/entries/{id}/:
+    patch:
+      summary: Update an entry (owner-scoped)
+      description: |
+        Requires authentication. Partially updates label/issuer/ciphertext/iv.
+        A row owned by another user returns 404. Throttled at 120/min per user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/TwoFactorUpdateEntryPayload" }
+      responses:
+        "200":
+          description: Entry updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TwoFactorEntry" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found
+    delete:
+      summary: Delete an entry (owner-scoped)
+      description: |
+        Requires authentication. A row owned by another user returns 404.
+        Throttled at 120/min per user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found
+
 components:
   securitySchemes:
     bearerAuth:
@@ -770,3 +915,49 @@ components:
         email: { type: string, format: email }
         label: { type: string, maxLength: 100 }
         consent: { type: boolean, description: "Must be true; false or missing returns 400 consent_required" }
+    TwoFactorProfile:
+      type: object
+      description: "KDF parameters for the caller's server-blind 2FA vault."
+      properties:
+        id: { type: integer }
+        kdf_salt: { type: string, description: "Base64-encoded 32-byte salt (server never derives the key)" }
+        kdf_iterations: { type: integer, description: "PBKDF2 iteration count fixed by the server" }
+        kdf_algorithm: { type: string, description: "KDF/hash identifier, e.g. PBKDF2-HMAC-SHA256" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    TwoFactorCreateProfilePayload:
+      type: object
+      required: [kdf_salt]
+      properties:
+        kdf_salt: { type: string, description: "Base64-encoded 32-byte salt" }
+
+    TwoFactorEntry:
+      type: object
+      description: "One encrypted TOTP secret. ciphertext/iv are opaque to the server."
+      properties:
+        id: { type: integer }
+        label: { type: string }
+        issuer: { type: string }
+        ciphertext: { type: string, description: "Base64 AES-256-GCM ciphertext including the 16-byte tag" }
+        iv: { type: string, description: "Base64 12-byte GCM nonce (unique per write)" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    TwoFactorCreateEntryPayload:
+      type: object
+      required: [label, ciphertext, iv]
+      properties:
+        label: { type: string }
+        issuer: { type: string }
+        ciphertext: { type: string, description: "Base64 AES-256-GCM ciphertext + tag" }
+        iv: { type: string, description: "Base64 12-byte GCM nonce" }
+
+    TwoFactorUpdateEntryPayload:
+      type: object
+      description: "Any subset of entry fields. Send a fresh ciphertext+iv when re-encrypting."
+      properties:
+        label: { type: string }
+        issuer: { type: string }
+        ciphertext: { type: string }
+        iv: { type: string }

@@ -214,3 +214,31 @@ export function IconLogout(p: IconProps) {
     </svg>
   )
 }
+
+export function IconKey(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <circle cx="7.5" cy="16.5" r="4.5" />
+      <path d="M10.6 13.4 21 3" />
+      <path d="M18 6l3 3" />
+    </svg>
+  )
+}
+
+export function IconCopy(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15V5a2 2 0 0 1 2-2h10" />
+    </svg>
+  )
+}
+
+export function IconLock(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <rect x="5" y="11" width="14" height="9" rx="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+    </svg>
+  )
+}

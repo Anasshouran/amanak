@@ -3,6 +3,22 @@
 The AMANAK mobile client: an Expo (React Native) app sharing the
 `@amanak/api-client` and `@amanak/shared-types` packages with the web app.
 
+## 2FA vault (P8)
+
+The **2FA Vault** tab (`app/(tabs)/vault.tsx`) is the mobile mirror of the web
+vault: create/unlock a server-blind vault, list entries with live TOTP codes,
+scan a QR code with the camera (`expo-camera`) or type a base32 key, copy a
+code (`expo-clipboard`), edit/delete entries, and delete the vault. The vault
+auto-locks after 5 minutes of inactivity.
+
+React Native / Hermes has no Web Crypto and `expo-crypto` exposes only random
+bytes and digests, so the crypto is implemented in **pure TypeScript** under
+`src/lib/vault/` (`base32`, `sha1`, `sha256`, `hmac`, `pbkdf2`, `aes`, `gcm`,
+`totp`, `vault`, `bytes`, `random`). It produces **byte-identical** blobs to the
+web client, so the same vault opens on both. Correctness is enforced with
+differential tests against the platform WebCrypto API plus FIPS-197 / NIST /
+RFC known-answer vectors. See `docs/security/2fa-privacy.md` and ADR-0006.
+
 ## API base URL
 
 `apps/mobile/src/lib/apiUrl.ts` resolves the backend base URL in this order:

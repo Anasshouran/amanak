@@ -7,6 +7,7 @@ import {
   IconDashboard,
   IconDevices,
   IconIncidents,
+  IconKey,
   IconScanner,
   IconSettings,
   IconShield,
@@ -27,6 +28,7 @@ const LINKS: NavEntry[] = [
   { to: "/devices", key: "nav.devices", icon: IconDevices },
   { to: "/incidents", key: "nav.incidents", icon: IconIncidents },
   { to: "/ai", key: "nav.ai", icon: IconAI },
+  { to: "/vault", key: "nav.2fa", icon: IconKey },
   { to: "/settings", key: "nav.settings", icon: IconSettings },
 ]
 
