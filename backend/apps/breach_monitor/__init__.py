@@ -1,0 +1,1 @@
+"""AMANAK Breach Monitor app."""

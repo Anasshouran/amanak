@@ -13,11 +13,15 @@ import type {
   ApiError,
   AuthResponse,
   AuthTokens,
+  BreachConsentPayload,
+  BreachHit,
+  CheckSummary,
   DashboardOverview,
   Device,
   DeviceInput,
   Incident,
   IncidentInput,
+  MonitoredEmail,
   ScanResponse,
   ScanResultRecord,
   SecurityScore,
@@ -250,5 +254,26 @@ export class ApiClient {
 
   aiGuidance(topic: AITopic) {
     return this.request<AIResponse>("POST", "/ai/guidance", { topic })
+  }
+
+  // ---- breach monitor ----
+  listMonitoredEmails() {
+    return this.request<MonitoredEmail[]>("GET", "/breach/monitored-emails/")
+  }
+
+  addMonitoredEmail(input: BreachConsentPayload) {
+    return this.request<MonitoredEmail>("POST", "/breach/monitored-emails/", input)
+  }
+
+  removeMonitoredEmail(id: number) {
+    return this.request<null>("DELETE", `/breach/monitored-emails/${id}/`)
+  }
+
+  checkBreaches() {
+    return this.request<CheckSummary>("POST", "/breach/check/")
+  }
+
+  listHits() {
+    return this.request<BreachHit[]>("GET", "/breach/hits/")
   }
 }

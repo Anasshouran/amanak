@@ -16,4 +16,5 @@ urlpatterns = [
     path("api/v1/incidents/", include("incidents.urls")),
     path("api/v1/scan/", include("scanner.urls")),
     path("api/v1/ai/", include("apps.ai_assistant.urls")),
+    path("api/v1/breach/", include("apps.breach_monitor.urls")),
 ]

@@ -142,3 +142,41 @@ export type AIResponse = {
   model: string
   tokens_used: number
 }
+
+// ---- Breach monitor (P7). Opt-in, privacy-preserving, disabled by default. ----
+
+export type MonitoredEmail = {
+  id: number
+  email: string
+  label: string
+  is_active: boolean
+  consent_given_at: string
+  created_at: string
+  updated_at: string
+}
+
+export type BreachHit = {
+  id: number
+  monitored_email: number
+  email: string
+  name: string
+  domain: string
+  breach_date: string
+  pwn_count: number | null
+  data_classes: string[]
+  is_verified: boolean
+  first_seen_at: string
+  last_checked_at: string
+}
+
+export type CheckSummary = {
+  checked: number
+  hits_new: number
+  hits_total: number
+}
+
+export type BreachConsentPayload = {
+  email: string
+  label?: string
+  consent: boolean
+}

@@ -427,6 +427,115 @@ paths:
         "503":
           $ref: "#/components/responses/AIDisabled"
 
+  /breach/monitored-emails/:
+    get:
+      summary: List the caller's monitored emails (breach monitor)
+      description: |
+        Requires authentication. Returns only the calling user's rows. When
+        BREACH_MONITOR_ENABLED is false the list is always empty (200 []), so
+        the endpoint never leaks whether monitoring is configured.
+      responses:
+        "200":
+          description: Monitored emails
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MonitoredEmail" }
+        "401":
+          description: Authentication required
+    post:
+      summary: Opt an email into breach monitoring
+      description: |
+        Requires authentication and explicit consent (consent must be true;
+        false or missing returns 400 consent_required). The address is stored
+        but is only ever handed to a provider while monitoring is enabled.
+        When disabled returns 503 breach_monitor_disabled. A per-user maximum
+        (default 5) applies (400 max_emails_reached); duplicates return 400
+        already_monitored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/BreachConsentPayload" }
+      responses:
+        "201":
+          description: Monitored email created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MonitoredEmail" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+        "503":
+          $ref: "#/components/responses/BreachMonitorDisabled"
+
+  /breach/monitored-emails/{id}/:
+    delete:
+      summary: Stop monitoring an email (owner-scoped)
+      description: |
+        Requires authentication. Deletes the monitored email and cascades its
+        hits. A row owned by another user returns 404. Returns 503 when
+        monitoring is disabled.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found
+        "503":
+          $ref: "#/components/responses/BreachMonitorDisabled"
+
+  /breach/check/:
+    post:
+      summary: Check monitored emails against the breach provider
+      description: |
+        Requires authentication. Runs the configured provider against the
+        caller's active monitored emails and upserts new hits, de-duplicated by
+        (email, breach name). Raw provider responses are never stored, and raw
+        addresses are never logged (only sha256(email)[:8]). When disabled
+        returns 503 breach_monitor_disabled. Per-user limit 2/min and per-IP
+        limit 5/min apply; exceeding a limit returns 429. Provider failure
+        returns 502 breach_provider_error.
+      responses:
+        "200":
+          description: Check summary
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckSummary" }
+        "401":
+          description: Authentication required
+        "429":
+          description: Rate limit exceeded
+        "502":
+          description: Provider unavailable
+        "503":
+          $ref: "#/components/responses/BreachMonitorDisabled"
+
+  /breach/hits/:
+    get:
+      summary: List the caller's breach hits
+      description: |
+        Requires authentication. Returns hits for the caller's monitored emails
+        only. Returns 200 [] when monitoring is disabled.
+      responses:
+        "200":
+          description: Breach hits
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/BreachHit" }
+        "401":
+          description: Authentication required
+
 components:
   securitySchemes:
     bearerAuth:
@@ -454,6 +563,15 @@ components:
             type: object
             properties:
               code: { type: string, enum: [ai_disabled] }
+
+    BreachMonitorDisabled:
+      description: Breach monitoring is disabled by configuration
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              code: { type: string, enum: [breach_monitor_disabled] }
 
   schemas:
     User:
@@ -609,3 +727,46 @@ components:
         provider: { type: string, enum: [null, fake, openai, anthropic] }
         model: { type: string }
         tokens_used: { type: integer }
+
+    MonitoredEmail:
+      type: object
+      properties:
+        id: { type: integer }
+        email: { type: string, format: email }
+        label: { type: string }
+        is_active: { type: boolean }
+        consent_given_at: { type: string, format: date-time }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    BreachHit:
+      type: object
+      properties:
+        id: { type: integer }
+        monitored_email: { type: integer }
+        email: { type: string, format: email, description: "Owning monitored email address" }
+        name: { type: string }
+        domain: { type: string }
+        breach_date: { type: string, format: date }
+        pwn_count: { type: [integer, "null"] }
+        data_classes:
+          type: array
+          items: { type: string }
+        is_verified: { type: boolean }
+        first_seen_at: { type: string, format: date-time }
+        last_checked_at: { type: string, format: date-time }
+
+    CheckSummary:
+      type: object
+      properties:
+        checked: { type: integer }
+        hits_new: { type: integer }
+        hits_total: { type: integer }
+
+    BreachConsentPayload:
+      type: object
+      required: [email, consent]
+      properties:
+        email: { type: string, format: email }
+        label: { type: string, maxLength: 100 }
+        consent: { type: boolean, description: "Must be true; false or missing returns 400 consent_required" }

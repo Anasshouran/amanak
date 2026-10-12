@@ -9,6 +9,7 @@ import { Devices } from "./pages/Devices"
 import { Incidents } from "./pages/Incidents"
 import { Scanner } from "./pages/Scanner"
 import { AIAssistant } from "./pages/AIAssistant"
+import { BreachMonitor } from "./pages/BreachMonitor"
 
 export function App() {
   return (
@@ -28,6 +29,7 @@ export function App() {
         <Route path="/incidents" element={<Incidents />} />
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/ai" element={<AIAssistant />} />
+        <Route path="/breach" element={<BreachMonitor />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

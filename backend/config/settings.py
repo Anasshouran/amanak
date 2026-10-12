@@ -80,6 +80,7 @@ INSTALLED_APPS = [
     "incidents",
     "scanner",
     "apps.ai_assistant",
+    "apps.breach_monitor",
 ]
 
 MIDDLEWARE = [
@@ -340,6 +341,17 @@ AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", "15"))
 AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "1024"))
 AI_DAILY_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", "100"))
 
+# Breach monitor (P7). Disabled by default: no email leaves the system unless
+# BREACH_MONITOR_ENABLED is explicitly turned on AND a user has opted an address
+# in. BREACH_FAKE_PROVIDER swaps the HIBP client for an offline deterministic
+# provider (tests only). A monitored email is sent to the provider only after
+# both conditions hold.
+BREACH_MONITOR_ENABLED = _env_bool("BREACH_MONITOR_ENABLED", "false")
+BREACH_FAKE_PROVIDER = _env_bool("BREACH_FAKE_PROVIDER", "false")
+HIBP_API_KEY = os.environ.get("HIBP_API_KEY", "")
+BREACH_MONITOR_TIMEOUT = int(os.environ.get("BREACH_MONITOR_TIMEOUT", "8"))
+BREACH_MONITOR_MAX_EMAILS = int(os.environ.get("BREACH_MONITOR_MAX_EMAILS", "5"))
+
 # REST Framework settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
@@ -360,6 +372,9 @@ REST_FRAMEWORK = {
         "scan_global": "1000/min",
         "ai_user": "10/min",
         "ai_daily": f"{AI_DAILY_LIMIT}/day",
+        "breach_check_user": "2/min",
+        "breach_check_ip": "5/min",
+        "breach_add_user": "10/min",
     },
 }
 
