@@ -9,6 +9,8 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
@@ -126,7 +128,15 @@ class UserViewSet(viewsets.ViewSet):
     @action(methods=["post"], detail=False)
     def login(self, request):
         serializer = UserLoginSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except DRFValidationError as exc:
+            # A credential mismatch is an authentication failure (401), not a
+            # malformed-request validation error (400). Field-level errors
+            # (missing/malformed email) still propagate as 400.
+            if "non_field_errors" in exc.detail:
+                raise AuthenticationFailed("Invalid credentials")
+            raise
         user = serializer.validated_user
         tokens = _tokens_for(user)
         response = Response({"user": UserSerializer(user).data, "tokens": tokens})

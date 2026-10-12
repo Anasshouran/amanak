@@ -7,11 +7,14 @@ guess/know the primary key.
 """
 
 import pytest
+from django.contrib.auth import get_user_model
 from rest_framework import status
 
 from accounts.models import Account
 from devices.models import Device
 from incidents.models import Incident
+
+User = get_user_model()
 
 pytestmark = pytest.mark.django_db
 
@@ -224,3 +227,24 @@ def test_aiconversation_queryset_is_owner_scoped(user_a, user_b):
     )
     assert not AIConversation.objects.filter(user=user_a).exists()
     assert AIConversation.objects.filter(user=user_b).count() == 1
+
+
+# ---------------------------------------------- scan history isolation (P7.2)
+
+
+def test_user2_cannot_see_user1_scan_history(api_client):
+    u1 = User.objects.create_user(
+        email="u1@test.local", username="u1", password="Pass12345!"
+    )
+    u2 = User.objects.create_user(
+        email="u2@test.local", username="u2", password="Pass12345!"
+    )
+    api_client.force_authenticate(u1)
+    scan = api_client.post(
+        "/api/v1/scan/url", {"input": "https://example.com"}, format="json"
+    )
+    assert scan.status_code == status.HTTP_200_OK
+    api_client.force_authenticate(u2)
+    response = api_client.get("/api/v1/scan/history")
+    assert response.status_code == status.HTTP_200_OK
+    assert response.data == []

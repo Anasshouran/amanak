@@ -62,7 +62,23 @@ class TestAuthFlow:
             {"email": "a@example.com", "password": "wrong-password"},
             format="json",
         )
-        assert resp.status_code == status.HTTP_400_BAD_REQUEST
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_login_invalid_credentials_returns_401(self, api_client, user_a):
+        resp = api_client.post(
+            "/api/v1/auth/login/",
+            {"email": "a@example.com", "password": "totally-wrong"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_login_sql_injection_returns_401(self, api_client):
+        resp = api_client.post(
+            "/api/v1/auth/login/",
+            {"email": "admin'--@x.com", "password": "x"},
+            format="json",
+        )
+        assert resp.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_refresh_token_returns_new_access(self, api_client, user_a):
         login = api_client.post(

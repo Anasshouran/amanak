@@ -125,3 +125,9 @@ verdict means "worth a second look", not "confirmed malicious". To report a
 false positive, keep the redacted match evidence (rule ID + description) and
 file it against the scanner ruleset. Never include sensitive raw input in
 reports.
+
+## Out of scope
+
+The scanner detects phishing and social-engineering content only.
+HTML/JS injection (XSS) is not in scope — the rendering layer
+(React) auto-escapes and does not execute untrusted HTML.
