@@ -59,6 +59,30 @@ npm install                     # once, from repo root
 cd apps/web && npm run dev      # http://localhost:5173, proxies /api to :8000
 ```
 
+### End-to-end tests (Playwright)
+
+The E2E suite needs the backend reachable (the local Compose stack exposes it
+at `http://localhost:8080`). Playwright starts the Vite dev server itself, and
+`reuseExistingServer` reuses one that is already running.
+
+The suite makes many auth calls (each full page load refreshes the session),
+which exceeds the production `auth` throttle of 20/min. Run the backend it
+targets with `DJANGO_DEBUG=true` and a raised `AUTH_THROTTLE_RATE` — the rate is
+only overridable in debug; production always enforces 20/min. The CI workflow
+sets both for its E2E backend.
+
+```bash
+cd apps/web
+npx playwright install --with-deps chromium   # once
+npm run e2e                                   # headless run
+npm run e2e:ui                                # interactive mode
+npm run e2e:screenshots                       # writes screenshots/ (40 PNGs)
+```
+
+The breach monitor is **enabled** in the local stack (`.env.production` sets
+`BREACH_MONITOR_ENABLED=True` with the offline fake provider), so the enabled
+breach flow runs; the disabled-state test skips itself automatically.
+
 ## Install (monorepo)
 
 From the repository root once:
@@ -85,8 +109,12 @@ npm run start      # = EXPO_USE_METRO_WORKSPACE_ROOT=1 expo start
   env baked into `npm run start`. Keep both in sync with the repo layout.
 - Scan the QR with Expo Go, run `npm run android`/`ios for emulators, or
   `npm run web`.
-- `apps/mobile/src/lib/api.ts` points at `127.0.0.1:8000` (and `10.0.2.2` on
-  the Android emulator). On a physical device set `API_URL` to your LAN IP.
+- `apps/mobile/src/lib/apiUrl.ts` resolves the API base URL from
+  `EXPO_PUBLIC_API_URL` first, then per platform (`10.0.2.2:8080` on the
+  Android emulator; `127.0.0.1:8080` on the iOS simulator and Expo web). On a
+  physical device it fails fast unless `EXPO_PUBLIC_API_URL` is set, e.g.
+  `EXPO_PUBLIC_API_URL=http://<LAN-IP>:8080 npx expo start`.
+- Mobile unit tests: `cd apps/mobile && npm test`.
 
 > Note: this sandbox installs with `--ignore-scripts` (native-module
 > postinstall steps do not run), which is fine for bundling; on a normal dev
@@ -110,6 +138,10 @@ Copy `.env.example` to `.env` and configure as needed. The backend currently
 runs on sqlite with DEBUG=true by default for local development; production
 must override `DEBUG`, `SECRET_KEY`, `ALLOWED_HOSTS` and use Postgres (see
 `docs/architecture/security-baseline.md`).
+
+`AUTH_THROTTLE_RATE` raises the `auth` rate limit (default `20/min`) and is only
+honored when `DJANGO_DEBUG=true`; production always enforces `20/min`. It exists
+so the E2E suite can run against a debug backend.
 
 ## Key security notes for P1
 

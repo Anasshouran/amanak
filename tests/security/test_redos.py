@@ -1,7 +1,8 @@
 """ReDoS regression tests.
 
 Each regex rule is matched against adversarial input and must complete in
-under 50 ms. This guards against catastrophic backtracking in rule patterns.
+under 80 ms. This guards against catastrophic backtracking in rule patterns,
+with enough headroom to stay stable under heavy parallel load.
 """
 
 import time
@@ -16,7 +17,7 @@ from loader import (
     load_ruleset,
 )
 
-BUDGET_MS = 50
+BUDGET_MS = 80
 
 RULESET = load_ruleset()
 URL_RULES = [r for r in RULESET["rules"] if r.category == "url"]

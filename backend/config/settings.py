@@ -56,6 +56,23 @@ SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", _INSECURE_SECRET_KEY)
 # Safe default: production-like unless explicitly opted into debug.
 DEBUG = _env_bool("DJANGO_DEBUG", "false")
 
+# Auth throttle rate. Production always enforces the default 20/min and ignores
+# the environment; only debug/test mode may override it (the end-to-end suite
+# makes more auth calls per minute than a human would). Kept as a pure helper so
+# the policy is unit-testable without reloading Django settings.
+_default_auth_throttle = "20/min"
+
+
+def _resolve_auth_throttle_rate(debug, override):
+    if debug and override:
+        return override
+    return _default_auth_throttle
+
+
+AUTH_THROTTLE_RATE = _resolve_auth_throttle_rate(
+    DEBUG, os.environ.get("AUTH_THROTTLE_RATE")
+)
+
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
 
 
@@ -366,7 +383,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/day",
-        "auth": "20/min",
+        "auth": AUTH_THROTTLE_RATE,
         "scan_user": "30/min",
         "scan_ip": "60/min",
         "scan_global": "1000/min",

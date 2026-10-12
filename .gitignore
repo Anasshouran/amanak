@@ -23,6 +23,11 @@ htmlcov/
 __pycache__/
 *.sqlite3
 
+# Playwright
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/screenshots/
+
 # IDE
 .vscode/
 .idea/

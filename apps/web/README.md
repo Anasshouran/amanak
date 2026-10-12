@@ -26,7 +26,9 @@ The dev server proxies `/api` to `http://127.0.0.1:8000`, so run the backend
 | `npm run typecheck` | Type-check only. |
 | `npm test` | Run the design-system tests once (Vitest + jsdom). |
 | `npm run test:watch` | Run Vitest in watch mode. |
-| `npm run screenshots` | Manually capture theme/locale screenshots (see below). |
+| `npm run e2e` | Run the Playwright end-to-end suite (see below). |
+| `npm run e2e:ui` | Run Playwright in interactive UI mode. |
+| `npm run e2e:screenshots` | Capture 40 screenshots (10 screens × 2 themes × 2 locales). |
 
 ## Design system
 
@@ -89,16 +91,30 @@ provider (defaults, toggling, document attributes, persistence), the
 translation helper (lookup, interpolation, missing-key fallback), and the
 button primitive (variants, disabled + busy state).
 
-## Screenshots
+## End-to-end tests
 
-`scripts/screenshot.mjs` is a manual, Playwright-based helper that captures every
-screen in both themes and both locales. It is **not** wired into CI. Install the
-browser once, then run:
+Playwright specs live in `e2e/` and run against the Vite dev server, which
+Playwright starts automatically (`reuseExistingServer` reuses one already up).
+The backend must be reachable via `VITE_API_URL` (default
+`http://localhost:8080` — the local Compose stack). Run that backend with
+`DJANGO_DEBUG=true` and a raised `AUTH_THROTTLE_RATE` (e.g. `1000/min`): the
+suite's session refreshes otherwise trip the production `auth` throttle of
+20/min. The rate override is ignored unless debug is on.
 
 ```bash
-npm install -D playwright
-npx playwright install chromium
-AMANAK_EMAIL=you@example.com AMANAK_PASSWORD=secret npm run screenshots
+npx playwright install --with-deps chromium   # once
+npm run e2e                                    # headless
+npm run e2e:ui                                 # interactive
 ```
 
-Images are written to `apps/web/screenshots/`.
+Specs: `auth`, `scanner`, `breach`, `theme-locale`, and `screenshot`.
+
+### Screenshots
+
+`screenshot.spec.ts` captures every screen in both themes and both locales
+(40 PNGs) into `apps/web/screenshots/`. It is skipped unless explicitly enabled,
+so it never runs in CI by default:
+
+```bash
+npm run e2e:screenshots
+```

@@ -1,14 +1,15 @@
 /**
  * Mobile API wiring: base URL + expo-secure-store-backed token storage.
  *
- * Change API_URL to your machine's LAN IP when testing on a physical device.
+ * The base URL is resolved by `./apiUrl` (see its resolution order). On a
+ * physical device set `EXPO_PUBLIC_API_URL` to your machine's LAN IP.
  */
 
 import * as SecureStore from "expo-secure-store"
 import { ApiClient } from "@amanak/api-client"
-import { Platform } from "react-native"
+import { resolveApiUrl } from "./apiUrl"
 
-const API_URL = `http://${Platform.select({ android: "10.0.2.2", default: "127.0.0.1" })}:8000`
+const API_URL = resolveApiUrl()
 
 const ACCESS_KEY = "amanak.access"
 const REFRESH_KEY = "amanak.refresh"

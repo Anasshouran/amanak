@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (pytest)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: amanak
+          POSTGRES_USER: amanak
+          POSTGRES_PASSWORD: amanak-ci
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U amanak"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6380:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r backend/requirements.txt
+      - run: pip install pyyaml==5.4.1
+      - name: Run tests
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: "5433"
+          POSTGRES_DB: amanak
+          POSTGRES_USER: amanak
+          POSTGRES_PASSWORD: amanak-ci
+          REDIS_URL: redis://127.0.0.1:6380/1
+          DJANGO_DEBUG: "true"
+          USE_POSTGRES: "true"
+        run: pytest -q
+
+  frontend:
+    name: Frontend (typecheck, unit, e2e)
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: amanak
+          POSTGRES_USER: amanak
+          POSTGRES_PASSWORD: amanak-ci
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U amanak"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6380:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm ci
+      - run: npm run typecheck --workspaces --if-present
+      - run: npm test --workspace apps/web
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Start backend for e2e
+        env:
+          POSTGRES_HOST: 127.0.0.1
+          POSTGRES_PORT: "5433"
+          POSTGRES_DB: amanak
+          POSTGRES_USER: amanak
+          POSTGRES_PASSWORD: amanak-ci
+          REDIS_URL: redis://127.0.0.1:6380/1
+          DJANGO_DEBUG: "true"
+          USE_POSTGRES: "true"
+          CORS_ALLOWED_ORIGINS: http://localhost:5173
+          AUTH_THROTTLE_RATE: "1000/min"
+        run: |
+          pip install -r backend/requirements.txt pyyaml==5.4.1
+          python backend/manage.py migrate
+          python backend/manage.py runserver 0.0.0.0:8080 &
+          sleep 5
+          curl -fsS http://127.0.0.1:8080/healthz/ || (echo "backend not up"; exit 1)
+      - run: npx playwright install --with-deps chromium
+      - run: npm run e2e --workspace apps/web
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: apps/web/playwright-report/
+          retention-days: 7

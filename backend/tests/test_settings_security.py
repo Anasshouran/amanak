@@ -126,3 +126,24 @@ def test_static_root_is_configured():
 
 def test_upload_size_cap_configured():
     assert settings.DATA_UPLOAD_MAX_MEMORY_SIZE == 10 * 1024 * 1024
+
+
+# ---- P7.4: auth throttle rate is env-overridable only in debug -------------
+
+
+def test_auth_throttle_locked_in_production():
+    """Production always enforces 20/min and ignores the environment."""
+    assert settings._resolve_auth_throttle_rate(False, "1000/min") == "20/min"
+    assert settings._resolve_auth_throttle_rate(False, None) == "20/min"
+
+
+def test_auth_throttle_overridable_in_debug():
+    assert settings._resolve_auth_throttle_rate(True, "1000/min") == "1000/min"
+
+
+def test_auth_throttle_debug_without_override_uses_default():
+    assert settings._resolve_auth_throttle_rate(True, None) == "20/min"
+
+
+def test_rest_framework_uses_resolved_auth_throttle():
+    assert settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["auth"] == settings.AUTH_THROTTLE_RATE
