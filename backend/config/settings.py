@@ -437,8 +437,11 @@ EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
 EMAIL_USE_TLS = _env_bool("EMAIL_USE_TLS", "false")
 DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "ama-nak@local.io")
 
-# Base URL used to build email links (verification / password reset).
-FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:8000")
+# Public origin used to build email links (verification / password reset).
+# Must be reachable by the user. Falls back to the legacy FRONTEND_URL.
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL") or os.environ.get(
+    "FRONTEND_URL", "http://localhost:8000"
+)
 
 
 # ============================================================

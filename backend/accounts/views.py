@@ -109,7 +109,7 @@ class UserViewSet(viewsets.ViewSet):
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         token = default_token_generator.make_token(user)
         verify_url = (
-            f"{settings.FRONTEND_URL}/api/v1/auth/verify-email?uid={uid}&token={token}"
+            f"{settings.PUBLIC_BASE_URL}/api/v1/auth/verify-email/?uid={uid}&token={token}"
         )
         send_mail(
             "Verify your AMANAK email",
@@ -215,7 +215,7 @@ class UserViewSet(viewsets.ViewSet):
                 uid = urlsafe_base64_encode(force_bytes(user.pk))
                 token = default_token_generator.make_token(user)
                 reset_url = (
-                    f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+                    f"{settings.PUBLIC_BASE_URL}/reset-password?uid={uid}&token={token}"
                 )
                 send_mail(
                     "AMANAK password reset",
