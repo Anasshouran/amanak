@@ -94,6 +94,12 @@ services:
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/healthz-nginx"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     ports:
       - "80:80"
       - "443:443"

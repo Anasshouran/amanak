@@ -36,6 +36,7 @@ apps/mobile/.expo/
 
 # Docker
 .dockerignore
+docker-compose.local-prod.ports.yml
 
 # Monorepo
 .pnpm-lock.yaml
