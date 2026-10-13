@@ -1,6 +1,6 @@
 import { Redirect, Tabs } from "expo-router"
 import { Button, Text } from "react-native"
-import { AuthProvider, useAuth } from "../../src/state/AuthContext"
+import { useAuth } from "../../src/state/AuthContext"
 
 function TabsNavigator() {
   const { user, loading, logout } = useAuth()
@@ -38,9 +38,5 @@ function TabsNavigator() {
 }
 
 export default function Root() {
-  return (
-    <AuthProvider>
-      <TabsNavigator />
-    </AuthProvider>
-  )
+  return <TabsNavigator />
 }

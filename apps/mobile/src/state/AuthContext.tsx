@@ -1,4 +1,4 @@
-import { createContext, useContext, useCallback, useState, type ReactNode } from "react"
+import { createContext, useContext, useCallback, useEffect, useState, type ReactNode } from "react"
 import { api, tokens } from "../lib/api"
 import type { User } from "@amanak/shared-types"
 
@@ -28,15 +28,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.login(email, password)
     setUser(res.user)
+    setLoading(false)
   }, [])
 
   const register = useCallback(async (email: string, username: string, password: string) => {
     const res = await api.register(email, username, password)
     await tokens.setTokens(res.tokens)
     setUser(res.user)
+    setLoading(false)
   }, [])
 
   const logout = useCallback(async () => {
