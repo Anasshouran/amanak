@@ -9,6 +9,9 @@
 
 import { toBytes } from "./bytes"
 
+/** OWASP 2023 minimum for PBKDF2-HMAC-SHA256. Mirrors the server default. */
+export const PBKDF2_ITERATIONS = 310_000
+
 export async function deriveKey(
   masterPassword: string,
   salt: Uint8Array,

@@ -215,3 +215,71 @@ export type TwoFactorUpdateEntryInput = Partial<{
   ciphertext: string
   iv: string
 }>
+
+// ---- Password manager (P9). Server-blind: metadata is plaintext, secrets are
+// ---- an opaque base64 blob the server can never decrypt. ----
+
+export const PASSWORD_CATEGORIES = [
+  "general",
+  "email",
+  "banking",
+  "social",
+  "work",
+  "shopping",
+  "entertainment",
+  "developer",
+  "government",
+  "other",
+] as const
+
+export type PasswordCategory = (typeof PASSWORD_CATEGORIES)[number]
+
+export type PasswordVaultProfile = {
+  id: number
+  kdf_salt: string
+  kdf_iterations: number
+  kdf_algorithm: string
+  verification_ciphertext: string
+  verification_iv: string
+  created_at: string
+  updated_at: string
+}
+
+export type PasswordCreateProfileInput = {
+  kdf_salt: string
+  verification_ciphertext: string
+  verification_iv: string
+}
+
+export type PasswordEntry = {
+  id: number
+  title: string
+  username: string
+  url: string
+  category: string
+  tags: string[]
+  ciphertext: string
+  iv: string
+  created_at: string
+  updated_at: string
+}
+
+export type PasswordCreateEntryInput = {
+  title: string
+  username?: string
+  url?: string
+  category?: string
+  tags?: string[]
+  ciphertext: string
+  iv: string
+}
+
+export type PasswordUpdateEntryInput = Partial<{
+  title: string
+  username: string
+  url: string
+  category: string
+  tags: string[]
+  ciphertext: string
+  iv: string
+}>

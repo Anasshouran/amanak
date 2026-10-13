@@ -99,6 +99,7 @@ INSTALLED_APPS = [
     "apps.ai_assistant",
     "apps.breach_monitor",
     "apps.two_factor",
+    "apps.password_vault",
 ]
 
 MIDDLEWARE = [
@@ -396,6 +397,9 @@ REST_FRAMEWORK = {
         "two_factor_entries_user": "120/min",
         "two_factor_profile_user": "30/min",
         "two_factor_list_user": "240/min",
+        "password_vault_read_user": "60/min",
+        "password_vault_write_user": "60/min",
+        "password_vault_profile_user": "30/min",
     },
 }
 

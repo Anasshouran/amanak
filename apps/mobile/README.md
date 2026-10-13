@@ -42,6 +42,16 @@ Docker Compose stack.
 
 To find your LAN IP: `ipconfig getifaddr en0` (macOS) or `hostname -I` (Linux).
 
+## Password manager (P9)
+
+The **Passwords** tab (`app/(tabs)/passwords.tsx`) mirrors the web password
+vault: create/unlock a server-blind vault, list entries, reveal and copy
+passwords, add/edit/delete entries, and delete the whole vault with an account
+password. It reuses the pure-TypeScript primitives under
+`src/lib/vault/` (`passwordPayload`, `generator`) and produces byte-identical
+blobs to the web client. See `docs/security/password-vault-privacy.md` and
+ADR-0009.
+
 ## Scripts
 
 | Script | Description |

@@ -11,6 +11,7 @@ import { Scanner } from "./pages/Scanner"
 import { AIAssistant } from "./pages/AIAssistant"
 import { BreachMonitor } from "./pages/BreachMonitor"
 import { TwoFactor } from "./pages/TwoFactor"
+import { PasswordVault } from "./pages/PasswordVault"
 import { Settings } from "./pages/Settings"
 import { NotFound } from "./pages/NotFound"
 
@@ -34,6 +35,7 @@ export function App() {
         <Route path="/ai" element={<AIAssistant />} />
         <Route path="/breach" element={<BreachMonitor />} />
         <Route path="/vault" element={<TwoFactor />} />
+        <Route path="/passwords" element={<PasswordVault />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<NotFound />} />

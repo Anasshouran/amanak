@@ -204,6 +204,77 @@ export function IconArrow(p: IconProps) {
   )
 }
 
+export function IconPasswords(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <rect x="4" y="10" width="16" height="10" rx="2" />
+      <path d="M8 10V7a4 4 0 0 1 8 0v3" />
+      <path d="M12 14v2" />
+    </svg>
+  )
+}
+
+export function IconEye(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+export function IconEyeOff(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 6.2A9.7 9.7 0 0 1 12 6c6.4 0 10 6 10 6a17 17 0 0 1-3.2 3.8" />
+      <path d="M6.2 7.7A17 17 0 0 0 2 12s3.6 6 10 6a9.7 9.7 0 0 0 3.8-.8" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </svg>
+  )
+}
+
+export function IconDownload(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M12 3v11" />
+      <path d="M8 10l4 4 4-4" />
+      <path d="M4 19h16" />
+    </svg>
+  )
+}
+
+export function IconUpload(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M12 15V4" />
+      <path d="M8 8l4-4 4 4" />
+      <path d="M4 19h16" />
+    </svg>
+  )
+}
+
+export function IconSearch(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="M21 21l-4.3-4.3" />
+    </svg>
+  )
+}
+
+export function IconRefresh(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M20 11a8 8 0 0 0-14-4.5L4 9" />
+      <path d="M4 4v5h5" />
+      <path d="M4 13a8 8 0 0 0 14 4.5L20 15" />
+      <path d="M20 20v-5h-5" />
+    </svg>
+  )
+}
+
+
 export function IconLogout(p: IconProps) {
   return (
     <svg {...base(p)}>

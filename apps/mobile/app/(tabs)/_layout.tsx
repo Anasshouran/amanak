@@ -28,6 +28,7 @@ function TabsNavigator() {
       />
       <Tabs.Screen name="accounts" options={{ title: "Accounts" }} />
       <Tabs.Screen name="vault" options={{ title: "2FA Vault" }} />
+      <Tabs.Screen name="passwords" options={{ title: "Passwords" }} />
       <Tabs.Screen name="devices" options={{ title: "Devices" }} />
       <Tabs.Screen name="incidents" options={{ title: "Incidents" }} />
       <Tabs.Screen name="scanner" options={{ title: "Scanner" }} />

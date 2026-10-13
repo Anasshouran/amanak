@@ -22,6 +22,11 @@ import type {
   Incident,
   IncidentInput,
   MonitoredEmail,
+  PasswordCreateEntryInput,
+  PasswordCreateProfileInput,
+  PasswordEntry,
+  PasswordUpdateEntryInput,
+  PasswordVaultProfile,
   ScanResponse,
   ScanResultRecord,
   SecurityScore,
@@ -308,5 +313,37 @@ export class ApiClient {
 
   deleteTwoFactorEntry(id: number) {
     return this.request<null>("DELETE", `/two-factor/entries/${id}/`)
+  }
+
+  // ---- password manager (P9) ----
+  getPasswordVaultProfile() {
+    return this.request<PasswordVaultProfile>("GET", "/password-vault/profile/")
+  }
+
+  createPasswordVaultProfile(input: PasswordCreateProfileInput) {
+    return this.request<PasswordVaultProfile>("POST", "/password-vault/profile/", input)
+  }
+
+  /** Wipes the entire vault. The account password confirms the action. */
+  deletePasswordVaultProfile(accountPassword: string) {
+    return this.request<null>("DELETE", "/password-vault/profile/", {
+      account_password: accountPassword,
+    })
+  }
+
+  listPasswordEntries() {
+    return this.request<PasswordEntry[]>("GET", "/password-vault/entries/")
+  }
+
+  createPasswordEntry(input: PasswordCreateEntryInput) {
+    return this.request<PasswordEntry>("POST", "/password-vault/entries/", input)
+  }
+
+  updatePasswordEntry(id: number, input: PasswordUpdateEntryInput) {
+    return this.request<PasswordEntry>("PATCH", `/password-vault/entries/${id}/`, input)
+  }
+
+  deletePasswordEntry(id: number) {
+    return this.request<null>("DELETE", `/password-vault/entries/${id}/`)
   }
 }

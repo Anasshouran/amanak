@@ -681,6 +681,160 @@ paths:
         "404":
           description: Not found
 
+  /password-vault/profile/:
+    get:
+      summary: Get the caller's password vault profile
+      description: |
+        Requires authentication. A profile holds the KDF parameters (salt,
+        iterations, algorithm) needed to derive the vault key client-side; the
+        server can never derive it. Returns 404 not_found when the caller has
+        not created a vault yet. Throttled at 60/min per user.
+      responses:
+        "200":
+          description: Vault profile
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PasswordVaultProfile" }
+        "401":
+          description: Authentication required
+        "404":
+          description: No vault for this user (code not_found)
+    post:
+      summary: Create the caller's password vault profile
+      description: |
+        Requires authentication. The client generates a fresh 32-byte salt and
+        sends it base64-encoded. Returns 409 profile_exists when a profile
+        already exists. Throttled at 30/min per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordCreateProfilePayload" }
+      responses:
+        "201":
+          description: Vault profile created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PasswordVaultProfile" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+        "409":
+          description: A vault already exists (code profile_exists)
+    delete:
+      summary: Delete the caller's vault and every password in it
+      description: |
+        Requires authentication. Cascades all entries. The caller must confirm
+        with their AMANAK **account** password (not the vault master password,
+        which the server never sees). A missing or wrong confirmation returns
+        400 invalid_password; no profile returns 404 not_found. Throttled at
+        30/min per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordDeleteProfilePayload" }
+      responses:
+        "204":
+          description: Deleted
+        "400":
+          description: Missing or incorrect account password (code invalid_password)
+        "401":
+          description: Authentication required
+        "404":
+          description: No vault for this user (code not_found)
+
+  /password-vault/entries/:
+    get:
+      summary: List the caller's password entries
+      description: |
+        Requires authentication. Returns metadata (title, username, url,
+        category, tags) in plaintext plus an opaque base64 ciphertext/iv the
+        server can never read. Results are ordered by title. Throttled at
+        60/min per user.
+      responses:
+        "200":
+          description: Password entries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PasswordEntry" }
+        "401":
+          description: Authentication required
+    post:
+      summary: Create a password entry
+      description: |
+        Requires authentication. Plaintext metadata plus a base64 AES-256-GCM
+        blob. Because the client binds the entry's id as AAD, it should PATCH a
+        fresh ciphertext+iv with the real id after creation. Throttled at
+        60/min per user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordCreateEntryPayload" }
+      responses:
+        "201":
+          description: Entry created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PasswordEntry" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+        "409":
+          description: No vault profile yet (code profile_required)
+
+  /password-vault/entries/{id}/:
+    patch:
+      summary: Update an entry (owner-scoped)
+      description: |
+        Requires authentication. Partially updates metadata and/or the encrypted
+        blob. A row owned by another user returns 404. Throttled at 60/min per
+        user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PasswordUpdateEntryPayload" }
+      responses:
+        "200":
+          description: Entry updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PasswordEntry" }
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found
+    delete:
+      summary: Delete an entry (owner-scoped)
+      description: |
+        Requires authentication. A row owned by another user returns 404.
+        Throttled at 60/min per user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+        "401":
+          description: Authentication required
+        "404":
+          description: Not found
+
 components:
   securitySchemes:
     bearerAuth:
@@ -959,5 +1113,79 @@ components:
       properties:
         label: { type: string }
         issuer: { type: string }
+        ciphertext: { type: string }
+        iv: { type: string }
+
+    PasswordVaultProfile:
+      type: object
+      description: "KDF parameters for the caller's server-blind password vault."
+      properties:
+        id: { type: integer }
+        kdf_salt: { type: string, description: "Base64-encoded 32-byte salt (server never derives the key)" }
+        kdf_iterations: { type: integer, description: "PBKDF2 iteration count fixed by the server" }
+        kdf_algorithm: { type: string, description: "KDF/hash identifier, e.g. PBKDF2-HMAC-SHA256" }
+        verification_ciphertext: { type: string, description: "Base64 AES-256-GCM blob (empty AAD) proving the master password; opaque to the server" }
+        verification_iv: { type: string, description: "Base64 12-byte GCM nonce for the verification blob" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PasswordCreateProfilePayload:
+      type: object
+      required: [kdf_salt, verification_ciphertext, verification_iv]
+      properties:
+        kdf_salt: { type: string, description: "Base64-encoded 32-byte salt" }
+        verification_ciphertext: { type: string, description: "Base64 AES-256-GCM encryption of the fixed plaintext AMANAK-PWD-VAULT-V1 with empty AAD" }
+        verification_iv: { type: string, description: "Base64 12-byte GCM nonce" }
+
+    PasswordDeleteProfilePayload:
+      type: object
+      required: [account_password]
+      properties:
+        account_password:
+          type: string
+          description: "The AMANAK account password confirming vault deletion (never the vault master password)"
+
+    PasswordEntry:
+      type: object
+      description: "One password entry. Metadata is plaintext; ciphertext/iv are opaque to the server."
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        username: { type: string }
+        url: { type: string }
+        category: { type: string, description: "One of the fixed category set, or empty" }
+        tags:
+          type: array
+          items: { type: string }
+        ciphertext: { type: string, description: "Base64 AES-256-GCM ciphertext including the 16-byte tag" }
+        iv: { type: string, description: "Base64 12-byte GCM nonce (unique per write)" }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+
+    PasswordCreateEntryPayload:
+      type: object
+      required: [title, ciphertext, iv]
+      properties:
+        title: { type: string }
+        username: { type: string }
+        url: { type: string }
+        category: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        ciphertext: { type: string, description: "Base64 AES-256-GCM ciphertext + tag" }
+        iv: { type: string, description: "Base64 12-byte GCM nonce" }
+
+    PasswordUpdateEntryPayload:
+      type: object
+      description: "Any subset of entry fields. Send a fresh ciphertext+iv when re-encrypting."
+      properties:
+        title: { type: string }
+        username: { type: string }
+        url: { type: string }
+        category: { type: string }
+        tags:
+          type: array
+          items: { type: string }
         ciphertext: { type: string }
         iv: { type: string }

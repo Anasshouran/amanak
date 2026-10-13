@@ -91,6 +91,22 @@ mobile because the blob format is identical (see
 QR import uses an uploaded image decoded with `jsqr`; manual base32 entry is
 always available. The vault auto-locks after 5 minutes of inactivity.
 
+## Password manager (P9)
+
+The `/passwords` route (`src/pages/PasswordVault.tsx`) is a server-blind password
+vault that reuses the same P8 primitives. The password, notes and custom-field
+values are encrypted in the browser as an opaque `AES-256-GCM` blob; the plain
+`title`/`username`/`url`/`category`/`tags` metadata is stored server-side so
+search and filtering work. The crypto helpers live in `src/crypto/`
+(`passwordPayload`, `strength`, `generator`) and are covered by Vitest.
+
+Features: a setup/unlock wizard with a 5-fail/5-min → 15-min lockout, reveal
+(hidden again after 10 s) and copy, categories and tag search, a password
+generator, and encrypted JSON import/export. Deleting the whole vault requires
+the **account** password, never the vault master password. The vault auto-locks
+after 5 minutes of inactivity. See `docs/security/password-vault-privacy.md` and
+ADR-0009.
+
 ## Tests
 
 Vitest runs against a jsdom environment with React Testing Library and
@@ -121,7 +137,8 @@ npm run e2e                                    # headless
 npm run e2e:ui                                 # interactive
 ```
 
-Specs: `auth`, `scanner`, `breach`, `theme-locale`, and `screenshot`.
+Specs: `auth`, `scanner`, `breach`, `theme-locale`, `password-vault`, and
+`screenshot`.
 
 ### Screenshots
 
