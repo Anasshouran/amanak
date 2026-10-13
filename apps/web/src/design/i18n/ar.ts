@@ -5,6 +5,7 @@ export const ar: Record<string, string> = {
   "nav.dashboard": "لوحة التحكم",
   "nav.scanner": "الماسح",
   "nav.breach": "مراقبة التسريبات",
+  "nav.family": "العائلة",
   "nav.accounts": "الحسابات",
   "nav.devices": "الأجهزة",
   "nav.incidents": "الحوادث",
@@ -337,6 +338,8 @@ export const ar: Record<string, string> = {
   "passwords.category.government": "حكومي",
   "passwords.category.other": "أخرى",
 
+  "family.title": "حماية العائلة",
+  "family.subtitle": "ضوابط الخصوصية العائلية. الافتراضي: النتيجة الإجمالية فقط.",
   "notfound.title": "الصفحة غير موجودة",
   "notfound.description": "الصفحة التي تبحث عنها غير موجودة.",
   "notfound.back": "رجوع إلى لوحة التحكم",

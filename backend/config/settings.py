@@ -100,6 +100,7 @@ INSTALLED_APPS = [
     "apps.breach_monitor",
     "apps.two_factor",
     "apps.password_vault",
+    "apps.family",
 ]
 
 MIDDLEWARE = [
@@ -400,6 +401,8 @@ REST_FRAMEWORK = {
         "password_vault_read_user": "60/min",
         "password_vault_write_user": "60/min",
         "password_vault_profile_user": "30/min",
+        "family_read_user": "120/min",
+        "family_write_user": "30/min",
     },
 }
 

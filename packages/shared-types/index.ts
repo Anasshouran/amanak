@@ -283,3 +283,87 @@ export type PasswordUpdateEntryInput = Partial<{
   ciphertext: string
   iv: string
 }>
+
+// ---- Family Protection (P10). Opt-in sharing, server-blind aggregate. ----
+
+export type FamilyRole = "guardian" | "member"
+
+export type Family = {
+  id: number
+  name: string
+  guardian: { user_id: number; display_name: string }
+  role: FamilyRole
+  created_at: string
+  updated_at: string
+}
+
+export type FamilyInvitation = {
+  id: number
+  invited_email: string
+  token: string
+  created_at: string
+  expires_at: string
+  accepted_at: string | null
+}
+
+export type FamilyInvitationCreateInput = {
+  invited_email: string
+}
+
+export type FamilyInvitationAcceptInput = {
+  token: string
+  confirm?: boolean
+}
+
+export type FamilyTransferInput = {
+  to_user_id: number
+}
+
+export type FamilyDeleteInput = {
+  account_password: string
+}
+
+export type FamilyMemberSummary = {
+  user_id: number
+  display_name: string
+  role: FamilyRole
+  joined_at: string
+  security_score: number
+  shared?: {
+    incidents?: { high_severity_count: number; titles: string[] }
+    devices?: { count: number; last_seen: string | null }
+    breach?: { hit_count: number }
+    scans?: { total: number; verdicts: { safe: number; suspicious: number; dangerous: number } }
+  }
+}
+
+export type FamilyMe = {
+  user_id: number
+  display_name: string
+  role: FamilyRole
+  family_id: number
+  family_name: string
+  joined_at: string
+  share_incidents: boolean
+  share_devices: boolean
+  share_breach: boolean
+  share_scans: boolean
+  security_score: number
+}
+
+export type FamilyAlert = {
+  id: number
+  member: number
+  kind: "incident_high_severity"
+  summary: string
+  severity: string
+  created_at: string
+  seen_at: string | null
+}
+
+export type FamilyShareToggles = {
+  share_incidents?: boolean
+  share_devices?: boolean
+  share_breach?: boolean
+  share_scans?: boolean
+}

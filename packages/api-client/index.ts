@@ -19,6 +19,16 @@ import type {
   DashboardOverview,
   Device,
   DeviceInput,
+  Family,
+  FamilyAlert,
+  FamilyInvitation,
+  FamilyInvitationAcceptInput,
+  FamilyInvitationCreateInput,
+  FamilyMe,
+  FamilyMemberSummary,
+  FamilyShareToggles,
+  FamilyTransferInput,
+  FamilyDeleteInput,
   Incident,
   IncidentInput,
   MonitoredEmail,
@@ -345,5 +355,70 @@ export class ApiClient {
 
   deletePasswordEntry(id: number) {
     return this.request<null>("DELETE", `/password-vault/entries/${id}/`)
+  }
+
+  // ---- family protection (P10) ----
+  getFamily() {
+    return this.request<Family>("GET", "/family/")
+  }
+
+  createFamily(name: string) {
+    return this.request<Family>("POST", "/family/", { name })
+  }
+
+  renameFamily(name: string) {
+    return this.request<Family>("PATCH", "/family/", { name })
+  }
+
+  deleteFamily(accountPassword: string) {
+    return this.request<null>("DELETE", "/family/", { account_password: accountPassword })
+  }
+
+  listMembers() {
+    return this.request<FamilyMemberSummary[]>("GET", "/family/members/")
+  }
+
+  getMember(userId: number) {
+    return this.request<FamilyMemberSummary>("GET", `/family/members/${userId}/`)
+  }
+
+  removeMember(userId: number) {
+    return this.request<null>("DELETE", `/family/members/${userId}/`)
+  }
+
+  getMe() {
+    return this.request<FamilyMe>("GET", "/family/me/")
+  }
+
+  updateMe(toggles: FamilyShareToggles) {
+    return this.request<FamilyMe>("PATCH", "/family/me/", toggles)
+  }
+
+  listInvitations() {
+    return this.request<FamilyInvitation[]>("GET", "/family/invitations/")
+  }
+
+  createInvitation(input: FamilyInvitationCreateInput) {
+    return this.request<FamilyInvitation>("POST", "/family/invitations/", input)
+  }
+
+  cancelInvitation(id: number) {
+    return this.request<null>("DELETE", `/family/invitations/${id}/`)
+  }
+
+  acceptInvitation(input: FamilyInvitationAcceptInput) {
+    return this.request<{ family_id: number; family_name: string; role: string }>(
+      "POST",
+      "/family/invitations/accept/",
+      input,
+    )
+  }
+
+  transferGuardianship(input: FamilyTransferInput) {
+    return this.request<Family>("POST", "/family/transfer/", input)
+  }
+
+  listAlerts() {
+    return this.request<FamilyAlert[]>("GET", "/family/alerts/")
   }
 }

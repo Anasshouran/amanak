@@ -49,5 +49,10 @@ export async function loginUser(page: Page, user: TestUser): Promise<void> {
   await expect(page).toHaveURL(/\/$/)
 }
 
+export async function waitForApiIdle(page: Page) {
+  await page.waitForLoadState("networkidle")
+  await page.waitForTimeout(300)
+}
+
 export const test = base
 export { expect }

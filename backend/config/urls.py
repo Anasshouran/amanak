@@ -19,4 +19,5 @@ urlpatterns = [
     path("api/v1/breach/", include("apps.breach_monitor.urls")),
     path("api/v1/two-factor/", include("apps.two_factor.urls")),
     path("api/v1/password-vault/", include("apps.password_vault.urls")),
+    path("api/v1/family/", include("apps.family.urls")),
 ]
