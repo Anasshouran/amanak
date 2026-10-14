@@ -103,6 +103,7 @@ INSTALLED_APPS = [
     "apps.family",
     "apps.awareness",
     "apps.billing",
+    "apps.staff",
 ]
 
 MIDDLEWARE = [
@@ -111,6 +112,10 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Must run after AuthenticationMiddleware. Resolves bearer tokens so
+    # blocked users are rejected on token-first API calls (DRF authenticates
+    # inside the view, after middleware) and so staff views see request.user.
+    "common.middleware.BlockedUserMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -409,6 +414,8 @@ REST_FRAMEWORK = {
         "awareness_answer_user": "60/min",
         "billing_read_user": "120/min",
         "billing_write_user": "30/min",
+        "staff_read_user": "240/min",
+        "staff_write_user": "60/min",
     },
 }
 
