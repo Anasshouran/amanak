@@ -48,3 +48,9 @@ these fields to the list serializer to eliminate the N+1.
 The backend creates tickets with user=request.user, so the button
 mis-scoped tickets to the staff member. P13.3 will add a staff-only
 endpoint accepting a target user_id and re-enable the UI.
+
+### 2fa.spec.ts code-rotation timing flake (E2E)
+`apps/web/e2e/2fa.spec.ts` occasionally flakes on code rotation when
+the test runs near a 30-second TOTP window boundary. Passes reliably
+in isolation. Fix: mock the system clock in the test, or wait for a
+fresh window before asserting. Not a code defect.
