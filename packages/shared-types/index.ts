@@ -83,6 +83,12 @@ export type ApiError = {
   code: string
   message: string
   details?: Record<string, unknown>
+  /** HTTP status, when the failure came from the server. */
+  status?: number
+  /** Present on 402 payment-required responses. */
+  feature?: string
+  limit?: number
+  used?: number
 }
 
 export type ScanVerdict = "safe" | "suspicious" | "dangerous"
@@ -410,4 +416,70 @@ export type AwarenessCategory = {
   count_hard: number
   attempted: number
   correct: number
+}
+
+// Subscription Tiers (P12)
+export type PlanId = "free" | "pro" | "family" | string
+
+export type PlanLimits = {
+  scans_per_month: number
+  monitored_emails: number
+  password_entries: number
+  two_factor_entries: number
+  family_members: number
+  ai_enabled: boolean
+  ai_requests_per_month: number
+  awareness_sessions_per_month: number
+  export_enabled: boolean
+  support_level: "community" | "email" | "priority" | string
+}
+
+export type Plan = {
+  id: PlanId
+  name_en: string
+  name_ar: string
+  price_monthly: string
+  price_yearly: string
+  currency: string
+  limits: PlanLimits
+  is_active: boolean
+}
+
+export type SubscriptionStatus =
+  | "active"
+  | "trialing"
+  | "past_due"
+  | "canceled"
+  | "expired"
+export type BillingPeriod = "monthly" | "yearly"
+
+export type Subscription = {
+  id: number
+  plan: Plan
+  status: SubscriptionStatus
+  period: BillingPeriod
+  current_period_start: string
+  current_period_end: string
+  cancel_at_period_end: boolean
+  provider: string
+}
+
+export type UsageEntry = { used: number; limit: number }
+
+export type BillingUsage = {
+  scans: UsageEntry
+  ai_requests: UsageEntry
+  awareness_sessions: UsageEntry
+  monitored_emails: UsageEntry
+  password_entries: UsageEntry
+  two_factor_entries: UsageEntry
+  family_members: UsageEntry
+  ai_enabled: boolean
+  export_enabled: boolean
+}
+
+export type PlanChangeResponse = {
+  kind: "manual" | "redirect"
+  checkout_url: string | null
+  subscription: Subscription
 }

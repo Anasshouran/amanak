@@ -7,6 +7,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status, viewsets
 
+from common.gating import can_use, consume, current_usage, get_limit
+
 from . import scenarios_loader as sl
 from .models import AwarenessAttempt, AwarenessProgress
 from .serializers import (
@@ -97,6 +99,10 @@ class AwarenessViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"], url_path="answer", throttle_classes=[AwarenessAnswerUserRateThrottle])
     def answer(self, request):
+        if not can_use(request.user, "awareness_sessions", amount=1):
+            used = current_usage(request.user, "awareness_sessions")
+            limit = get_limit(request.user, "awareness_sessions")
+            return Response({"feature": "awareness_sessions", "limit": limit, "used": used}, status=status.HTTP_402_PAYMENT_REQUIRED)
         ser = AnswerRequestSerializer(data=request.data)
         ser.is_valid(raise_exception=True)
         sid = ser.validated_data["scenario_id"]
@@ -120,6 +126,7 @@ class AwarenessViewSet(viewsets.GenericViewSet):
             difficulty=int(s.get("difficulty", 0)),
             is_correct=res["is_correct"],
         )
+        consume(request.user, "awareness_sessions", amount=1)
 
         resp = {
             "is_correct": res["is_correct"],

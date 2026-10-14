@@ -26,6 +26,15 @@ class ScanViewSet(viewsets.ViewSet):
     throttle_classes = [ScanUserRateThrottle, ScanIpRateThrottle, ScanGlobalRateThrottle]
 
     def _run(self, request, kind):
+        from common.gating import can_use, consume, current_usage, get_limit
+
+        if not can_use(request.user, "scans", amount=1):
+            used = current_usage(request.user, "scans")
+            limit = get_limit(request.user, "scans")
+            return Response(
+                {"feature": "scans", "limit": limit, "used": used},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
         serializer = ScanRequestSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -59,6 +68,7 @@ class ScanViewSet(viewsets.ViewSet):
             preview=redacted_preview(sanitized),
         )
         payload["id"] = result.id
+        consume(request.user, "scans", amount=1)
         return Response(ScanResponseSerializer(payload).data)
 
     @action(methods=["post"], detail=False, url_path="url")

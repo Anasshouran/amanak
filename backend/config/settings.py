@@ -102,6 +102,7 @@ INSTALLED_APPS = [
     "apps.password_vault",
     "apps.family",
     "apps.awareness",
+    "apps.billing",
 ]
 
 MIDDLEWARE = [
@@ -406,6 +407,8 @@ REST_FRAMEWORK = {
         "family_write_user": "30/min",
         "awareness_read_user": "120/min",
         "awareness_answer_user": "60/min",
+        "billing_read_user": "120/min",
+        "billing_write_user": "30/min",
     },
 }
 

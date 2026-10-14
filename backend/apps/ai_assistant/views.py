@@ -17,6 +17,8 @@ from rest_framework.response import Response
 
 from scanner.models import ScanResult
 
+from common.gating import can_use, consume, current_usage, get_limit
+
 from . import services
 from .serializers import (
     AIExplainScanRequestSerializer,
@@ -49,6 +51,13 @@ class AIViewSet(viewsets.ViewSet):
     def explain_scan(self, request):
         if not settings.AI_ENABLED:
             return self._disabled(request)
+        # billing gating
+        if get_limit(request.user, "ai_enabled") == 0:
+            return Response({"feature": "ai"}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        if not can_use(request.user, "ai_requests", amount=1):
+            used = current_usage(request.user, "ai_requests")
+            limit = get_limit(request.user, "ai_requests")
+            return Response({"feature": "ai_requests", "limit": limit, "used": used}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         serializer = AIExplainScanRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -59,17 +68,29 @@ class AIViewSet(viewsets.ViewSet):
                 {"code": "not_found", "message": "scan not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        return self._respond(lambda: services.explain_scan(request.user, scan))
+        resp = self._respond(lambda: services.explain_scan(request.user, scan))
+        if resp.status_code == status.HTTP_200_OK:
+            consume(request.user, "ai_requests", amount=1)
+        return resp
 
     @action(detail=False, methods=["post"], url_path="guidance")
     def guidance(self, request):
         if not settings.AI_ENABLED:
             return self._disabled(request)
+        if get_limit(request.user, "ai_enabled") == 0:
+            return Response({"feature": "ai"}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        if not can_use(request.user, "ai_requests", amount=1):
+            used = current_usage(request.user, "ai_requests")
+            limit = get_limit(request.user, "ai_requests")
+            return Response({"feature": "ai_requests", "limit": limit, "used": used}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         serializer = AIGuidanceRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         topic = serializer.validated_data["topic"]
-        return self._respond(lambda: services.guidance(request.user, topic))
+        resp = self._respond(lambda: services.guidance(request.user, topic))
+        if resp.status_code == status.HTTP_200_OK:
+            consume(request.user, "ai_requests", amount=1)
+        return resp
 
     @staticmethod
     def _resolve_scan(user, raw_id):

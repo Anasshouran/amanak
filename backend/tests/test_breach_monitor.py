@@ -165,14 +165,16 @@ def test_breach_rate_limit_per_user(client_a, enabled, monkeypatch):
 # ---- max emails -------------------------------------------------------------
 
 
-def test_breach_max_emails_per_user(client_a, enabled):
-    for i in range(5):
-        assert _add(client_a, f"user{i}@example.test").status_code == status.HTTP_201_CREATED
+def test_breach_max_emails_per_user(client_a, user_a, enabled):
+    from apps.billing.testutils import grant_plan
 
-    resp = _add(client_a, "user5@example.test")
-    assert resp.status_code == status.HTTP_400_BAD_REQUEST
-    assert resp.json()["code"] == "max_emails_reached"
-    assert MonitoredEmail.objects.count() == 5
+    grant_plan(user_a, "free")  # free plan allows 1 monitored email
+    assert _add(client_a, "user0@example.test").status_code == status.HTTP_201_CREATED
+
+    resp = _add(client_a, "user1@example.test")
+    assert resp.status_code == status.HTTP_402_PAYMENT_REQUIRED
+    assert resp.json()["feature"] == "monitored_emails"
+    assert MonitoredEmail.objects.count() == 1
 
 
 # ---- router -----------------------------------------------------------------

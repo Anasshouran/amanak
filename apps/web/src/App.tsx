@@ -15,6 +15,8 @@ import { TwoFactor } from "./pages/TwoFactor"
 import { PasswordVault } from "./pages/PasswordVault"
 const Family = lazy(() => import("./pages/Family"))
 const Awareness = lazy(() => import("./pages/Awareness"))
+import { Pricing } from "./pages/Pricing"
+import { Billing } from "./pages/Billing"
 import { Settings } from "./pages/Settings"
 import { NotFound } from "./pages/NotFound"
 
@@ -42,6 +44,8 @@ export function App() {
         <Route path="/family" element={<Suspense fallback={null}><Family /></Suspense>} />
         <Route path="/awareness" element={<Suspense fallback={null}><Awareness /></Suspense>} />
         <Route path="/settings" element={<Settings />} />
+        <Route path="/plans" element={<Pricing />} />
+        <Route path="/billing" element={<Billing />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

@@ -4,12 +4,14 @@ import { useT } from "../i18n"
 import {
   IconAccounts,
   IconAI,
+  IconAwareness,
   IconDashboard,
   IconDevices,
   IconFamily,
   IconIncidents,
   IconKey,
   IconPasswords,
+  IconPlans,
   IconScanner,
   IconSettings,
   IconShield,
@@ -33,7 +35,9 @@ const LINKS: NavEntry[] = [
   { to: "/ai", key: "nav.ai", icon: IconAI },
   { to: "/vault", key: "nav.2fa", icon: IconKey },
   { to: "/passwords", key: "nav.passwords", icon: IconPasswords },
+  { to: "/awareness", key: "nav.awareness", icon: IconAwareness },
   { to: "/settings", key: "nav.settings", icon: IconSettings },
+  { to: "/plans", key: "nav.plans", icon: IconPlans },
 ]
 
 function linkClass({ isActive }: { isActive: boolean }): string {

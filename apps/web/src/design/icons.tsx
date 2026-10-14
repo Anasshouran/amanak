@@ -324,3 +324,22 @@ export function IconFamily(p: IconProps) {
     </svg>
   )
 }
+
+export function IconAwareness(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+      <path d="M6 12v5c0 1.1 2.7 2 6 2s6-.9 6-2v-5" />
+    </svg>
+  )
+}
+
+export function IconPlans(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="m12 2 9 5-9 5-9-5 9-5Z" />
+      <path d="m3 12 9 5 9-5" />
+      <path d="m3 17 9 5 9-5" />
+    </svg>
+  )
+}

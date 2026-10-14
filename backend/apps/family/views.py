@@ -12,6 +12,8 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from common.gating import get_limit
+
 from .models import Family, FamilyAlert, FamilyInvitation, FamilyMembership
 from .serializers import (
     FamilyAlertSerializer,
@@ -343,6 +345,13 @@ class FamilyViewSet(viewsets.ViewSet):
         membership = self._membership(request.user)
         if not membership or not membership.is_guardian:
             return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        # gating: family members limit (active memberships in family)
+        limit = get_limit(request.user, "family_members")
+        if limit == 0:
+            return Response({"feature": "family_members", "limit": 0, "used": FamilyMembership.objects.filter(family=membership.family).count()}, status=status.HTTP_402_PAYMENT_REQUIRED)
+        family_member_count = FamilyMembership.objects.filter(family=membership.family).count()
+        if limit >= 0 and family_member_count >= limit:
+            return Response({"feature": "family_members", "limit": limit, "used": family_member_count}, status=status.HTTP_402_PAYMENT_REQUIRED)
         serializer = InvitationCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(

@@ -22,16 +22,24 @@ def api_client():
 
 @pytest.fixture
 def user_a(db):
-    return User.objects.create_user(
+    from apps.billing.testutils import grant_plan
+
+    user = User.objects.create_user(
         email="a@example.com", username="user_a", password="passA12345!"
     )
+    grant_plan(user, "pro")
+    return user
 
 
 @pytest.fixture
 def user_b(db):
-    return User.objects.create_user(
+    from apps.billing.testutils import grant_plan
+
+    user = User.objects.create_user(
         email="b@example.com", username="user_b", password="passB12345!"
     )
+    grant_plan(user, "pro")
+    return user
 
 
 def auth_client(user):

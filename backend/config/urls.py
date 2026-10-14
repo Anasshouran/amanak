@@ -21,4 +21,5 @@ urlpatterns = [
     path("api/v1/password-vault/", include("apps.password_vault.urls")),
     path("api/v1/family/", include("apps.family.urls")),
     path("api/v1/awareness/", include("apps.awareness.urls")),
+    path("api/v1/billing/", include("apps.billing.urls")),
 ]

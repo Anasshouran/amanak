@@ -51,11 +51,15 @@ def create_client(user):
 @pytest.fixture
 def make_user(db):
     def _make(i, email=None, password="passA12345!"):
-        return User.objects.create_user(
+        from apps.billing.testutils import grant_plan
+
+        user = User.objects.create_user(
             email=email or f"u{i}@local.dev",
             username=f"u{i}",
             password=password,
         )
+        grant_plan(user, "family")
+        return user
 
     return _make
 

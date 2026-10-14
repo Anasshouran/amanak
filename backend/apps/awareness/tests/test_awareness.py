@@ -32,8 +32,12 @@ class AwarenessLoaderTests(APITestCase):
 
 class AwarenessAPITests(APITestCase):
     def setUp(self):
+        from apps.billing.testutils import grant_plan
+
         self.u1 = User.objects.create_user(email="u1@test.local", password="Pass1234!", username="u1")
         self.u2 = User.objects.create_user(email="u2@test.local", password="Pass1234!", username="u2")
+        grant_plan(self.u1, "pro")
+        grant_plan(self.u2, "pro")
         self.client.force_authenticate(self.u1)
 
     def test_categories_returns_structure(self):

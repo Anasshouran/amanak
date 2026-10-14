@@ -103,6 +103,13 @@ class PasswordVaultViewSet(viewsets.ViewSet):
                 {"code": "profile_required", "message": "Set up the password vault first."},
                 status=status.HTTP_409_CONFLICT,
             )
+        # gating: password entries count
+        from apps.password_vault.models import PasswordEntry
+        from common.gating import get_limit
+        limit = get_limit(request.user, "password_entries")
+        current = PasswordEntry.objects.filter(profile=profile).count()
+        if limit >= 0 and current >= limit:
+            return Response({"feature": "password_entries", "limit": limit, "used": current}, status=status.HTTP_402_PAYMENT_REQUIRED)
         serializer = PasswordEntrySerializer(data=request.data)
         if not serializer.is_valid():
             return Response(

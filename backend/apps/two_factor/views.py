@@ -11,6 +11,7 @@ from __future__ import annotations
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from common.gating import get_limit
 
 from .models import TwoFactorEntry, TwoFactorProfile
 from .serializers import TwoFactorEntrySerializer, TwoFactorProfileSerializer
@@ -91,6 +92,10 @@ class TwoFactorViewSet(viewsets.ViewSet):
                 {"code": "profile_required", "message": "Set up the 2FA profile first."},
                 status=status.HTTP_409_CONFLICT,
             )
+        limit = get_limit(request.user, "two_factor_entries")
+        current = TwoFactorEntry.objects.filter(profile=profile).count()
+        if limit >= 0 and current >= limit:
+            return Response({"feature": "two_factor_entries", "limit": limit, "used": current}, status=status.HTTP_402_PAYMENT_REQUIRED)
         serializer = TwoFactorEntrySerializer(data=request.data)
         if not serializer.is_valid():
             return Response(

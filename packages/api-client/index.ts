@@ -15,6 +15,8 @@ import type {
   AuthTokens,
   BreachConsentPayload,
   BreachHit,
+  BillingPeriod,
+  BillingUsage,
   CheckSummary,
   DashboardOverview,
   Device,
@@ -37,9 +39,13 @@ import type {
   PasswordEntry,
   PasswordUpdateEntryInput,
   PasswordVaultProfile,
+  Plan,
+  PlanChangeResponse,
+  PlanId,
   ScanResponse,
   ScanResultRecord,
   SecurityScore,
+  Subscription,
   TwoFactorCreateEntryInput,
   TwoFactorEntry,
   TwoFactorProfile,
@@ -131,7 +137,7 @@ export class ApiClient {
         detail?: string
         [key: string]: unknown
       }
-      throw {
+      const apiError: ApiError = {
         code: error.code ?? String(res.status),
         message:
           error.message ??
@@ -140,7 +146,14 @@ export class ApiClient {
             ? String(error.detail)
             : "Request failed"),
         details: error.details,
-      } as ApiError
+        status: res.status,
+      }
+      if (res.status === 402) {
+        apiError.feature = error.feature
+        apiError.limit = error.limit
+        apiError.used = error.used
+      }
+      throw apiError
     }
 
     return data as T
@@ -465,5 +478,30 @@ export class ApiClient {
 
   resetAwareness() {
     return this.request<null>("POST", "/awareness/reset/", {})
+  }
+
+  // ---- subscription tiers (P12) ----
+  getPlans() {
+    return this.request<Plan[]>("GET", "/billing/plans/")
+  }
+
+  getSubscription() {
+    return this.request<Subscription>("GET", "/billing/subscription/")
+  }
+
+  changePlan(body: { plan_id: PlanId; period?: BillingPeriod }) {
+    return this.request<PlanChangeResponse>("POST", "/billing/subscription/change/", body)
+  }
+
+  cancelSubscription() {
+    return this.request<Subscription>("POST", "/billing/subscription/cancel/", {})
+  }
+
+  resumeSubscription() {
+    return this.request<Subscription>("POST", "/billing/subscription/resume/", {})
+  }
+
+  getBillingUsage() {
+    return this.request<BillingUsage>("GET", "/billing/usage/")
   }
 }

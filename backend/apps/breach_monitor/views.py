@@ -16,6 +16,7 @@ from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from common.gating import can_use, current_usage, get_limit, consume
 
 from . import services
 from .models import BreachHit, MonitoredEmail
@@ -88,18 +89,10 @@ class BreachViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if (
-            MonitoredEmail.objects.filter(user=request.user).count()
-            >= settings.BREACH_MONITOR_MAX_EMAILS
-        ):
-            return Response(
-                {
-                    "code": "max_emails_reached",
-                    "message": f"at most {settings.BREACH_MONITOR_MAX_EMAILS} monitored "
-                    "emails are allowed",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        current_count = MonitoredEmail.objects.filter(user=request.user).count()
+        limit = get_limit(request.user, "monitored_emails")
+        if limit >= 0 and current_count >= limit:
+            return Response({"feature": "monitored_emails", "limit": limit, "used": current_count}, status=status.HTTP_402_PAYMENT_REQUIRED)
 
         email = data["email"].strip().lower()
         if MonitoredEmail.objects.filter(user=request.user, email=email).exists():
