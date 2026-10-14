@@ -7,6 +7,8 @@ export type User = {
   is_verified: boolean
   created_at: string
   updated_at: string
+  is_staff?: boolean
+  roles?: string[]
 }
 
 export type AuthTokens = {
@@ -482,4 +484,95 @@ export type PlanChangeResponse = {
   kind: "manual" | "redirect"
   checkout_url: string | null
   subscription: Subscription
+}
+
+// ---- staff / moderation / tickets (P13.1 API, consumed by P13.2 UI) ----
+
+export type Paginated<T> = {
+  count: number
+  page: number
+  pages: number
+  results: T[]
+}
+
+export type StaffUser = {
+  id: number
+  email: string
+  username: string
+  is_verified: boolean
+  is_active: boolean
+  is_staff: boolean
+  date_joined: string | null
+}
+
+export type StaffSubscription = {
+  plan: string | null
+  status: string | null
+  current_period_end: string | null
+}
+
+export type StaffUsageSlice = { used: number; limit: number }
+
+export type StaffUsage = {
+  scans: StaffUsageSlice
+  ai_requests: StaffUsageSlice
+}
+
+export type StaffModeration = { is_blocked: boolean; reason: string }
+
+export type StaffCounts = {
+  scans_total: number
+  incidents_total: number
+  vault_entries: number
+  "2fa_entries": number
+}
+
+export type StaffUserSnapshot = {
+  user: StaffUser
+  subscription: StaffSubscription
+  usage_this_month: StaffUsage
+  moderation: StaffModeration
+  counts: StaffCounts
+}
+
+export type SupportTicket = {
+  id: number
+  user: number
+  user_email: string | null
+  subject: string
+  status: string
+  priority: string
+  assigned_to: number | null
+  created_at: string
+  updated_at: string
+}
+
+export type SupportTicketDetail = SupportTicket & {
+  body: string
+  messages: SupportTicketMessage[]
+}
+
+export type SupportTicketMessage = {
+  id: number
+  author: number | null
+  author_email: string | null
+  is_staff: boolean
+  body: string
+  created_at: string
+}
+
+export type AdminActionLogEntry = {
+  id: number
+  actor: number | null
+  actor_email: string | null
+  action: string
+  target_user: number | null
+  target_type: string
+  target_id: string
+  before: unknown
+  after: unknown
+  reason: string
+  ip: string | null
+  user_agent: string
+  created_at: string
 }

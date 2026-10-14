@@ -15,6 +15,7 @@ import {
   IconScanner,
   IconSettings,
   IconShield,
+  IconStaff,
 } from "../icons"
 
 type NavEntry = {
@@ -44,12 +45,15 @@ function linkClass({ isActive }: { isActive: boolean }): string {
   return `amk-navlink${isActive ? " is-active" : ""}`
 }
 
-export function Nav() {
+export function Nav({ staff = false }: { staff?: boolean }) {
   const t = useT()
+  const links: NavEntry[] = staff
+    ? [...LINKS, { to: "/staff", key: "staff.nav", icon: IconStaff }]
+    : LINKS
   return (
     <>
       <aside className="amk-sidebar" aria-label={t("common.menu")}>
-        {LINKS.map(({ to, key, icon: Icon, end }) => (
+        {links.map(({ to, key, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={linkClass}>
             <Icon size={18} />
             <span>{t(key)}</span>
@@ -57,7 +61,7 @@ export function Nav() {
         ))}
       </aside>
       <nav className="amk-bottomnav" aria-label={t("common.menu")}>
-        {LINKS.map(({ to, key, icon: Icon, end }) => (
+        {links.map(({ to, key, icon: Icon, end }) => (
           <NavLink key={to} to={to} end={end} className={linkClass}>
             <Icon size={20} />
             <span>{t(key)}</span>

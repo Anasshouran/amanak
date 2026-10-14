@@ -10,10 +10,27 @@ User = get_user_model()
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model."""
 
+    roles = serializers.SerializerMethodField()
+
     class Meta:
         model = User
-        fields = ["id", "email", "username", "is_verified", "created_at", "updated_at"]
-        read_only_fields = ["id", "is_verified", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "email",
+            "username",
+            "is_verified",
+            "created_at",
+            "updated_at",
+            "is_staff",
+            "roles",
+        ]
+        read_only_fields = ["id", "is_verified", "created_at", "updated_at", "is_staff", "roles"]
+
+    def get_roles(self, user):
+        names = set(user.groups.filter(name__in=("support", "billing_admin", "security_admin", "super_admin")).values_list("name", flat=True))
+        if user.is_superuser:
+            names.add("super_admin")
+        return sorted(names)
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):

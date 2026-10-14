@@ -1,4 +1,5 @@
 import { test as base, expect, type Page } from "@playwright/test"
+import { execFileSync } from "node:child_process"
 
 export type TestUser = {
   email: string
@@ -52,6 +53,26 @@ export async function loginUser(page: Page, user: TestUser): Promise<void> {
 export async function waitForApiIdle(page: Page) {
   await page.waitForLoadState("networkidle")
   await page.waitForTimeout(300)
+}
+
+/**
+ * Promote a registered account to a staff role by invoking the backend
+ * management command inside the local-prod backend container. The container
+ * name can be overridden with E2E_BACKEND_CONTAINER.
+ */
+export function grantStaffRole(email: string, role: string): void {
+  const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"
+  execFileSync(
+    "docker",
+    ["exec", container, "python", "backend/manage.py", "grant_role", email, role],
+    { stdio: "ignore" },
+  )
+}
+
+/** Reload so AuthContext re-fetches /me/ and picks up a freshly granted role. */
+export async function refreshSession(page: Page): Promise<void> {
+  await page.reload()
+  await waitForApiIdle(page)
 }
 
 export const test = base

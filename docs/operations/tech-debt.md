@@ -30,3 +30,21 @@ _No open items._
   `apps/mobile/src/lib/apiUrl.ts` — `EXPO_PUBLIC_API_URL` first, then a
   per-platform default, failing fast on a physical device without the env var —
   with unit tests in `apps/mobile/src/lib/__tests__/apiUrl.test.ts`.
+
+## P13.2 — staff dashboard deferred items
+
+### StaffMetrics lacks a real aggregation endpoint
+StaffHome and StaffMetrics compute from list endpoints; scans-per-day
+and subscriptions-by-plan show "unavailable". A future
+`GET /staff/metrics/` with DB aggregation + short cache is needed
+before launch.
+
+### StaffUsers has bounded N+1 enrichment
+The staff list serializer lacks plan/blocked/tickets per row; the UI
+enriches each page via snapshots (≤25 requests). Backend should add
+these fields to the list serializer to eliminate the N+1.
+
+### "Open ticket on behalf" removed from StaffUserDetail
+The backend creates tickets with user=request.user, so the button
+mis-scoped tickets to the staff member. P13.3 will add a staff-only
+endpoint accepting a target user_id and re-enable the UI.

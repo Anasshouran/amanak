@@ -343,3 +343,12 @@ export function IconPlans(p: IconProps) {
     </svg>
   )
 }
+
+export function IconStaff(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      <path d="M9.5 11.5 11 13l3.5-4" />
+    </svg>
+  )
+}

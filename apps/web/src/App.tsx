@@ -19,6 +19,14 @@ import { Pricing } from "./pages/Pricing"
 import { Billing } from "./pages/Billing"
 import { Settings } from "./pages/Settings"
 import { NotFound } from "./pages/NotFound"
+import { StaffRoute } from "./components/StaffRoute"
+import { StaffHome } from "./pages/StaffHome"
+import { StaffUsers } from "./pages/StaffUsers"
+import { StaffUserDetail } from "./pages/StaffUserDetail"
+import { StaffAudit } from "./pages/StaffAudit"
+import { StaffTickets } from "./pages/StaffTickets"
+import { StaffTicketDetail } from "./pages/StaffTicketDetail"
+import { StaffMetrics } from "./pages/StaffMetrics"
 
 export function App() {
   return (
@@ -46,6 +54,62 @@ export function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/plans" element={<Pricing />} />
         <Route path="/billing" element={<Billing />} />
+        <Route
+          path="/staff"
+          element={
+            <StaffRoute>
+              <StaffHome />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/users"
+          element={
+            <StaffRoute>
+              <StaffUsers />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/users/:id"
+          element={
+            <StaffRoute>
+              <StaffUserDetail />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/audit"
+          element={
+            <StaffRoute>
+              <StaffAudit />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/tickets"
+          element={
+            <StaffRoute>
+              <StaffTickets />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/tickets/:id"
+          element={
+            <StaffRoute>
+              <StaffTicketDetail />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/metrics"
+          element={
+            <StaffRoute>
+              <StaffMetrics />
+            </StaffRoute>
+          }
+        />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

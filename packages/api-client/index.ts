@@ -51,6 +51,14 @@ import type {
   TwoFactorProfile,
   TwoFactorUpdateEntryInput,
   User,
+  AdminActionLogEntry,
+  Paginated,
+  StaffModeration,
+  StaffUser,
+  StaffUserSnapshot,
+  SupportTicket,
+  SupportTicketDetail,
+  SupportTicketMessage,
 } from "@amanak/shared-types"
 
 export type { ApiError }
@@ -503,5 +511,74 @@ export class ApiClient {
 
   getBillingUsage() {
     return this.request<BillingUsage>("GET", "/billing/usage/")
+  }
+
+  // ---- staff dashboard (P13.2) ----
+  private _qs(params: Record<string, string | number | undefined>): string {
+    const q = new URLSearchParams()
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") q.set(key, String(value))
+    }
+    const s = q.toString()
+    return s ? `?${s}` : ""
+  }
+
+  listStaffUsers(params: {
+    q?: string
+    status?: string
+    page?: number
+  } = {}) {
+    return this.request<Paginated<StaffUser>>("GET", `/staff/users/${this._qs(params)}`)
+  }
+
+  getStaffUser(id: number) {
+    return this.request<StaffUserSnapshot>("GET", `/staff/users/${id}/`)
+  }
+
+  blockStaffUser(id: number, reason: string) {
+    return this.request<StaffModeration>("POST", `/staff/users/${id}/block/`, { reason })
+  }
+
+  unblockStaffUser(id: number, reason: string) {
+    return this.request<StaffModeration>("POST", `/staff/users/${id}/unblock/`, { reason })
+  }
+
+  listAuditLog(params: {
+    actor?: string
+    target?: string
+    action?: string
+    since?: string
+    until?: string
+    page?: number
+  } = {}) {
+    return this.request<Paginated<AdminActionLogEntry>>("GET", `/staff/audit/${this._qs(params)}`)
+  }
+
+  listTickets(params: {
+    status?: string
+    priority?: string
+    assigned_to?: string
+    page?: number
+  } = {}) {
+    return this.request<Paginated<SupportTicket>>("GET", `/staff/tickets/${this._qs(params)}`)
+  }
+
+  createTicket(input: { subject: string; body: string }) {
+    return this.request<SupportTicketDetail>("POST", "/staff/tickets/", input)
+  }
+
+  getTicket(id: number) {
+    return this.request<SupportTicketDetail>("GET", `/staff/tickets/${id}/`)
+  }
+
+  updateTicket(
+    id: number,
+    patch: { status?: string; priority?: string; assigned_to?: number | null },
+  ) {
+    return this.request<SupportTicket>("PATCH", `/staff/tickets/${id}/`, patch)
+  }
+
+  addTicketMessage(id: number, body: string) {
+    return this.request<SupportTicketMessage>("POST", `/staff/tickets/${id}/messages/`, { body })
   }
 }
