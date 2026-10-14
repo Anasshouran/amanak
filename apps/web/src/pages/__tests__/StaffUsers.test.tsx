@@ -21,24 +21,6 @@ vi.mock("react-router-dom", () => ({
   Link: ({ children }: { children?: unknown }) => <span>{children as never}</span>,
 }))
 
-function snapshot(id: number, email: string, plan: string, blocked: boolean) {
-  return {
-    user: {
-      id,
-      email,
-      username: email.split("@")[0],
-      is_verified: true,
-      is_active: true,
-      is_staff: false,
-      date_joined: "2026-01-01T00:00:00Z",
-    },
-    subscription: { plan, status: "active", current_period_end: null },
-    usage_this_month: { scans: { used: 0, limit: 10 }, ai_requests: { used: 0, limit: 5 } },
-    moderation: { is_blocked: blocked, reason: "" },
-    counts: { scans_total: 0, incidents_total: 0, vault_entries: 0, "2fa_entries": 0 },
-  }
-}
-
 function renderPage() {
   return render(
     <ThemeProvider>
@@ -67,6 +49,9 @@ describe("StaffUsers", () => {
           is_active: true,
           is_staff: false,
           date_joined: "2026-01-01T00:00:00Z",
+          plan: "pro",
+          is_blocked: false,
+          tickets_count: 3,
         },
         {
           id: 11,
@@ -76,16 +61,12 @@ describe("StaffUsers", () => {
           is_active: true,
           is_staff: false,
           date_joined: "2026-02-01T00:00:00Z",
+          plan: "free",
+          is_blocked: true,
+          tickets_count: 0,
         },
       ],
     })
-    apiMock.getStaffUser.mockImplementation((id: number) =>
-      Promise.resolve(
-        id === 10
-          ? snapshot(10, "alpha@example.com", "pro", false)
-          : snapshot(11, "beta@example.com", "free", true),
-      ),
-    )
   })
 
   it("renders users returned by the API", async () => {
@@ -105,6 +86,13 @@ describe("StaffUsers", () => {
         ),
       { timeout: 2000 },
     )
+  })
+
+  it("renders the enriched plan and status from the list payload", async () => {
+    renderPage()
+    await screen.findByText("alpha@example.com")
+    expect(screen.getAllByText("pro").length).toBeGreaterThan(0)
+    expect(apiMock.getStaffUser).not.toHaveBeenCalled()
   })
 
   it("paginates to the next page", async () => {

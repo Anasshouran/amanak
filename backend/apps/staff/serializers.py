@@ -24,6 +24,9 @@ def user_brief(user):
         "is_active": user.is_active,
         "is_staff": user.is_staff,
         "date_joined": user.date_joined.isoformat() if user.date_joined else None,
+        "plan": getattr(user, "subscription_plan", None),
+        "is_blocked": getattr(user, "is_blocked", False),
+        "tickets_count": getattr(user, "tickets_count", 0),
     }
 
 

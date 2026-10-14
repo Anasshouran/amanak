@@ -585,8 +585,8 @@ export class ApiClient {
     return this.request<Paginated<SupportTicket>>("GET", `/staff/tickets/${this._qs(params)}`)
   }
 
-  createTicket(input: { subject: string; body: string }) {
-    return this.request<SupportTicketDetail>("POST", "/staff/tickets/", input)
+  createTicket(input: { subject: string; body: string; target_user_id?: number }) {
+    return this.request<SupportTicketDetail>("POST", `/staff/tickets/`, input)
   }
 
   getTicket(id: number) {
@@ -677,6 +677,16 @@ export class ApiClient {
 
   downloadUserExport(token: string) {
     return this.request<Record<string, unknown>>("GET", `/staff/exports/${token}/`)
+  }
+
+  listStaffMetrics(params: { range: "7d" | "30d" | "90d" }) {
+    return this.request<{
+      signups_per_day: Array<{ date: string; count: number }>
+      scans_per_day: Array<{ date: string; count: number }>
+      subscriptions_by_plan: Record<string, number>
+      tickets_opened_per_day: Array<{ date: string; count: number }>
+      tickets_closed_per_day: Array<{ date: string; count: number }>
+    }>("GET", `/staff/metrics/${this._qs(params)}`)
   }
 
   listNotifications() {

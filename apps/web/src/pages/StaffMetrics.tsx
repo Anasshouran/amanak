@@ -6,7 +6,9 @@ import { canSeeAudit, fetchAllPages } from "../lib/staff"
 import { errorMessage, useAsync } from "../lib/useAsync"
 import { useAuth } from "../state/AuthContext"
 
-const RANGES: Record<string, number> = { "7d": 7, "30d": 30, "90d": 90 }
+type Range = "7d" | "30d" | "90d"
+
+const RANGES: Record<Range, number> = { "7d": 7, "30d": 30, "90d": 90 }
 
 function bucket(dates: string[], days: number): { label: string; value: number }[] {
   const counts = new Map<string, number>()
@@ -29,17 +31,16 @@ function bucket(dates: string[], days: number): { label: string; value: number }
 export function StaffMetrics() {
   const t = useT()
   const { user } = useAuth()
-  const [range, setRange] = useState("30d")
+  const [range, setRange] = useState<Range>("30d")
   const days = RANGES[range] ?? 30
 
   const metrics = useAsync(async () => {
-    const [users, tickets, audit] = await Promise.all([
-      fetchAllPages((page) => api.listStaffUsers({ page }), 10),
-      fetchAllPages((page) => api.listTickets({ page }), 10),
+    const [metricsData, audit] = await Promise.all([
+      api.listStaffMetrics({ range }),
       canSeeAudit(user) ? fetchAllPages((page) => api.listAuditLog({ page }), 10) : Promise.resolve([]),
     ])
-    return { users, tickets, audit }
-  }, [user])
+    return { metricsData, audit }
+  }, [user, range])
 
   if (metrics.error) {
     return (
@@ -64,16 +65,20 @@ export function StaffMetrics() {
   const data = metrics.data
   if (!data) return null
 
+  const { metricsData, audit } = data
+
   const signups = bucket(
-    data.users.map((u) => u.date_joined ?? ""),
+    metricsData.signups_per_day.map((s) => s.date),
     days,
   )
+
   const opened = bucket(
-    data.tickets.map((tk) => tk.created_at),
+    metricsData.tickets_opened_per_day.map((tk) => tk.date),
     days,
   )
+
   const blocks = bucket(
-    data.audit.filter((a) => a.action === "user.block").map((a) => a.created_at),
+    audit.filter((a) => a.action === "user.block").map((a) => a.created_at),
     days,
   )
 
@@ -85,7 +90,7 @@ export function StaffMetrics() {
           <p>{t("staff.metrics.subtitle")}</p>
         </div>
         <div className="amk-row">
-          {Object.keys(RANGES).map((key) => (
+          {(Object.keys(RANGES) as Range[]).map((key) => (
             <Button
               key={key}
               variant={range === key ? "primary" : "secondary"}
@@ -111,10 +116,17 @@ export function StaffMetrics() {
           </Card>
         )}
         <Card padded elevated title={t("staff.metrics.scans")}>
-          <p className="amk-muted">{t("staff.metrics.unavailable")}</p>
+          <BarChart data={bucket(metricsData.scans_per_day.map((s) => s.date), days)} />
         </Card>
         <Card padded elevated title={t("staff.metrics.byPlan")}>
-          <p className="amk-muted">{t("staff.metrics.unavailable")}</p>
+          <div className="amk-grid amk-grid--two">
+            {Object.entries(metricsData.subscriptions_by_plan).map(([plan, count]) => (
+              <div key={plan} className="amk-stat">
+                <span className="amk-stat-label">{plan}</span>
+                <span className="amk-stat-value">{count}</span>
+              </div>
+            ))}
+          </div>
         </Card>
       </div>
     </div>

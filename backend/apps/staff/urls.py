@@ -51,6 +51,7 @@ urlpatterns = [
         name="staff-announcement-send",
     ),
     path("audit/", views.audit_list, name="staff-audit"),
+    path("metrics/", views.metrics_list, name="staff-metrics"),
     path("tickets/", views.tickets_collection, name="staff-tickets"),
     path("tickets/<int:ticket_id>/", views.ticket_detail_view, name="staff-ticket-detail"),
     path(

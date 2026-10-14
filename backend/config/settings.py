@@ -423,6 +423,7 @@ REST_FRAMEWORK = {
         "billing_write_user": "30/min",
         "staff_read_user": "240/min",
         "staff_write_user": "60/min",
+        "staff_metrics_user": "60/min",
     },
 }
 

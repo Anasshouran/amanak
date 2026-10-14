@@ -503,6 +503,9 @@ export type StaffUser = {
   is_active: boolean
   is_staff: boolean
   date_joined: string | null
+  plan?: string | null
+  is_blocked?: boolean
+  tickets_count?: number
 }
 
 export type StaffSubscription = {

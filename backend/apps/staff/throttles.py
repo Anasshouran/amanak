@@ -25,9 +25,21 @@ class StaffWriteUserRateThrottle(_StaffThrottle):
     scope = "staff_write_user"
 
 
+class StaffMetricsUserRateThrottle(_StaffThrottle):
+    scope = "staff_metrics_user"
+
+
+_THROTTLES = {
+    "read": StaffReadUserRateThrottle,
+    "write": StaffWriteUserRateThrottle,
+    "metrics": StaffMetricsUserRateThrottle,
+}
+
+
 def enforce_throttle(request, scope):
     """Return a 429 JsonResponse when throttled, else ``None``."""
-    throttle = StaffReadUserRateThrottle() if scope == "read" else StaffWriteUserRateThrottle()
+    throttle_cls = _THROTTLES.get(scope, StaffWriteUserRateThrottle)
+    throttle = throttle_cls()
     if not throttle.allow_request(request, None):
         return JsonResponse(
             {"code": "throttled", "detail": "Request was throttled."}, status=429

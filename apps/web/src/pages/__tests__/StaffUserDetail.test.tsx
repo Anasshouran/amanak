@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, fireEvent, waitFor } from "@testing-library/react"
 import { ThemeProvider } from "../../design/ThemeProvider"
 import { ToastProvider } from "../../design/components"
 import { StaffUserDetail } from "../StaffUserDetail"
@@ -72,5 +72,35 @@ describe("StaffUserDetail", () => {
     await screen.findByRole("heading", { name: "alpha@example.com" })
     expect(screen.queryByRole("button", { name: "Block user" })).not.toBeInTheDocument()
     expect(screen.queryByRole("button", { name: "Unblock user" })).not.toBeInTheDocument()
+  })
+
+  it("lets a support agent open a ticket on behalf of the user", async () => {
+    auth.user = { id: 2, email: "sup@amanak.dev", is_staff: true, roles: ["support"] }
+    apiMock.createTicket.mockResolvedValue({ id: 99, user: 10 })
+    renderPage()
+    await screen.findByRole("heading", { name: "alpha@example.com" })
+
+    fireEvent.click(screen.getByRole("button", { name: "Open ticket on behalf" }))
+    await screen.findByRole("dialog")
+    fireEvent.change(screen.getByLabelText("Subject"), { target: { value: "Hello" } })
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "Body" } })
+    fireEvent.click(await screen.findByRole("button", { name: "Create" }))
+
+    await waitFor(() =>
+      expect(apiMock.createTicket).toHaveBeenCalledWith({
+        subject: "Hello",
+        body: "Body",
+        target_user_id: 10,
+      }),
+    )
+  })
+
+  it("hides the behalf-ticket button from a billing admin", async () => {
+    auth.user = { id: 3, email: "bill@amanak.dev", is_staff: true, roles: ["billing_admin"] }
+    renderPage()
+    await screen.findByRole("heading", { name: "alpha@example.com" })
+    expect(
+      screen.queryByRole("button", { name: "Open ticket on behalf" }),
+    ).not.toBeInTheDocument()
   })
 })

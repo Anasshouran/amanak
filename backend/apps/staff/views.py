@@ -12,7 +12,9 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.core.cache import cache
+from django.db.models import Q, Count, F, Value
+from django.db.models.functions import Coalesce, TruncDate
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -22,6 +24,7 @@ from django.views.decorators.http import require_http_methods
 from accounts.models import User
 from apps.billing.models import Plan, Subscription
 from apps.notifications.models import InAppNotification
+from scanner.models import ScanResult
 from common.middleware import log_admin_action
 from common.staff import (
     BILLING_ADMIN,
@@ -107,7 +110,7 @@ def users_list(request):
     if throttled:
         return throttled
 
-    qs = User.objects.all().order_by("id")
+    qs = User.objects.select_related("subscription").order_by("id")
     q = request.GET.get("q", "").strip()
     if q:
         from django.db.models import Q
@@ -121,6 +124,13 @@ def users_list(request):
         from django.db.models import Q
 
         qs = qs.filter(Q(moderation__isnull=True) | Q(moderation__is_blocked=False))
+
+    # Enrich without per-row queries: one annotated query for the whole page.
+    qs = qs.annotate(
+        subscription_plan=F("subscription__plan_id"),
+        is_blocked=Coalesce(F("moderation__is_blocked"), Value(False)),
+        tickets_count=Count("support_tickets", distinct=True),
+    )
 
     return JsonResponse(_paginate(qs, request, user_brief))
 
@@ -274,9 +284,34 @@ def tickets_collection(request):
         text = (body.get("body") or "").strip()
         if not subject or not text:
             return _error("invalid_input")
+        
+        target_user_id = body.get("target_user_id")
+        target_user = None
+        if target_user_id is not None:
+            if not has_staff_role(request.user, SUPPORT):
+                return _error("forbidden", status=403)
+            target_user = User.objects.filter(pk=target_user_id).first()
+            if target_user is None:
+                return _error("invalid_target_user")
+            user = target_user
+        else:
+            user = request.user
+        
         ticket = SupportTicket.objects.create(
-            user=request.user, subject=subject[:200], body=text
+            user=user, subject=subject[:200], body=text
         )
+        
+        if target_user is not None:
+            log_admin_action(
+                request.user,
+                "ticket.create_on_behalf",
+                target_user=target_user,
+                target_type="ticket",
+                target_id=ticket.id,
+                reason=f"Created on behalf of {target_user.email}",
+                request=request,
+            )
+        
         return JsonResponse(ticket_detail(ticket), status=201)
 
     throttled = enforce_throttle(request, "read")
@@ -817,3 +852,62 @@ def export_download(request, token):
         request=request,
     )
     return JsonResponse(build_user_export(export.user))
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+@require_staff_role(SUPPORT, BILLING_ADMIN, SECURITY_ADMIN, SUPER_ADMIN)
+def metrics_list(request):
+    throttled = enforce_throttle(request, "metrics")
+    if throttled:
+        return throttled
+
+    range_days = request.GET.get("range", "30d")
+    if range_days not in ("7d", "30d", "90d"):
+        return _error("invalid_range", status=400)
+
+    days = int(range_days[:-1])
+    cache_key = f"staff_metrics:{range_days}"
+    cached = cache.get(cache_key)
+    if cached is not None:
+        return JsonResponse(cached)
+
+    start_date = timezone.now() - timedelta(days=days)
+
+    def per_day(queryset, field):
+        rows = (
+            queryset.filter(**{f"{field}__gte": start_date})
+            .annotate(day=TruncDate(field))
+            .values("day")
+            .annotate(count=Count("id"))
+            .order_by("day")
+        )
+        return [
+            {"date": row["day"].isoformat() if row["day"] else None, "count": row["count"]}
+            for row in rows
+        ]
+
+    signups_per_day = per_day(User.objects.all(), "date_joined")
+    scans_per_day = per_day(ScanResult.objects.all(), "created_at")
+    tickets_opened_per_day = per_day(SupportTicket.objects.all(), "created_at")
+    tickets_closed_per_day = per_day(
+        SupportTicket.objects.filter(status="closed"), "updated_at"
+    )
+
+    subscriptions_by_plan = {
+        row["plan_id"]: row["count"]
+        for row in Subscription.objects.values("plan_id")
+        .annotate(count=Count("id"))
+        .order_by("plan_id")
+    }
+
+    response = {
+        "signups_per_day": signups_per_day,
+        "scans_per_day": scans_per_day,
+        "subscriptions_by_plan": subscriptions_by_plan,
+        "tickets_opened_per_day": tickets_opened_per_day,
+        "tickets_closed_per_day": tickets_closed_per_day,
+    }
+
+    cache.set(cache_key, response, 60)  # 60 seconds cache
+    return JsonResponse(response)

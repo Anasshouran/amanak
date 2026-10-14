@@ -50,33 +50,16 @@ export function StaffUsers() {
 
   const list = useAsync(async () => {
     const res = await api.listStaffUsers({ q: query, status, page })
-    const enriched = await Promise.all(
-      res.results.map(async (u): Promise<Row> => {
-        try {
-          const snap = await api.getStaffUser(u.id)
-          return {
-            id: u.id,
-            email: u.email,
-            username: u.username,
-            is_verified: u.is_verified,
-            date_joined: u.date_joined,
-            plan: snap.subscription.plan,
-            blocked: snap.moderation.is_blocked,
-          }
-        } catch {
-          return {
-            id: u.id,
-            email: u.email,
-            username: u.username,
-            is_verified: u.is_verified,
-            date_joined: u.date_joined,
-            plan: null,
-            blocked: false,
-          }
-        }
-      }),
-    )
-    return { count: res.count, pages: res.pages, rows: enriched }
+    const rows: Row[] = res.results.map((u) => ({
+      id: u.id,
+      email: u.email,
+      username: u.username,
+      is_verified: u.is_verified,
+      date_joined: u.date_joined,
+      plan: u.plan ?? null,
+      blocked: u.is_blocked ?? false,
+    }))
+    return { count: res.count, pages: res.pages, rows }
   }, [query, status, page])
 
   useEffect(() => {

@@ -22,6 +22,7 @@ import {
   canChangeBilling,
   canExportUser,
   canImpersonate,
+  canManageTickets,
   isForbidden,
 } from "../lib/staff"
 import { errorMessage, useAsync } from "../lib/useAsync"
@@ -39,9 +40,12 @@ export function StaffUserDetail() {
   const [unblockOpen, setUnblockOpen] = useState(false)
   const [impersonateOpen, setImpersonateOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [behalfOpen, setBehalfOpen] = useState(false)
   const [impersonateReason, setImpersonateReason] = useState("")
   const [exportReason, setExportReason] = useState("")
   const [exportConfirmEmail, setExportConfirmEmail] = useState("")
+  const [behalfSubject, setBehalfSubject] = useState("")
+  const [behalfBody, setBehalfBody] = useState("")
   const [busy, setBusy] = useState(false)
 
   const snap = useAsync(() => api.getStaffUser(userId), [userId])
@@ -163,6 +167,27 @@ export function StaffUserDetail() {
     }
   }
 
+  async function onBehalf() {
+    if (!behalfSubject.trim() || !behalfBody.trim()) return
+    setBusy(true)
+    try {
+      await api.createTicket({
+        subject: behalfSubject.trim(),
+        body: behalfBody.trim(),
+        target_user_id: userId,
+      })
+      toast.push(t("staff.detail.behalfDone"), "success")
+      setBehalfOpen(false)
+      setBehalfSubject("")
+      setBehalfBody("")
+      tickets.reload()
+    } catch (err) {
+      toast.push(errorMessage(err, t("staff.detail.behalfFail")), "error")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="amk-page">
       <div className="amk-page-head">
@@ -235,6 +260,15 @@ export function StaffUserDetail() {
                 disabled={busy}
               >
                 {t("staff.detail.impersonate")}
+              </Button>
+            )}
+            {canManageTickets(user) && (
+              <Button
+                variant="ghost"
+                onClick={() => setBehalfOpen(true)}
+                disabled={busy}
+              >
+                {t("staff.detail.openTicket")}
               </Button>
             )}
             {canExportUser(user) && (
@@ -412,6 +446,42 @@ export function StaffUserDetail() {
           </Button>
           <Button onClick={() => void onExport()} disabled={busy}>
             {t("staff.export.download")}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={behalfOpen}
+        onClose={() => setBehalfOpen(false)}
+        title={t("staff.detail.openTicket")}
+      >
+        <p className="amk-muted">{t("staff.detail.behalfNote")}</p>
+        <div className="amk-field">
+          <Input
+            label={t("staff.tickets.subject")}
+            value={behalfSubject}
+            onChange={(e) => setBehalfSubject(e.target.value)}
+            placeholder={t("staff.tickets.subjectPlaceholder")}
+          />
+        </div>
+        <div className="amk-field">
+          <Textarea
+            label={t("staff.tickets.body")}
+            value={behalfBody}
+            rows={4}
+            onChange={(e) => setBehalfBody(e.target.value)}
+            placeholder={t("staff.tickets.bodyPlaceholder")}
+          />
+        </div>
+        <div className="amk-modal__actions">
+          <Button variant="ghost" onClick={() => setBehalfOpen(false)}>
+            {t("staff.cancel")}
+          </Button>
+          <Button
+            onClick={() => void onBehalf()}
+            disabled={busy || !behalfSubject.trim() || !behalfBody.trim()}
+          >
+            {t("staff.tickets.create")}
           </Button>
         </div>
       </Modal>
