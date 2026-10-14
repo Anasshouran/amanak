@@ -1,0 +1,11 @@
+- id: "email-shipping-notice"
+  category: "email"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "إشعار شحن", en: "Shipping notice"}
+  prompt: {ar:"تم شحن طلبك. اضغط لتتبع: https://track-parcel.tk", en:"Your order shipped. Track: https://track-parcel.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"رابط تتبع مزيف", en:"Fake tracking link"}
+  red_flags: [lure, domain_imitation]
+  scanner_rule_refs: [URL-PHISH-001]

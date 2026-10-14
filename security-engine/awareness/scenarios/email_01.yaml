@@ -1,0 +1,42 @@
+- id: "email-paypal-urgent"
+  category: "email"
+  difficulty: 1
+  locale: "ar"
+  title:
+    ar: "رسالة من PayPal"
+    en: "A message from PayPal"
+  prompt:
+    ar: |
+      مرحباً،
+      تم تعليق حسابك. يرجى النقر على الرابط لتأكيد بياناتك خلال 24 ساعة.
+      https://paypal-secure-login.tk/verify
+    en: |
+      Hello,
+      Your account has been suspended. Click the link to confirm your
+      details within 24 hours.
+      https://paypal-secure-login.tk/verify
+  options:
+    - id: "safe"
+      label:
+        ar: "آمن"
+        en: "Safe"
+    - id: "phishing"
+      label:
+        ar: "تصيّد"
+        en: "Phishing"
+    - id: "unsure"
+      label:
+        ar: "غير متأكد"
+        en: "Unsure"
+  correct: "phishing"
+  explanation:
+    ar: "علامات التصيّد: اسم النطاق مشبّه (paypal-secure-login.tk)، استعجال، طلب بيانات اعتماد عبر رابط خارجي."
+    en: "Phishing signs: lookalike domain (paypal-secure-login.tk), urgency, credential request via external link."
+  red_flags:
+    - domain_imitation
+    - urgency
+    - credential_request
+  scanner_rule_refs:
+    - URL-PHISH-001
+    - URL-PHISH-002
+    - URL-PHISH-004

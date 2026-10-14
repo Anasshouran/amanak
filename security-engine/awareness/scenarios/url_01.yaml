@@ -1,0 +1,11 @@
+- id: "url-paypal-lookalike"
+  category: "url"
+  difficulty: 1
+  locale: "both"
+  title: {ar: "رابط مشبّه", en: "Lookalike URL"}
+  prompt: {ar:"رابط: https://paypal.com.secure-login.tk", en:"URL: https://paypal.com.secure-login.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"النطاق الحقيقي هو الآخير (.tk)", en:"True domain is the TLD (.tk)"}
+  red_flags: [domain_imitation, subdomain_trick]
+  scanner_rule_refs: [URL-PHISH-001, URL-PHISH-002]

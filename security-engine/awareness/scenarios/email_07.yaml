@@ -1,0 +1,13 @@
+- id: "email-prize-scam"
+  category: "email"
+  difficulty: 1
+  locale: "both"
+  title: {ar: "جائزة", en: "Prize"}
+  prompt:
+    ar: "مبروك! ربحت جوال. ادخل بياناتك في https://win-prize.tk/claim"
+    en: "Congrats! You won a phone. Enter details at https://win-prize.tk/claim"
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"عرض جائز كاذب يطلب بيانات", en:"Fake prize lure requesting info"}
+  red_flags: [lure, credential_request]
+  scanner_rule_refs: [URL-PHISH-001, URL-PHISH-004]

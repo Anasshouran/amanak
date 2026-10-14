@@ -247,3 +247,5 @@ export function Family() {
     </div>
   )
 }
+
+export default Family

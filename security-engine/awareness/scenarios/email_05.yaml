@@ -1,0 +1,27 @@
+- id: "email-bank-hard"
+  category: "email"
+  difficulty: 3
+  locale: "both"
+  title:
+    ar: "تحذير من البنك"
+    en: "Bank warning"
+  prompt:
+    ar: |
+      تم إيقاف بطاقتك مؤقتاً. اتبع الرابط لتفعيلها فوراً.
+      https://secure-bank.tk/verify
+    en: |
+      Your card has been temporarily blocked. Follow the link to activate it now.
+      https://secure-bank.tk/verify
+  options:
+    - id: "safe"
+      label: {ar: "آمن", en: "Safe"}
+    - id: "phishing"
+      label: {ar: "تصيّد", en: "Phishing"}
+    - id: "unsure"
+      label: {ar: "غير متأكد", en: "Unsure"}
+  correct: "phishing"
+  explanation:
+    ar: "نطاق غير رسمي، استعجال، طلب اتخاذ إجراء فوري."
+    en: "Unofficial domain, urgency, immediate action requested."
+  red_flags: [domain_imitation, urgency, credential_request]
+  scanner_rule_refs: [URL-PHISH-001, URL-PHISH-004]

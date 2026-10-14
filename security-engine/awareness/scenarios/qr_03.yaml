@@ -1,0 +1,11 @@
+- id: "qr-wifi-scam"
+  category: "qr"
+  difficulty: 1
+  locale: "both"
+  title: {ar: "QR شبكة WiFi", en: "Wi-Fi QR scam"}
+  prompt: {ar:"مسح QR يطلب اتصال شبكة مشبّهة", en:"QR suggests connecting to a suspicious Wi-Fi network"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"لا تثق بشبكات Wi-Fi مجهولة عبر QR", en:"Avoid unknown Wi-Fi via QR codes"}
+  red_flags: [qr_phishing, lure]
+  scanner_rule_refs: [URL-PHISH-004]

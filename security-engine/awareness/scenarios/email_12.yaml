@@ -1,0 +1,11 @@
+- id: "email-invoice-phish"
+  category: "email"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "فاتورة مزيفة", en: "Fake invoice"}
+  prompt: {ar:"فاتورة مرفقة. عرض https://invoice-pay.tk", en:"Invoice attached. View https://invoice-pay.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"فاتورة احتيالية", en:"Phishing invoice"}
+  red_flags: [lure, credential_request]
+  scanner_rule_refs: [URL-PHISH-004]

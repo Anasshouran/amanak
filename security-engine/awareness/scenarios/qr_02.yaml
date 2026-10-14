@@ -1,0 +1,11 @@
+- id: "qr-payment-scam"
+  category: "qr"
+  difficulty: 3
+  locale: "both"
+  title: {ar: "دفع عبر QR مزيف", en: "Fake QR payment"}
+  prompt: {ar:"طلب دفع عبر QR إلى https://pay-qr.tk", en:"Requested payment via QR to https://pay-qr.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"تحقق من حساب المستلم قبل الدفع", en:"Verify recipient before paying"}
+  red_flags: [qr_phishing, payment_request, lure]
+  scanner_rule_refs: [URL-PHISH-004]

@@ -1,0 +1,11 @@
+- id: "qr-fake-login"
+  category: "qr"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "رمز QR مشبّه", en: "Fake QR code"}
+  prompt: {ar:"مسح QR يفترض فتح https://qr-login.tk", en:"Scanning QR opens https://qr-login.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"رموز QR تخفي الرابط — تحقق دائماً", en:"QR codes hide URLs; verify before login"}
+  red_flags: [qr_phishing, domain_imitation]
+  scanner_rule_refs: [URL-PHISH-004]

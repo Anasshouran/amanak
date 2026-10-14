@@ -1,0 +1,11 @@
+- id: "email-support-phish"
+  category: "email"
+  difficulty: 3
+  locale: "both"
+  title: {ar: "دعم فني", en: "Tech support"}
+  prompt: {ar:"دعم فني: جهازك مصاب. اتصل أو افتح https://tech-support.tk", en:"Tech support: infected device. Open https://tech-support.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"احتيال دعم فني", en:"Tech support scam"}
+  red_flags: [social_engineering, lure, credential_request]
+  scanner_rule_refs: [URL-PHISH-004]

@@ -1,0 +1,11 @@
+- id: "email-tax-refund"
+  category: "email"
+  difficulty: 3
+  locale: "both"
+  title: {ar: "استرداد ضريبي", en: "Tax refund"}
+  prompt: {ar:"مستحق لك استرداد ضريبي. تأكيد: https://tax-refund.tk/claim", en:"Tax refund due. Confirm: https://tax-refund.tk/claim"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"طعم ضريبي للاستدراج", en:"Tax lure"}
+  red_flags: [lure, credential_request, domain_imitation]
+  scanner_rule_refs: [URL-PHISH-004]

@@ -1,0 +1,11 @@
+- id: "email-password-expired"
+  category: "email"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "انتهاء صلاحية كلمة المرور", en: "Password expired"}
+  prompt: {ar:"انتهت صلاحية كلمة المرور. حدثها: https://pwd-reset.tk", en:"Password expired. Reset: https://pwd-reset.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"طلب إعادة تعيين عبر رابط مشبّه", en:"Fake password reset"}
+  red_flags: [urgency, credential_request, domain_imitation]
+  scanner_rule_refs: [URL-PHISH-002, URL-PHISH-004]

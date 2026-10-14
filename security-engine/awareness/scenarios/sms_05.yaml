@@ -1,0 +1,11 @@
+- id: "sms-bill-overdue"
+  category: "sms"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "فاتورة متأخرة", en: "Overdue bill"}
+  prompt: {ar:"فاتورتك متأخرة. ادفع عبر https://bill-pay.tk", en:"Bill overdue. Pay via https://bill-pay.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"رابط دفع مزيف", en:"Fake payment link"}
+  red_flags: [urgency, credential_request, lure]
+  scanner_rule_refs: [URL-PHISH-004]

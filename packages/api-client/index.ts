@@ -97,12 +97,16 @@ export class ApiClient {
       headers.Authorization = `Bearer ${access}`
     }
 
-    const res = await fetch(`${this.baseUrl}/api/v1${path}`, {
+    const init: RequestInit = {
       method,
       headers,
-      body: body === undefined ? undefined : JSON.stringify(body),
       credentials: this.options.credentials,
-    })
+    }
+    const methodUpper = method.toUpperCase()
+    if (body !== undefined && methodUpper !== "GET" && methodUpper !== "HEAD") {
+      init.body = JSON.stringify(body)
+    }
+    const res = await fetch(`${this.baseUrl}/api/v1${path}`, init)
 
     let data: unknown = null
     try {
@@ -420,5 +424,46 @@ export class ApiClient {
 
   listAlerts() {
     return this.request<FamilyAlert[]>("GET", "/family/alerts/")
+  }
+  // ---- phishing awareness (P11) ----
+  getAwarenessCategories() {
+    return this.request<any[]>("GET", "/awareness/categories/")
+  }
+
+  getAwarenessScenarios(params: {
+    category?: string
+    difficulty?: number
+    limit?: number
+    exclude_answered?: boolean
+    locale?: string
+  } = {}) {
+    const q = new URLSearchParams()
+    if (params.category) q.set("category", params.category)
+    if (params.difficulty !== undefined) q.set("difficulty", String(params.difficulty))
+    if (params.limit !== undefined) q.set("limit", String(params.limit))
+    if (params.exclude_answered) q.set("exclude_answered", "true")
+    if (params.locale) q.set("locale", params.locale)
+    const qs = q.toString()
+    const url = qs ? `/awareness/scenarios/?${qs}` : "/awareness/scenarios/"
+    return this.request<any[]>("GET", url)
+  }
+
+  getAwarenessScenario(id: string) {
+    return this.request<any>("GET", `/awareness/scenarios/${id}/`)
+  }
+
+  answerAwareness(body: {
+    scenario_id: string
+    answer: "safe" | "phishing" | "unsure"
+  }) {
+    return this.request<any>("POST", "/awareness/answer/", body)
+  }
+
+  getAwarenessProgress() {
+    return this.request<any>("GET", "/awareness/progress/")
+  }
+
+  resetAwareness() {
+    return this.request<null>("POST", "/awareness/reset/", {})
   }
 }

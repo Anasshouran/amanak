@@ -1,0 +1,11 @@
+- id: "url-obfuscated"
+  category: "url"
+  difficulty: 3
+  locale: "both"
+  title: {ar: "رابط مموه", en: "Obfuscated URL"}
+  prompt: {ar:"https://login.tk.secure-access.tk", en:"https://login.tk.secure-access.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"تحقق من النطاق الفعلي", en:"Check the actual domain"}
+  red_flags: [domain_imitation, subdomain_trick, obfuscation]
+  scanner_rule_refs: [URL-PHISH-001, URL-PHISH-004]

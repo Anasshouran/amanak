@@ -1,0 +1,11 @@
+- id: "url-ip-address"
+  category: "url"
+  difficulty: 3
+  locale: "both"
+  title: {ar: "عنوان IP بدل نطاق", en: "IP instead of domain"}
+  prompt: {ar:"http://192.0.2.5/login", en:"http://192.0.2.5/login"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"استخدام IP يقلل الثقة ويشيع في التصيّد", en:"Raw IP often used in phishing"}
+  red_flags: [ip_address, suspicious_url]
+  scanner_rule_refs: [URL-PHISH-004]

@@ -1,0 +1,21 @@
+- id: "email-otp-phish"
+  category: "email"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "رمز التحقق", en: "OTP code"}
+  prompt:
+    ar: "تم إرسال رمز تحقق: 123456. أكد عبر https://login-verify.tk/otp"
+    en: "Your OTP is 123456. Confirm via https://login-verify.tk/otp"
+  options:
+    - id: "safe"
+      label: {ar: "آمن", en: "Safe"}
+    - id: "phishing"
+      label: {ar: "تصيّد", en: "Phishing"}
+    - id: "unsure"
+      label: {ar: "غير متأكد", en: "Unsure"}
+  correct: "phishing"
+  explanation:
+    ar: "غالباً ما يطلب التصيّد رموز OTP عبر روابط احتيالية."
+    en: "Phishers often trick users into submitting OTPs via fake links."
+  red_flags: [domain_imitation, credential_request]
+  scanner_rule_refs: [URL-PHISH-002, URL-PHISH-004]

@@ -1,0 +1,11 @@
+- id: "sms-delivery-fail"
+  category: "sms"
+  difficulty: 1
+  locale: "both"
+  title: {ar: "فشل توصيل", en: "Delivery failed"}
+  prompt: {ar:"فشل توصيل. اتبع https://delivery-fix.tk لتحديث العنوان", en:"Delivery failed. Follow https://delivery-fix.tk to update address"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"طعم توصيل يطلب بيانات", en:"Delivery lure"}
+  red_flags: [lure, credential_request]
+  scanner_rule_refs: [URL-PHISH-004]

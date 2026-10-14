@@ -1,0 +1,11 @@
+- id: "sms-sim-swap"
+  category: "sms"
+  difficulty: 3
+  locale: "both"
+  title: {ar: "تحذير شريحة", en: "SIM warning"}
+  prompt: {ar:"تم تغيير شريتك. تحقق عبر https://sim-verify.tk", en:"SIM changed. Verify via https://sim-verify.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"محتوى يهدف لسرقة بيانات", en:"SIM-swap lure"}
+  red_flags: [urgency, credential_request]
+  scanner_rule_refs: [URL-PHISH-004]

@@ -101,6 +101,7 @@ INSTALLED_APPS = [
     "apps.two_factor",
     "apps.password_vault",
     "apps.family",
+    "apps.awareness",
 ]
 
 MIDDLEWARE = [
@@ -403,6 +404,8 @@ REST_FRAMEWORK = {
         "password_vault_profile_user": "30/min",
         "family_read_user": "120/min",
         "family_write_user": "30/min",
+        "awareness_read_user": "120/min",
+        "awareness_answer_user": "60/min",
     },
 }
 

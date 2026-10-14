@@ -1,0 +1,11 @@
+- id: "sms-voucher-scam"
+  category: "sms"
+  difficulty: 1
+  locale: "both"
+  title: {ar: "قسيمة مجانية", en: "Free voucher"}
+  prompt: {ar:"قسيمة مجانية. احصل عليها: https://free-voucher.tk", en:"Free voucher. Claim: https://free-voucher.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"طعم للحصول على بيانات", en:"Data harvesting lure"}
+  red_flags: [lure, credential_request]
+  scanner_rule_refs: [URL-PHISH-004]

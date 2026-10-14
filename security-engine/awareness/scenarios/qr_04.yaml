@@ -1,0 +1,11 @@
+- id: "qr-app-download"
+  category: "qr"
+  difficulty: 1
+  locale: "both"
+  title: {ar: "QR لتحميل تطبيق", en: "QR app download"}
+  prompt: {ar:"مسح QR لتحميل تطبيق من https://app-download.tk", en:"Scan QR to download app from https://app-download.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"تطبيقات من مصادر غير رسمية خطر", en:"Unofficial apps risky"}
+  red_flags: [qr_phishing, lure]
+  scanner_rule_refs: [URL-PHISH-004]

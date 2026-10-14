@@ -1,0 +1,11 @@
+- id: "url-free-ssl"
+  category: "url"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "HTTPS لا يضمن الأمان", en: "HTTPS not enough"}
+  prompt: {ar:"https://secure-bank.tk/login", en:"https://secure-bank.tk/login"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"HTTPS موجود لكن النطاق احتيالي", en:"HTTPS present but domain is fake"}
+  red_flags: [domain_imitation]
+  scanner_rule_refs: [URL-PHISH-001, URL-PHISH-004]

@@ -1,0 +1,11 @@
+- id: "url-typo-squatting"
+  category: "url"
+  difficulty: 2
+  locale: "both"
+  title: {ar: "خطأ إملائي", en: "Typosquat"}
+  prompt: {ar:"https://go0gle-login.tk", en:"https://go0gle-login.tk"}
+  options: [{id:"safe",label:{ar:"آمن",en:"Safe"}},{id:"phishing",label:{ar:"تصيّد",en:"Phishing"}},{id:"unsure",label:{ar:"غير متأكد",en:"Unsure"}}]
+  correct: "phishing"
+  explanation: {ar:"استبدال حرف o بصفر", en:"Zero instead of o"}
+  red_flags: [typosquatting, domain_imitation]
+  scanner_rule_refs: [URL-PHISH-001]

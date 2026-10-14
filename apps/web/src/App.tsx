@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react"
 import { Routes, Route } from "react-router-dom"
 import { Layout } from "./components/Layout"
 import { ProtectedRoute } from "./components/ProtectedRoute"
@@ -12,7 +13,8 @@ import { AIAssistant } from "./pages/AIAssistant"
 import { BreachMonitor } from "./pages/BreachMonitor"
 import { TwoFactor } from "./pages/TwoFactor"
 import { PasswordVault } from "./pages/PasswordVault"
-import { Family } from "./pages/Family"
+const Family = lazy(() => import("./pages/Family"))
+const Awareness = lazy(() => import("./pages/Awareness"))
 import { Settings } from "./pages/Settings"
 import { NotFound } from "./pages/NotFound"
 
@@ -37,7 +39,8 @@ export function App() {
         <Route path="/breach" element={<BreachMonitor />} />
         <Route path="/vault" element={<TwoFactor />} />
         <Route path="/passwords" element={<PasswordVault />} />
-        <Route path="/family" element={<Family />} />
+        <Route path="/family" element={<Suspense fallback={null}><Family /></Suspense>} />
+        <Route path="/awareness" element={<Suspense fallback={null}><Awareness /></Suspense>} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<NotFound />} />

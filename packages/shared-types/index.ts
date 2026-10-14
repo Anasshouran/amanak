@@ -367,3 +367,47 @@ export type FamilyShareToggles = {
   share_breach?: boolean
   share_scans?: boolean
 }
+
+// Phishing Awareness (P11)
+export type AwarenessAnswer = "safe" | "phishing" | "unsure"
+
+export type AwarenessOption = {
+  id: string
+  label: { ar: string; en: string } | Record<string, string>
+}
+
+export type AwarenessScenario = {
+  id: string
+  category: "email" | "sms" | "url" | "qr" | string
+  difficulty: number
+  locale: string
+  title?: { ar: string; en: string } | Record<string, string>
+  prompt?: { ar: string; en: string } | Record<string, string>
+  options: AwarenessOption[]
+}
+
+export type AwarenessProgress = {
+  total_attempts: number
+  correct_attempts: number
+  accuracy: number
+  streak_current: number
+  streak_best: number
+  badges: string[]
+}
+
+export type AwarenessAnswerResponse = {
+  is_correct: boolean
+  explanation?: { ar: string; en: string } | Record<string, string>
+  red_flags?: string[]
+  scanner_rule_refs?: string[]
+  progress: AwarenessProgress
+}
+
+export type AwarenessCategory = {
+  id: string
+  count_easy: number
+  count_medium: number
+  count_hard: number
+  attempted: number
+  correct: number
+}
