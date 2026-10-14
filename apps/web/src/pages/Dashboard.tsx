@@ -4,6 +4,7 @@ import { Badge, Button, Card, EmptyState, ErrorState, ProgressRing, Skeleton } f
 import { IconPlus, IconScanner, IconShield } from "../design/icons"
 import { useT } from "../design/i18n"
 import { useTheme } from "../design/ThemeProvider"
+import { useCountUp } from "../design/useCountUp"
 import { api } from "../lib/api"
 import { formatDateTime } from "../lib/format"
 import { verdictVariant } from "../lib/labels"
@@ -16,12 +17,26 @@ type DashboardData = {
 }
 
 function Kpi({ label, value }: { label: string; value: number }) {
+  const animated = useCountUp(value)
   return (
     <div className="amk-kpi">
-      <span className="amk-kpi__value">{value}</span>
+      <span className="amk-kpi__value">{animated}</span>
       <span className="amk-kpi__label">{label}</span>
     </div>
   )
+}
+
+function verdictColor(variant: string): string {
+  switch (variant) {
+    case "success":
+      return "var(--c-success)"
+    case "warning":
+      return "var(--c-warning)"
+    case "danger":
+      return "var(--c-danger)"
+    default:
+      return "var(--c-muted)"
+  }
 }
 
 export function Dashboard() {
@@ -158,9 +173,14 @@ export function Dashboard() {
               {scans.length === 0 ? (
                 <p className="amk-muted">{t("dashboard.noActivity")}</p>
               ) : (
-                <ul className="amk-list">
+                <ul className="amk-activity">
                   {scans.slice(0, 5).map((scan) => (
-                    <li className="amk-listitem" key={scan.id}>
+                    <li className="amk-activity__item" key={scan.id}>
+                      <span
+                        className="amk-activity__dot"
+                        style={{ color: verdictColor(verdictVariant(scan.verdict)) }}
+                        aria-hidden="true"
+                      />
                       <div style={{ display: "grid", gap: 2, minWidth: 0, flex: 1 }}>
                         <span
                           className="amk-mono"
@@ -168,7 +188,7 @@ export function Dashboard() {
                         >
                           {scan.preview}
                         </span>
-                        <span className="amk-muted" style={{ fontSize: 12 }}>
+                        <span className="amk-activity__meta">
                           {formatDateTime(scan.created_at, locale)}
                         </span>
                       </div>

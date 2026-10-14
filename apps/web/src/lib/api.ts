@@ -49,8 +49,8 @@ async function refreshAccess(): Promise<string | null> {
 
 // Routes that render without a session. A 401 while on one of these must not
 // force a redirect, otherwise direct navigation to e.g. /register bounces to
-// /login.
-const PUBLIC_ROUTES = new Set(["/login", "/register"])
+// /login, and the public landing page would redirect anonymous visitors.
+const PUBLIC_ROUTES = new Set(["/", "/login", "/register"])
 
 export const api = new ApiClient(BASE_URL, tokens, {
   credentials: "include",

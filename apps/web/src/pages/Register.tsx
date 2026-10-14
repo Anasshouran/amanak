@@ -39,7 +39,7 @@ export function Register() {
     setBusy(true)
     try {
       await register(email, username, password)
-      navigate("/", { replace: true })
+      navigate("/dashboard", { replace: true })
     } catch {
       setErrors({ form: t("common.error") })
     } finally {

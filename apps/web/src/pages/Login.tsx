@@ -27,7 +27,7 @@ export function Login() {
     setBusy(true)
     try {
       await login(email, password)
-      navigate("/", { replace: true })
+      navigate("/dashboard", { replace: true })
     } catch {
       setErrors({ form: t("login.error.invalid") })
     } finally {

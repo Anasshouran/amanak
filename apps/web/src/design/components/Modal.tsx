@@ -8,9 +8,10 @@ export type ModalProps = {
   title: ReactNode
   children?: ReactNode
   actions?: ReactNode
+  size?: "sm" | "lg"
 }
 
-export function Modal({ open, onClose, title, children, actions }: ModalProps) {
+export function Modal({ open, onClose, title, children, actions, size }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
 
@@ -46,7 +47,7 @@ export function Modal({ open, onClose, title, children, actions }: ModalProps) {
     >
       <div
         ref={dialogRef}
-        className="amk-modal"
+        className={size ? `amk-modal amk-modal--${size}` : "amk-modal"}
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === "string" ? title : undefined}

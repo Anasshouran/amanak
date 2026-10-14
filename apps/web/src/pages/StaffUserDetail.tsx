@@ -131,8 +131,8 @@ export function StaffUserDetail() {
       })
       setImpersonateOpen(false)
       setImpersonateReason("")
-      toast.push(t("staff.impersonate.started"), "success")
-      navigate("/")
+      toast.push(t("staff.impersonate.started"))
+      navigate("/dashboard")
     } catch (err) {
       toast.push(errorMessage(err, t("staff.impersonate.fail")), "error")
     } finally {

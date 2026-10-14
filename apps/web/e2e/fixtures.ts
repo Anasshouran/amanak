@@ -39,7 +39,7 @@ export async function registerUser(page: Page, user: TestUser): Promise<void> {
   await page.getByLabel("Password", { exact: true }).fill(user.password)
   await page.getByLabel("Confirm password", { exact: true }).fill(user.password)
   await page.getByRole("button", { name: "Create account" }).click()
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL(/\/dashboard$/)
 }
 
 export async function loginUser(page: Page, user: TestUser): Promise<void> {
@@ -47,7 +47,7 @@ export async function loginUser(page: Page, user: TestUser): Promise<void> {
   await page.getByLabel("Email", { exact: true }).fill(user.email)
   await page.getByLabel("Password", { exact: true }).fill(user.password)
   await page.getByRole("button", { name: "Sign in", exact: true }).click()
-  await expect(page).toHaveURL(/\/$/)
+  await expect(page).toHaveURL(/\/dashboard$/)
 }
 
 export async function waitForApiIdle(page: Page) {

@@ -1,3 +1,6 @@
+import { useEffect, useState } from "react"
+import { useCountUp } from "../useCountUp"
+
 export type ProgressRingProps = {
   value: number
   size?: number
@@ -13,6 +16,15 @@ export function ProgressRing({ value, size = 160, stroke = 12, label, caption }:
   const offset = circumference - (clamped / 100) * circumference
   const color =
     clamped >= 70 ? "var(--c-success)" : clamped >= 40 ? "var(--c-warning)" : "var(--c-danger)"
+
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setMounted(true))
+    return () => cancelAnimationFrame(frame)
+  }, [])
+
+  const animated = useCountUp(clamped)
+  const display = label === undefined ? animated : label
 
   return (
     <div className="amk-ring" style={{ width: size, height: size }}>
@@ -34,13 +46,13 @@ export function ProgressRing({ value, size = 160, stroke = 12, label, caption }:
           strokeWidth={stroke}
           strokeLinecap="round"
           strokeDasharray={circumference}
-          strokeDashoffset={offset}
+          strokeDashoffset={mounted ? offset : circumference}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
           style={{ transition: "stroke-dashoffset var(--motion-slow)" }}
         />
       </svg>
       <div className="amk-ring__label">
-        <span className="amk-ring__value">{label ?? clamped}</span>
+        <span className="amk-ring__value">{display}</span>
         {caption && <span className="amk-ring__caption">{caption}</span>}
       </div>
     </div>

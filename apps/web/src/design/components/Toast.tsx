@@ -7,15 +7,18 @@ export type ToastItem = {
   id: number
   message: ReactNode
   variant: ToastVariant
+  durationMs: number
 }
 
 export function Toast({
   message,
   variant,
+  durationMs,
   onDismiss,
 }: {
   message: ReactNode
   variant: ToastVariant
+  durationMs: number
   onDismiss: () => void
 }) {
   return (
@@ -30,6 +33,11 @@ export function Toast({
       >
         ×
       </button>
+      <span
+        className="amk-toast__progress"
+        aria-hidden="true"
+        style={{ animationDuration: `${durationMs}ms` }}
+      />
     </div>
   )
 }

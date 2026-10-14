@@ -18,7 +18,7 @@ export function Header({ email, onSignOut, notifications }: HeaderProps) {
 
   return (
     <header className="amk-header">
-      <Link to="/" className="amk-brand-mark" aria-label={t("brand.name")}>
+      <Link to="/dashboard" className="amk-brand-mark" aria-label={t("brand.name")}>
         <span className="amk-brand-mark__dot" aria-hidden="true" />
         <span>{t("brand.name")}</span>
       </Link>

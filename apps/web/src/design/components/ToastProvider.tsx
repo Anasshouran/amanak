@@ -17,6 +17,7 @@ type ToastContextValue = {
 const ToastContext = createContext<ToastContextValue | undefined>(undefined)
 
 const AUTO_DISMISS_MS = 5000
+const MAX_TOASTS = 4
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([])
@@ -29,7 +30,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const push = useCallback(
     (message: ReactNode, variant: ToastVariant = "info") => {
       const id = (idRef.current += 1)
-      setToasts((current) => [...current, { id, message, variant }])
+      setToasts((current) => [...current, { id, message, variant, durationMs: AUTO_DISMISS_MS }].slice(-MAX_TOASTS))
       window.setTimeout(() => dismiss(id), AUTO_DISMISS_MS)
     },
     [dismiss],
@@ -46,6 +47,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             key={toast.id}
             message={toast.message}
             variant={toast.variant}
+            durationMs={toast.durationMs}
             onDismiss={() => dismiss(toast.id)}
           />
         ))}

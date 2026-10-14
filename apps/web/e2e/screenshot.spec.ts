@@ -11,7 +11,7 @@ const LOCALES = ["ar", "en"] as const
 const ROUTES = [
   { path: "/login", name: "login" },
   { path: "/register", name: "register" },
-  { path: "/", name: "dashboard" },
+  { path: "/dashboard", name: "dashboard" },
   { path: "/scanner", name: "scanner" },
   { path: "/breach", name: "breach" },
   { path: "/accounts", name: "accounts" },

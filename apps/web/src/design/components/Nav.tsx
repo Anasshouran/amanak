@@ -26,7 +26,7 @@ type NavEntry = {
 }
 
 const LINKS: NavEntry[] = [
-  { to: "/", key: "nav.dashboard", icon: IconDashboard, end: true },
+  { to: "/dashboard", key: "nav.dashboard", icon: IconDashboard, end: true },
   { to: "/scanner", key: "nav.scanner", icon: IconScanner },
   { to: "/breach", key: "nav.breach", icon: IconShield },
   { to: "/family", key: "nav.family", icon: IconFamily },

@@ -6,11 +6,12 @@ import {
   Button,
   Card,
   ErrorState,
+  ProgressRing,
   Skeleton,
   Tabs,
   Textarea,
 } from "../design/components"
-import { IconScanner } from "../design/icons"
+import { IconCopy, IconScanner } from "../design/icons"
 import { useT } from "../design/i18n"
 import { useTheme } from "../design/ThemeProvider"
 import { api } from "../lib/api"
@@ -18,15 +19,32 @@ import { formatDateTime } from "../lib/format"
 import { severityVariant, verdictVariant } from "../lib/labels"
 import { errorMessage, useAsync } from "../lib/useAsync"
 
+function CopyButton({ value }: { value: string }) {
+  const t = useT()
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      className="amk-copy"
+      onClick={() => {
+        void navigator.clipboard?.writeText(value)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1500)
+      }}
+    >
+      <IconCopy size={14} />
+      <span>{copied ? t("actions.copied") : t("actions.copy")}</span>
+    </button>
+  )
+}
+
 function ScanResultCard({ result }: { result: ScanResponse }) {
   const t = useT()
   return (
     <Card padded elevated title={t("scanner.result.title")}>
       <div className="amk-row" style={{ justifyContent: "space-between" }}>
         <Badge variant={verdictVariant(result.verdict)}>{t(`scanner.verdict.${result.verdict}`)}</Badge>
-        <span className="amk-muted">
-          {t("common.score")}: <strong>{result.score}</strong>
-        </span>
+        <ProgressRing size={64} stroke={6} value={result.score} caption={t("common.score")} />
       </div>
       <p className="amk-muted" style={{ fontSize: 12, marginTop: 4 }}>
         {t("scanner.ruleset")}: {result.ruleset_version}
@@ -35,22 +53,27 @@ function ScanResultCard({ result }: { result: ScanResponse }) {
       {result.matches.length === 0 ? (
         <p className="amk-muted">{t("scanner.noMatches")}</p>
       ) : (
-        <div>
+        <div className="amk-match-list">
           {result.matches.map((match, index) => (
-            <div className="amk-match" key={`${match.rule_id}-${index}`}>
-              <div className="amk-row" style={{ justifyContent: "space-between" }}>
+            <details className="amk-match" key={`${match.rule_id}-${index}`}>
+              <summary>
                 <span className="amk-mono">
                   {t("scanner.match.rule")}: {match.rule_id}
                 </span>
                 <Badge variant={severityVariant(match.severity)}>
                   {t(`scanner.severity.${match.severity}`)}
                 </Badge>
+              </summary>
+              <div className="amk-match__body">
+                <p>{match.description}</p>
+                {match.evidence_redacted && (
+                  <div className="amk-row" style={{ justifyContent: "space-between", gap: 8 }}>
+                    <code className="amk-mono amk-muted">{match.evidence_redacted}</code>
+                    <CopyButton value={match.evidence_redacted} />
+                  </div>
+                )}
               </div>
-              <p>{match.description}</p>
-              {match.evidence_redacted && (
-                <code className="amk-mono amk-muted">{match.evidence_redacted}</code>
-              )}
-            </div>
+            </details>
           ))}
         </div>
       )}

@@ -1,14 +1,34 @@
 <!doctype html>
-<html lang="en">
+<html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AMANAK أمانك</title>
     <style>
       html {
-        background: #020617;
+        background: #050a15;
+      }
+      html[data-theme="light"] {
+        background: #f1f5f9;
       }
     </style>
+    <script>
+      // Apply the stored theme/locale before first paint to avoid a flash.
+      (function () {
+        try {
+          var theme = localStorage.getItem("amanak.theme");
+          var locale = localStorage.getItem("amanak.locale");
+          theme = theme === "light" || theme === "dark" ? theme : "dark";
+          locale = locale === "ar" || locale === "en" ? locale : "ar";
+          var el = document.documentElement;
+          el.setAttribute("data-theme", theme);
+          el.setAttribute("lang", locale);
+          el.setAttribute("dir", locale === "ar" ? "rtl" : "ltr");
+        } catch (e) {
+          /* storage unavailable */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
