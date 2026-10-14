@@ -6,14 +6,24 @@ import {
   Card,
   ConfirmModal,
   ErrorState,
+  Input,
+  Modal,
   Skeleton,
+  Textarea,
   useToast,
 } from "../design/components"
 import { useT } from "../design/i18n"
 import { useTheme } from "../design/ThemeProvider"
 import { api } from "../lib/api"
 import { formatDate, formatDateTime } from "../lib/format"
-import { canBlockUsers, canChangeBilling, isForbidden } from "../lib/staff"
+import { setImpersonation } from "../lib/impersonation"
+import {
+  canBlockUsers,
+  canChangeBilling,
+  canExportUser,
+  canImpersonate,
+  isForbidden,
+} from "../lib/staff"
 import { errorMessage, useAsync } from "../lib/useAsync"
 import { useAuth } from "../state/AuthContext"
 
@@ -27,6 +37,11 @@ export function StaffUserDetail() {
   const navigate = useNavigate()
   const [blockOpen, setBlockOpen] = useState(false)
   const [unblockOpen, setUnblockOpen] = useState(false)
+  const [impersonateOpen, setImpersonateOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [impersonateReason, setImpersonateReason] = useState("")
+  const [exportReason, setExportReason] = useState("")
+  const [exportConfirmEmail, setExportConfirmEmail] = useState("")
   const [busy, setBusy] = useState(false)
 
   const snap = useAsync(() => api.getStaffUser(userId), [userId])
@@ -96,6 +111,58 @@ export function StaffUserDetail() {
     }
   }
 
+  async function onImpersonate() {
+    if (impersonateReason.trim().length < 10) {
+      toast.push(t("staff.impersonate.reasonRequired"), "error")
+      return
+    }
+    setBusy(true)
+    try {
+      const res = await api.impersonateUser(userId, impersonateReason.trim())
+      setImpersonation({
+        userId: res.target.id,
+        email: res.target.email,
+        sessionId: res.session_id,
+        expiresAt: Date.parse(res.expires_at),
+      })
+      setImpersonateOpen(false)
+      setImpersonateReason("")
+      toast.push(t("staff.impersonate.started"), "success")
+      navigate("/")
+    } catch (err) {
+      toast.push(errorMessage(err, t("staff.impersonate.fail")), "error")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function onExport() {
+    if (exportConfirmEmail.trim().toLowerCase() !== (s?.user.email ?? "").toLowerCase()) {
+      toast.push(t("staff.export.emailMismatch"), "error")
+      return
+    }
+    setBusy(true)
+    try {
+      const req = await api.requestUserExport(userId, exportReason.trim())
+      const doc = await api.downloadUserExport(req.token)
+      const blob = new Blob([JSON.stringify(doc, null, 2)], { type: "application/json" })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `amanak-export-${userId}.json`
+      a.click()
+      URL.revokeObjectURL(url)
+      toast.push(t("staff.export.done"), "success")
+      setExportOpen(false)
+      setExportConfirmEmail("")
+      setExportReason("")
+    } catch (err) {
+      toast.push(errorMessage(err, t("staff.export.fail")), "error")
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <div className="amk-page">
       <div className="amk-page-head">
@@ -157,9 +224,23 @@ export function StaffUserDetail() {
                 </Button>
               ))}
             {canChangeBilling(user) && (
-              <Link className="amk-btn amk-btn--secondary amk-btn--md" to="/staff/tickets">
+              <Link className="amk-btn amk-btn--secondary amk-btn--md" to="/staff/subscriptions">
                 {t("staff.detail.changePlan")}
               </Link>
+            )}
+            {canImpersonate(user) && !s.user.is_staff && (
+              <Button
+                variant="secondary"
+                onClick={() => setImpersonateOpen(true)}
+                disabled={busy}
+              >
+                {t("staff.detail.impersonate")}
+              </Button>
+            )}
+            {canExportUser(user) && (
+              <Button variant="ghost" onClick={() => setExportOpen(true)} disabled={busy}>
+                {t("staff.detail.export")}
+              </Button>
             )}
             <a
               className="amk-btn amk-btn--ghost amk-btn--md"
@@ -275,6 +356,65 @@ export function StaffUserDetail() {
         onConfirm={onUnblock}
         onClose={() => setUnblockOpen(false)}
       />
+
+      <Modal
+        open={impersonateOpen}
+        onClose={() => setImpersonateOpen(false)}
+        title={t("staff.impersonate.title")}
+      >
+        <p className="amk-muted">{t("staff.impersonate.message", { email: s.user.email })}</p>
+        <div className="amk-field">
+          <Textarea
+            label={t("staff.reason")}
+            value={impersonateReason}
+            rows={3}
+            onChange={(e) => setImpersonateReason(e.target.value)}
+          />
+        </div>
+        <div className="amk-modal__actions">
+          <Button variant="ghost" onClick={() => setImpersonateOpen(false)}>
+            {t("staff.cancel")}
+          </Button>
+          <Button
+            onClick={() => void onImpersonate()}
+            disabled={busy || impersonateReason.trim().length < 10}
+          >
+            {t("staff.impersonate.start")}
+          </Button>
+        </div>
+      </Modal>
+
+      <Modal
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        title={t("staff.export.title")}
+      >
+        <p className="amk-muted">{t("staff.export.message", { email: s.user.email })}</p>
+        <div className="amk-field">
+          <Textarea
+            label={t("staff.reason")}
+            value={exportReason}
+            rows={2}
+            onChange={(e) => setExportReason(e.target.value)}
+          />
+        </div>
+        <div className="amk-field">
+          <Input
+            label={t("staff.export.confirmLabel", { email: s.user.email })}
+            value={exportConfirmEmail}
+            onChange={(e) => setExportConfirmEmail(e.target.value)}
+            placeholder={s.user.email}
+          />
+        </div>
+        <div className="amk-modal__actions">
+          <Button variant="ghost" onClick={() => setExportOpen(false)}>
+            {t("staff.cancel")}
+          </Button>
+          <Button onClick={() => void onExport()} disabled={busy}>
+            {t("staff.export.download")}
+          </Button>
+        </div>
+      </Modal>
     </div>
   )
 }

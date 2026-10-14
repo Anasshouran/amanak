@@ -1,4 +1,5 @@
 import { ApiClient } from "@amanak/api-client"
+import { clearImpersonation, impersonationHeader } from "./impersonation"
 
 const BASE_URL =
   (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL ?? "http://127.0.0.1:8000"
@@ -54,6 +55,17 @@ const PUBLIC_ROUTES = new Set(["/login", "/register"])
 export const api = new ApiClient(BASE_URL, tokens, {
   credentials: "include",
   refreshAccess,
+  getImpersonation: impersonationHeader,
+  onForbidden: (error) => {
+    // An impersonation session that the server rejects (read-only violation or
+    // revoked session) is over: drop it and return to the staff dashboard.
+    if (error.code === "impersonation_read_only" || error.code === "impersonation_forbidden") {
+      clearImpersonation()
+      if (typeof window !== "undefined") {
+        window.location.assign("/staff")
+      }
+    }
+  },
   onUnauthorized: () => {
     void tokens.clear()
     if (typeof window !== "undefined" && !PUBLIC_ROUTES.has(window.location.pathname)) {

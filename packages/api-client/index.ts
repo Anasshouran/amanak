@@ -59,6 +59,13 @@ import type {
   SupportTicket,
   SupportTicketDetail,
   SupportTicketMessage,
+  AnnouncementAudience,
+  ExportRequestResponse,
+  ImpersonationStartResponse,
+  NotificationItem,
+  NotificationList,
+  StaffAnnouncement,
+  StaffSubscriptionRow,
 } from "@amanak/shared-types"
 
 export type { ApiError }
@@ -83,6 +90,14 @@ export type ApiClientOptions = {
   refreshAccess?: () => Promise<string | null>
   /** Called when refreshing fails so the app can redirect to login. */
   onUnauthorized?: () => void
+  /** Called for every 403 so callers can react (e.g. end an impersonation). */
+  onForbidden?: (error: ApiError) => void
+  /**
+   * Returns the active impersonation target, if any. When set, every request
+   * carries the ``X-Impersonate-User-Id`` header so the backend serves the
+   * target's (read-only) view.
+   */
+  getImpersonation?: () => { userId: number } | null
 }
 
 export class ApiClient {
@@ -109,6 +124,10 @@ export class ApiClient {
     }
     if (access) {
       headers.Authorization = `Bearer ${access}`
+    }
+    const impersonation = this.options.getImpersonation?.()
+    if (impersonation) {
+      headers["X-Impersonate-User-Id"] = String(impersonation.userId)
     }
 
     const init: RequestInit = {
@@ -160,6 +179,9 @@ export class ApiClient {
         apiError.feature = error.feature
         apiError.limit = error.limit
         apiError.used = error.used
+      }
+      if (res.status === 403) {
+        this.options.onForbidden?.(apiError)
       }
       throw apiError
     }
@@ -580,5 +602,96 @@ export class ApiClient {
 
   addTicketMessage(id: number, body: string) {
     return this.request<SupportTicketMessage>("POST", `/staff/tickets/${id}/messages/`, { body })
+  }
+
+  // ---- advanced admin (P13.3) ----
+
+  impersonateUser(id: number, reason: string) {
+    return this.request<ImpersonationStartResponse>(
+      "POST",
+      `/staff/users/${id}/impersonate/`,
+      { reason },
+    )
+  }
+
+  endImpersonation(sessionId?: number) {
+    return this.request<{ ended: boolean }>("POST", "/staff/impersonate/end/", {
+      session_id: sessionId,
+    })
+  }
+
+  listStaffSubscriptions(params: {
+    q?: string
+    plan?: string
+    status?: string
+    period?: string
+    page?: number
+  } = {}) {
+    return this.request<Paginated<StaffSubscriptionRow>>(
+      "GET",
+      `/staff/subscriptions/${this._qs(params)}`,
+    )
+  }
+
+  changeStaffSubscription(
+    userId: number,
+    input: { plan_id: string; period?: string; reason?: string },
+  ) {
+    return this.request<StaffSubscriptionRow>(
+      "POST",
+      `/staff/subscriptions/${userId}/change/`,
+      input,
+    )
+  }
+
+  listAnnouncements(params: { page?: number } = {}) {
+    return this.request<Paginated<StaffAnnouncement>>(
+      "GET",
+      `/staff/announcements/${this._qs(params)}`,
+    )
+  }
+
+  createAnnouncement(input: {
+    subject: string
+    body: string
+    audience: AnnouncementAudience
+  }) {
+    return this.request<StaffAnnouncement>("POST", "/staff/announcements/", input)
+  }
+
+  previewAnnouncement(id: number) {
+    return this.request<{ recipient_count: number; audience: Record<string, unknown> }>(
+      "POST",
+      `/staff/announcements/${id}/preview/`,
+      {},
+    )
+  }
+
+  sendAnnouncement(id: number) {
+    return this.request<StaffAnnouncement>("POST", `/staff/announcements/${id}/send/`, {})
+  }
+
+  requestUserExport(id: number, reason: string) {
+    return this.request<ExportRequestResponse>("POST", `/staff/users/${id}/export/`, { reason })
+  }
+
+  downloadUserExport(token: string) {
+    return this.request<Record<string, unknown>>("GET", `/staff/exports/${token}/`)
+  }
+
+  listNotifications() {
+    return this.request<NotificationList>("GET", "/notifications/")
+  }
+
+  markNotificationRead(id: number) {
+    return this.request<NotificationItem>("POST", `/notifications/${id}/read/`, {})
+  }
+
+  markAllNotificationsRead() {
+    return this.request<{ marked_read: number }>(
+      "POST",
+      "/notifications/mark-all-read/",
+      {},
+    )
   }
 }

@@ -3,7 +3,7 @@ import { useT } from "../design/i18n"
 import { useTheme } from "../design/ThemeProvider"
 import { api } from "../lib/api"
 import { formatDateTime } from "../lib/format"
-import { canSeeAudit } from "../lib/staff"
+import { canChangeBilling, canSeeAudit, canSendAnnouncements } from "../lib/staff"
 import { useAsync } from "../lib/useAsync"
 import { useAuth } from "../state/AuthContext"
 import { Link } from "react-router-dom"
@@ -103,6 +103,16 @@ export function StaffHome() {
           <Link className="amk-btn amk-btn--secondary amk-btn--md" to="/staff/metrics">
             {t("staff.home.quickMetrics")}
           </Link>
+          {canChangeBilling(user) && (
+            <Link className="amk-btn amk-btn--secondary amk-btn--md" to="/staff/subscriptions">
+              {t("staff.home.quickSubscriptions")}
+            </Link>
+          )}
+          {canSendAnnouncements(user) && (
+            <Link className="amk-btn amk-btn--secondary amk-btn--md" to="/staff/announcements">
+              {t("staff.home.quickAnnouncements")}
+            </Link>
+          )}
         </div>
       </Card>
     </div>

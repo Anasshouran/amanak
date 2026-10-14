@@ -23,6 +23,9 @@ import { StaffRoute } from "./components/StaffRoute"
 import { StaffHome } from "./pages/StaffHome"
 import { StaffUsers } from "./pages/StaffUsers"
 import { StaffUserDetail } from "./pages/StaffUserDetail"
+import { StaffSubscriptions } from "./pages/StaffSubscriptions"
+import { StaffAnnouncements } from "./pages/StaffAnnouncements"
+import { Notifications } from "./pages/Notifications"
 import { StaffAudit } from "./pages/StaffAudit"
 import { StaffTickets } from "./pages/StaffTickets"
 import { StaffTicketDetail } from "./pages/StaffTicketDetail"
@@ -110,6 +113,23 @@ export function App() {
             </StaffRoute>
           }
         />
+        <Route
+          path="/staff/subscriptions"
+          element={
+            <StaffRoute>
+              <StaffSubscriptions />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/announcements"
+          element={
+            <StaffRoute>
+              <StaffAnnouncements />
+            </StaffRoute>
+          }
+        />
+        <Route path="/notifications" element={<Notifications />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

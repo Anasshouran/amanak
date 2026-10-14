@@ -98,6 +98,7 @@ INSTALLED_APPS = [
     "scanner",
     "apps.ai_assistant",
     "apps.breach_monitor",
+    "apps.notifications",
     "apps.two_factor",
     "apps.password_vault",
     "apps.family",
@@ -116,6 +117,9 @@ MIDDLEWARE = [
     # blocked users are rejected on token-first API calls (DRF authenticates
     # inside the view, after middleware) and so staff views see request.user.
     "common.middleware.BlockedUserMiddleware",
+    # Must run after BlockedUserMiddleware: validates the read-only,
+    # time-boxed impersonation header and swaps request.user to the target.
+    "apps.staff.impersonation.ImpersonationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -382,6 +386,9 @@ BREACH_MONITOR_MAX_EMAILS = int(os.environ.get("BREACH_MONITOR_MAX_EMAILS", "5")
 # REST Framework settings
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
+        # Applied first so a validated staff impersonation is honoured inside
+        # DRF views; returns None for ordinary requests and falls through.
+        "apps.staff.impersonation.ImpersonationAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],

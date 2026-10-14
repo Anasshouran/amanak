@@ -70,6 +70,91 @@ class UserModeration(models.Model):
         return f"moderation[{self.user_id}]={state}"
 
 
+class ImpersonationSession(models.Model):
+    """A time-boxed, read-only staff impersonation of a user account (P13.3).
+
+    SECURITY: creating a session never grants access to secrets. The target
+    stays the same user; the staff actor merely *views* the account. Every
+    request made during the session is separately audit-logged.
+    """
+
+    impersonator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="impersonations_started",
+    )
+    target = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="impersonations_received",
+    )
+    started_at = models.DateTimeField(auto_now_add=True)
+    ended_at = models.DateTimeField(null=True, blank=True)
+    reason = models.TextField()
+
+    class Meta:
+        ordering = ["-started_at"]
+        indexes = [models.Index(fields=["impersonator", "started_at"])]
+
+    def __str__(self):
+        return f"impersonate[{self.impersonator_id}->{self.target_id}]"
+
+
+class StaffAnnouncement(models.Model):
+    """A staff-authored message broadcast to a filtered audience (P13.3)."""
+
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="announcements",
+    )
+    subject = models.CharField(max_length=200)
+    body = models.TextField()
+    # Audience selectors: {"all": true} OR {"plan": "pro"} OR {"verified": true}
+    audience = models.JSONField(default=dict)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    recipient_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        state = "sent" if self.sent_at else "draft"
+        return f"announcement[{self.id}]={state}"
+
+
+class ExportRequest(models.Model):
+    """A one-time, expiring GDPR-style user data export token (P13.3)."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="exports",
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="export_requests",
+    )
+    token = models.CharField(max_length=64, unique=True)
+    reason = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    used_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["user", "created_at"]),
+        ]
+
+    def __str__(self):
+        return f"export[{self.user_id}]={self.token[:8]}"
+
+
 class SupportTicket(models.Model):
     STATUS = [("open", "Open"), ("pending", "Pending"), ("closed", "Closed")]
     PRIORITY = [("low", "Low"), ("normal", "Normal"), ("high", "High")]

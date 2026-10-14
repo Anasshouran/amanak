@@ -127,3 +127,39 @@ def audit_entry(entry):
         "user_agent": entry.user_agent,
         "created_at": entry.created_at.isoformat(),
     }
+
+
+# --------------------------------------------------------------------------- #
+# P13.3 — subscriptions / announcements
+# --------------------------------------------------------------------------- #
+
+
+def subscription_row(subscription):
+    """A single subscription row for the staff subscriptions table."""
+    user = subscription.user
+    return {
+        "user_id": user.id,
+        "email": user.email,
+        "username": user.username,
+        "plan": subscription.plan_id,
+        "status": subscription.status,
+        "period": subscription.period,
+        "current_period_end": subscription.current_period_end.isoformat()
+        if subscription.current_period_end
+        else None,
+        "cancel_at_period_end": subscription.cancel_at_period_end,
+        "provider": subscription.provider,
+    }
+
+
+def announcement_brief(announcement):
+    return {
+        "id": announcement.id,
+        "subject": announcement.subject,
+        "body": announcement.body,
+        "audience": announcement.audience,
+        "sent_at": announcement.sent_at.isoformat() if announcement.sent_at else None,
+        "created_at": announcement.created_at.isoformat(),
+        "recipient_count": announcement.recipient_count,
+        "author_email": announcement.author.email if announcement.author else None,
+    }

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react"
 import { Link } from "react-router-dom"
 import { useT } from "../i18n"
 import { IconGlobe, IconLogout, IconMoon, IconSun } from "../icons"
@@ -7,9 +8,11 @@ import { Button } from "./Button"
 export type HeaderProps = {
   email?: string
   onSignOut?: () => void
+  /** App-provided widget (e.g. the notifications bell) kept out of the design layer. */
+  notifications?: ReactNode
 }
 
-export function Header({ email, onSignOut }: HeaderProps) {
+export function Header({ email, onSignOut, notifications }: HeaderProps) {
   const { theme, locale, toggleTheme, toggleLocale } = useTheme()
   const t = useT()
 
@@ -21,6 +24,7 @@ export function Header({ email, onSignOut }: HeaderProps) {
       </Link>
       <div className="amk-header__spacer" />
       <div className="amk-header__actions">
+        {notifications}
         <button
           type="button"
           className="amk-iconbtn"

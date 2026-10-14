@@ -1,9 +1,20 @@
+import { useEffect, useState } from "react"
 import { Redirect, Tabs } from "expo-router"
 import { Button, Text } from "react-native"
+import { api } from "../../src/lib/api"
 import { useAuth } from "../../src/state/AuthContext"
 
 function TabsNavigator() {
   const { user, loading, logout } = useAuth()
+  const [unread, setUnread] = useState(0)
+
+  useEffect(() => {
+    if (!user) return
+    api
+      .listNotifications()
+      .then((d) => setUnread(d.unread))
+      .catch(() => undefined)
+  }, [user])
 
   if (loading) {
     return <Text style={{ color: "#e2e8f0", textAlign: "center", marginTop: 200 }}>Loading…</Text>
@@ -38,6 +49,10 @@ function TabsNavigator() {
         <Tabs.Screen name="awareness" options={{ title: "Awareness" }} />
         <Tabs.Screen name="pricing" options={{ title: "Plans" }} />
         <Tabs.Screen name="billing" options={{ title: "Billing" }} />
+      <Tabs.Screen
+        name="notifications"
+        options={{ title: "Notifications", tabBarBadge: unread > 0 ? unread : undefined }}
+      />
     </Tabs>
   )
 }

@@ -37,6 +37,18 @@ export function canChangeBilling(user: User | null | undefined): boolean {
   return hasRole(user, "billing_admin")
 }
 
+export function canImpersonate(user: User | null | undefined): boolean {
+  return hasRole(user, "security_admin")
+}
+
+export function canExportUser(user: User | null | undefined): boolean {
+  return hasRole(user, "super_admin")
+}
+
+export function canSendAnnouncements(user: User | null | undefined): boolean {
+  return hasRole(user, "super_admin")
+}
+
 export function isForbidden(err: unknown): boolean {
   return (err as { status?: number } | undefined)?.status === 403
 }

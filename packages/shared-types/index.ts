@@ -576,3 +576,59 @@ export type AdminActionLogEntry = {
   user_agent: string
   created_at: string
 }
+
+// ---- advanced admin (P13.3) ----
+
+export type ImpersonationStartResponse = {
+  session_id: number
+  expires_at: string
+  target: { id: number; email: string }
+}
+
+export type StaffSubscriptionRow = {
+  user_id: number
+  email: string
+  username: string
+  plan: string
+  status: string
+  period: string
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  provider: string
+}
+
+export type AnnouncementAudience =
+  | { all: true }
+  | { verified: true }
+  | { plan: string }
+
+export type StaffAnnouncement = {
+  id: number
+  subject: string
+  body: string
+  audience: Record<string, unknown>
+  sent_at: string | null
+  created_at: string
+  recipient_count: number
+  author_email: string | null
+}
+
+export type NotificationItem = {
+  id: number
+  subject: string
+  body: string
+  read: boolean
+  created_at: string
+}
+
+export type NotificationList = {
+  unread: number
+  count: number
+  results: NotificationItem[]
+}
+
+export type ExportRequestResponse = {
+  token: string
+  url: string
+  expires_at: string
+}
