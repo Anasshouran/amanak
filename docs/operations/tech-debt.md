@@ -54,3 +54,12 @@ endpoint accepting a target user_id and re-enable the UI.
 the test runs near a 30-second TOTP window boundary. Passes reliably
 in isolation. Fix: mock the system clock in the test, or wait for a
 fresh window before asserting. Not a code defect.
+
+## Concurrent test runs cause transient Postgres contention
+
+Running `pytest` and `npm test` simultaneously against the same
+Postgres instance (port 5433) occasionally produces transient
+connection errors. Solo runs are clean (backend 404, web 101).
+
+Mitigation: run test suites sequentially in CI (already the case);
+document locally. Not a code defect.
