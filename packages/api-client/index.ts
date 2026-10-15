@@ -44,6 +44,8 @@ import type {
   PlanId,
   ScanResponse,
   ScanResultRecord,
+  ScoreHistoryRange,
+  ScoreHistoryResponse,
   SecurityScore,
   Subscription,
   TwoFactorCreateEntryInput,
@@ -247,6 +249,13 @@ export class ApiClient {
 
   recomputeScore() {
     return this.request<SecurityScore>("POST", "/dashboard/security-score/")
+  }
+
+  getSecurityScoreHistory(range: ScoreHistoryRange = "30d") {
+    return this.request<ScoreHistoryResponse>(
+      "GET",
+      `/dashboard/security-score/history/?range=${range}`,
+    )
   }
 
   // ---- accounts ----

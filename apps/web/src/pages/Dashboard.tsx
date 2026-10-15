@@ -1,6 +1,23 @@
-import type { BreachHit, DashboardOverview, ScanResultRecord } from "@amanak/shared-types"
+import { useState } from "react"
+import type {
+  BreachHit,
+  DashboardOverview,
+  ScanResultRecord,
+  ScoreHistoryRange,
+  ScoreHistoryResponse,
+} from "@amanak/shared-types"
 import { useNavigate } from "react-router-dom"
-import { Badge, Button, Card, EmptyState, ErrorState, ProgressRing, Skeleton } from "../design/components"
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorState,
+  LineChart,
+  ProgressRing,
+  Skeleton,
+  Tabs,
+} from "../design/components"
 import { IconPlus, IconScanner, IconShield } from "../design/icons"
 import { useT } from "../design/i18n"
 import { useTheme } from "../design/ThemeProvider"
@@ -37,6 +54,91 @@ function verdictColor(variant: string): string {
     default:
       return "var(--c-muted)"
   }
+}
+
+function TrendCard() {
+  const t = useT()
+  const [range, setRange] = useState<ScoreHistoryRange>("30d")
+  const { data, loading, error, reload } = useAsync<ScoreHistoryResponse>(
+    () => api.getSecurityScoreHistory(range),
+    [range],
+  )
+
+  const points = data?.points ?? []
+  const hasTrend = points.length >= 2
+
+  let deltaNode = null
+  if (hasTrend && data) {
+    const delta = data.delta
+    const color =
+      delta === 0 ? "var(--c-muted)" : delta > 0 ? "var(--c-success)" : "var(--c-danger)"
+    const label =
+      delta === 0
+        ? String(delta)
+        : t(delta > 0 ? "dashboard.trend.delta_up" : "dashboard.trend.delta_down", {
+            delta: Math.abs(delta),
+          })
+    deltaNode = (
+      <span
+        title={label}
+        aria-label={label}
+        style={{ color, fontWeight: 600, whiteSpace: "nowrap" }}
+      >
+        <span aria-hidden="true">{delta > 0 ? "▲" : delta < 0 ? "▼" : "■"} </span>
+        {delta > 0 ? "+" : ""}
+        {delta}
+      </span>
+    )
+  }
+
+  return (
+    <Card
+      padded
+      elevated
+      title={t("dashboard.trend.title")}
+      action={
+        <Tabs
+          items={[
+            { id: "7d", label: t("dashboard.trend.range.7d") },
+            { id: "30d", label: t("dashboard.trend.range.30d") },
+            { id: "90d", label: t("dashboard.trend.range.90d") },
+          ]}
+          value={range}
+          onChange={(id) => setRange(id as ScoreHistoryRange)}
+          ariaLabel={t("dashboard.trend.title")}
+        />
+      }
+    >
+      {loading ? (
+        <Skeleton height={180} />
+      ) : error ? (
+        <ErrorState
+          title={t("dashboard.trend.error")}
+          onRetry={reload}
+          retryLabel={t("actions.retry")}
+        />
+      ) : !hasTrend ? (
+        <p className="amk-muted">{t("dashboard.trend.empty")}</p>
+      ) : (
+        <>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 28, fontWeight: 700 }}>{data?.current}</span>
+            <span className="amk-muted">
+              {t("common.of")} 100
+            </span>
+            {deltaNode}
+          </div>
+          <LineChart
+            data={points.map((point) => ({ label: point.date.slice(5), value: point.score }))}
+            ariaLabel={t("dashboard.trend.aria", {
+              from: points[0].score,
+              to: points[points.length - 1].score,
+            })}
+          />
+        </>
+      )}
+    </Card>
+  )
 }
 
 export function Dashboard() {
@@ -129,9 +231,8 @@ export function Dashboard() {
           }
         />
       ) : (
-        <>
-          <div className="amk-grid amk-grid--two">
-            <Card padded elevated title={t("dashboard.securityScore")}>
+        <div className="amk-grid amk-grid--two">
+          <Card padded elevated title={t("dashboard.securityScore")}>
               <div style={{ display: "grid", justifyItems: "center", gap: 12 }}>
                 <ProgressRing value={overview.security_score} caption={`${t("common.of")} 100`} />
                 <p className="amk-muted" style={{ textAlign: "center" }}>
@@ -149,9 +250,13 @@ export function Dashboard() {
               </div>
             </Card>
           </div>
+      )}
 
-          <div className="amk-grid amk-grid--two">
-            <Card padded elevated title={t("dashboard.quickActions")}>
+      <TrendCard />
+
+      {!isEmpty && (
+        <div className="amk-grid amk-grid--two">
+          <Card padded elevated title={t("dashboard.quickActions")}>
               <div className="amk-row">
                 <Button icon={<IconScanner size={16} />} onClick={() => navigate("/scanner")}>
                   {t("dashboard.action.scanUrl")}
@@ -201,7 +306,6 @@ export function Dashboard() {
               )}
             </Card>
           </div>
-        </>
       )}
     </div>
   )

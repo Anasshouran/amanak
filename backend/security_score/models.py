@@ -16,3 +16,23 @@ class SecurityScore(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - Security Score: {self.score}"
+
+
+class SecurityScoreSnapshot(models.Model):
+    """A daily point-in-time copy of a user's security score (P16.1 trend)."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="score_snapshots"
+    )
+    date = models.DateField()  # one row per user per day
+    score = models.PositiveSmallIntegerField()  # 0-100
+    breakdown = models.JSONField(default=dict, blank=True)  # optional
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = [("user", "date")]
+        ordering = ["-date"]
+        indexes = [models.Index(fields=["user", "-date"])]
+
+    def __str__(self):
+        return f"{self.user.email} - {self.date}: {self.score}"

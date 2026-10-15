@@ -28,6 +28,23 @@ export type SecurityScore = {
   last_scanned: string | null
 }
 
+export type ScoreHistoryPoint = {
+  date: string
+  score: number
+}
+
+export type ScoreHistoryRange = "7d" | "30d" | "90d"
+
+export type ScoreHistoryResponse = {
+  range: ScoreHistoryRange
+  from: string
+  to: string
+  points: ScoreHistoryPoint[]
+  current: number
+  delta: number
+  trend: "up" | "down" | "flat"
+}
+
 export type DashboardOverview = {
   accounts: number
   devices: number
