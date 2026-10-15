@@ -30,7 +30,7 @@ test("support agent searches a user, sees no block button, and opens a ticket", 
   await page.getByLabel("Search").fill(agent.email)
   const row = page.getByRole("cell", { name: agent.email })
   await expect(row).toBeVisible()
-  await page.getByRole("link", { name: "Open" }).first().click()
+  await page.getByRole("link", { name: "Open", exact: true }).first().click()
   await expect(page.getByRole("heading", { name: agent.email })).toBeVisible()
 
   // Support must not be able to block users.
@@ -73,7 +73,7 @@ test("security admin blocks a user and the action shows in the audit log", async
   await waitForApiIdle(page)
   await page.getByLabel("Search").fill(victim.email)
   await expect(page.getByRole("cell", { name: victim.email })).toBeVisible()
-  await page.getByRole("link", { name: "Open" }).first().click()
+  await page.getByRole("link", { name: "Open", exact: true }).first().click()
   await expect(page.getByRole("heading", { name: victim.email })).toBeVisible()
 
   const blockButton = page.getByRole("button", { name: "Block user" })

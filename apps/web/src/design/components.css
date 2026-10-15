@@ -619,8 +619,156 @@
   flex-shrink: 0;
 }
 
+.amk-navsection {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--c-border);
+}
+
+.amk-navsection__title,
+.amk-navsection__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-1) 12px;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-muted);
+}
+
+.amk-navsection__toggle {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.amk-navsection__toggle:hover {
+  color: var(--c-text);
+}
+
+.amk-navsection__toggle svg {
+  transition: transform var(--motion-spring);
+}
+
+.amk-navsection__toggle[aria-expanded="false"] svg {
+  transform: rotate(-90deg);
+}
+
+.amk-navsection__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.amk-navbadge {
+  margin-inline-start: auto;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  line-height: 1;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--c-brand) 18%, transparent);
+  color: var(--c-brand);
+}
+
 .amk-bottomnav {
   display: none;
+}
+
+/* Button variant of a nav link (mobile staff entry). */
+.amk-navbutton {
+  border: none;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Chevron points toward the "end" edge when the section is collapsed. */
+[dir="rtl"] .amk-navsection__toggle[aria-expanded="false"] svg {
+  transform: rotate(90deg);
+}
+
+/* Mobile staff drawer */
+.amk-drawer-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: color-mix(in srgb, #000 55%, transparent);
+}
+
+.amk-drawer {
+  position: fixed;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 61;
+  width: min(300px, 84vw);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
+  background: var(--c-surface);
+  border-inline-end: 1px solid var(--c-border);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgba(0, 0, 0, 0.35));
+  overflow-y: auto;
+}
+
+.amk-drawer__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.amk-drawer__title {
+  font-size: var(--text-2xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--c-muted);
+}
+
+.amk-drawer__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-muted);
+  cursor: pointer;
+}
+
+.amk-drawer__close:hover {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+}
+
+.amk-drawer__close svg {
+  transform: rotate(90deg);
+}
+
+.amk-drawer__items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 /* ============================================================== Tabs */
