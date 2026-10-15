@@ -390,7 +390,6 @@ REST_FRAMEWORK = {
         # DRF views; returns None for ordinary requests and falls through.
         "apps.staff.impersonation.ImpersonationAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "rest_framework.authentication.SessionAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",

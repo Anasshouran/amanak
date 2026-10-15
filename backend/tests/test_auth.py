@@ -239,3 +239,20 @@ class TestPasswordReset:
             format="json",
         )
         assert resp.status_code == status.HTTP_400_BAD_REQUEST
+
+
+@pytest.mark.django_db
+def test_session_cookie_without_jwt_returns_401(api_client, user_a):
+    """Sessionid cookie must not authenticate API requests.
+    Regression: SessionAuthentication was in DRF defaults."""
+    api_client.force_login(user_a)
+
+    response = api_client.post(
+        "/api/v1/scan/url",
+        {"input": "https://example.com"},
+        format="json",
+    )
+    assert response.status_code == 401, (
+        f"Expected 401, got {response.status_code}. "
+        f"If 403, SessionAuthentication is still active."
+    )
