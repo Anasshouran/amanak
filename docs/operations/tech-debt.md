@@ -63,3 +63,11 @@ connection errors. Solo runs are clean (backend 404, web 101).
 
 Mitigation: run test suites sequentially in CI (already the case);
 document locally. Not a code defect.
+
+## scanner.spec.ts phishing test flakes under parallel workers
+
+`apps/web/e2e/scanner.spec.ts` "phishing URL dangerous" occasionally
+fails when the full Playwright suite runs with parallel workers,
+likely due to shared backend throttle state. Passes reliably standalone.
+Mitigation: run e2e sequentially or bump scanner throttle in the
+e2e override.
