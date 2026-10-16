@@ -6,10 +6,10 @@
     <title>AMANAK أمانك</title>
     <style>
       html {
-        background: #050a15;
+        background: #f5f7fb;
       }
-      html[data-theme="light"] {
-        background: #f1f5f9;
+      html[data-theme="dark"] {
+        background: #0b1220;
       }
     </style>
     <script>
@@ -18,7 +18,7 @@
         try {
           var theme = localStorage.getItem("amanak.theme");
           var locale = localStorage.getItem("amanak.locale");
-          theme = theme === "light" || theme === "dark" ? theme : "dark";
+          theme = theme === "light" || theme === "dark" ? theme : "light";
           locale = locale === "ar" || locale === "en" ? locale : "ar";
           var el = document.documentElement;
           el.setAttribute("data-theme", theme);

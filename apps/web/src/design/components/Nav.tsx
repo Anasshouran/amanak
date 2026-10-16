@@ -1,25 +1,25 @@
 import { useEffect, useRef, useState } from "react"
 import type { ComponentType, ReactNode } from "react"
-import { NavLink, useLocation } from "react-router-dom"
+import { Link, NavLink, useNavigate } from "react-router-dom"
 import { useT } from "../i18n"
+import { Button } from "./Button"
 import {
   IconAccounts,
-  IconAI,
   IconAwareness,
   IconAudit,
+  IconBell,
   IconChevron,
   IconDashboard,
   IconDevices,
   IconFamily,
-  IconIncidents,
   IconKey,
+  IconLogout,
   IconMetrics,
   IconPasswords,
-  IconPlans,
   IconScanner,
   IconSettings,
   IconShield,
-  IconStaff,
+  IconSparkles,
   IconStaffHome,
   IconSubscription,
   IconAnnouncement,
@@ -34,21 +34,23 @@ type NavEntry = {
   end?: boolean
 }
 
-const LINKS: NavEntry[] = [
+/** Group 1 — Personal (P17.1 reference order). */
+const PERSONAL_LINKS: NavEntry[] = [
   { to: "/dashboard", key: "nav.dashboard", icon: IconDashboard, end: true },
   { to: "/scanner", key: "nav.scanner", icon: IconScanner },
   { to: "/breach", key: "nav.breach", icon: IconShield },
-  { to: "/family", key: "nav.family", icon: IconFamily },
-  { to: "/accounts", key: "nav.accounts", icon: IconAccounts },
   { to: "/devices", key: "nav.devices", icon: IconDevices },
-  { to: "/incidents", key: "nav.incidents", icon: IconIncidents },
-  { to: "/ai", key: "nav.ai", icon: IconAI },
+  { to: "/accounts", key: "nav.accounts", icon: IconAccounts },
   { to: "/vault", key: "nav.2fa", icon: IconKey },
   { to: "/passwords", key: "nav.passwords", icon: IconPasswords },
+  { to: "/family", key: "nav.family", icon: IconFamily },
   { to: "/awareness", key: "nav.awareness", icon: IconAwareness },
-  { to: "/settings", key: "nav.settings", icon: IconSettings },
-  { to: "/plans", key: "nav.plans", icon: IconPlans },
+  { to: "/billing", key: "nav.billing", icon: IconSubscription },
+  { to: "/notifications", key: "nav.notifications", icon: IconBell },
 ]
+
+/** Group 3 — Bottom. */
+const SETTINGS_LINK: NavEntry = { to: "/settings", key: "nav.settings", icon: IconSettings }
 
 /** localStorage key holding whether the staff section is collapsed. */
 export const STAFF_SECTION_STORAGE_KEY = "nav.staff.collapsed"
@@ -57,29 +59,34 @@ function linkClass({ isActive }: { isActive: boolean }): string {
   return `amk-navlink${isActive ? " is-active" : ""}`
 }
 
-function NavSubItem({
+function initialsOf(value: string): string {
+  const parts = value.trim().split(/[\s@._-]+/).filter(Boolean)
+  const first = parts[0]?.[0] ?? "?"
+  const second = parts[1]?.[0] ?? ""
+  return (first + second).toUpperCase()
+}
+
+function NavItem({
   to,
+  labelKey,
   icon: Icon,
   end,
   badge,
   badgeLabel,
-  size = 18,
-  onNavigate,
-  children,
 }: {
   to: string
+  labelKey: string
   icon: ComponentType<{ size?: number }>
   end?: boolean
   badge?: number
   badgeLabel?: string
-  size?: number
-  onNavigate?: () => void
-  children: ReactNode
 }) {
+  const t = useT()
+  const label = t(labelKey)
   return (
-    <NavLink to={to} end={end} className={linkClass} onClick={onNavigate}>
-      <Icon size={size} />
-      <span>{children}</span>
+    <NavLink to={to} end={end} className={linkClass} title={label}>
+      <Icon size={18} />
+      <span className="amk-navlink__label">{label}</span>
       {badge != null && badge > 0 && (
         <span className="amk-navbadge" aria-label={badgeLabel}>
           {badge}
@@ -153,79 +160,72 @@ function NavSection({
   )
 }
 
-function useFocusTrap(open: boolean, onClose: () => void) {
+function UserArea({
+  name,
+  email,
+  onSignOut,
+}: {
+  name: string
+  email: string
+  onSignOut?: () => void
+}) {
+  const t = useT()
+  const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    const panel = ref.current
-    const focusable = () =>
-      Array.from(panel?.querySelectorAll<HTMLElement>("a[href], button:not([disabled])") ?? [])
-
-    focusable()[0]?.focus()
-
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault()
-        onClose()
-        return
-      }
-      if (event.key !== "Tab") return
-      const items = focusable()
-      if (items.length === 0) return
-      const first = items[0]
-      const last = items[items.length - 1]
-      const active = document.activeElement as HTMLElement | null
-      if (event.shiftKey && (active === first || !panel?.contains(active))) {
-        event.preventDefault()
-        last.focus()
-      } else if (!event.shiftKey && active === last) {
-        event.preventDefault()
-        first.focus()
-      }
+    function onDocClick(event: MouseEvent) {
+      if (!ref.current?.contains(event.target as Node)) setOpen(false)
     }
-
-    document.addEventListener("keydown", onKey)
-    return () => document.removeEventListener("keydown", onKey)
-  }, [open, onClose])
-
-  return ref
-}
-
-function StaffDrawer({
-  open,
-  title,
-  onClose,
-  children,
-}: {
-  open: boolean
-  title: string
-  onClose: () => void
-  children: ReactNode
-}) {
-  const t = useT()
-  const ref = useFocusTrap(open, onClose)
-
-  if (!open) return null
+    document.addEventListener("mousedown", onDocClick)
+    return () => document.removeEventListener("mousedown", onDocClick)
+  }, [open])
 
   return (
-    <>
-      <div className="amk-drawer-scrim" onClick={onClose} aria-hidden="true" />
-      <div className="amk-drawer" role="dialog" aria-modal="true" aria-label={title} ref={ref}>
-        <div className="amk-drawer__head">
-          <span className="amk-drawer__title">{title}</span>
-          <button
-            type="button"
-            className="amk-drawer__close"
-            aria-label={t("actions.close")}
-            onClick={onClose}
-          >
-            <IconChevron size={18} />
-          </button>
+    <div className="amk-sidebar__user" ref={ref}>
+      <button
+        type="button"
+        className="amk-userbtn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={t("user.menu")}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="amk-avatar" aria-hidden="true">
+          {initialsOf(name || email)}
+        </span>
+        <span className="amk-userbtn__meta">
+          <strong>{name}</strong>
+          <span>{email}</span>
+        </span>
+        <IconChevron size={16} />
+      </button>
+      {open && (
+        <div className="amk-usermenu__panel" role="menu">
+          <Link className="amk-menu-item" to="/settings" role="menuitem" onClick={() => setOpen(false)}>
+            {t("user.profile")}
+          </Link>
+          <Link className="amk-menu-item" to="/settings" role="menuitem" onClick={() => setOpen(false)}>
+            {t("nav.settings")}
+          </Link>
+          {onSignOut && (
+            <button
+              type="button"
+              className="amk-menu-item amk-menu-item--danger"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false)
+                onSignOut()
+              }}
+            >
+              <IconLogout size={16} />
+              {t("actions.signOut")}
+            </button>
+          )}
         </div>
-        <div className="amk-drawer__items">{children}</div>
-      </div>
-    </>
+      )}
+    </div>
   )
 }
 
@@ -233,74 +233,106 @@ export function Nav({
   staff = false,
   roles = [],
   openTickets = 0,
+  user,
+  onSignOut,
+  showUpgrade = true,
 }: {
   staff?: boolean
   roles?: string[]
   openTickets?: number
+  user?: { email: string; username?: string }
+  onSignOut?: () => void
+  showUpgrade?: boolean
 }) {
   const t = useT()
-  const location = useLocation()
-  const [drawerOpen, setDrawerOpen] = useState(false)
+  const navigate = useNavigate()
 
   const has = (...allowed: string[]) =>
     roles.includes("super_admin") || allowed.some((role) => roles.includes(role))
 
   const badgeLabel = t("staff.nav.ticketsBadge", { count: openTickets })
-  const closeDrawer = () => setDrawerOpen(false)
 
   const staffItems = staff ? (
     <>
-      <NavSubItem to="/staff" end icon={IconStaffHome} onNavigate={closeDrawer}>
-        {t("staff.nav.home")}
-      </NavSubItem>
+      <NavItem to="/staff" labelKey="staff.nav.home" icon={IconStaffHome} end />
       {has("support", "security_admin") && (
-        <NavSubItem to="/staff/users" icon={IconUsers} onNavigate={closeDrawer}>
-          {t("staff.nav.users")}
-        </NavSubItem>
+        <NavItem to="/staff/users" labelKey="staff.nav.users" icon={IconUsers} />
       )}
       {has("support") && (
-        <NavSubItem
+        <NavItem
           to="/staff/tickets"
+          labelKey="staff.nav.tickets"
           icon={IconTicket}
           badge={openTickets}
           badgeLabel={badgeLabel}
-          onNavigate={closeDrawer}
-        >
-          {t("staff.nav.tickets")}
-        </NavSubItem>
+        />
       )}
       {has("security_admin") && (
-        <NavSubItem to="/staff/audit" icon={IconAudit} onNavigate={closeDrawer}>
-          {t("staff.nav.audit")}
-        </NavSubItem>
+        <NavItem to="/staff/audit" labelKey="staff.nav.audit" icon={IconAudit} />
       )}
-      <NavSubItem to="/staff/metrics" icon={IconMetrics} onNavigate={closeDrawer}>
-        {t("staff.nav.metrics")}
-      </NavSubItem>
+      <NavItem to="/staff/metrics" labelKey="staff.nav.metrics" icon={IconMetrics} />
       {has("billing_admin") && (
-        <NavSubItem to="/staff/subscriptions" icon={IconSubscription} onNavigate={closeDrawer}>
-          {t("staff.nav.subscriptions")}
-        </NavSubItem>
+        <NavItem
+          to="/staff/subscriptions"
+          labelKey="staff.nav.subscriptions"
+          icon={IconSubscription}
+        />
       )}
       {has("super_admin") && (
-        <NavSubItem to="/staff/announcements" icon={IconAnnouncement} onNavigate={closeDrawer}>
-          {t("staff.nav.announcements")}
-        </NavSubItem>
+        <NavItem
+          to="/staff/announcements"
+          labelKey="staff.nav.announcements"
+          icon={IconAnnouncement}
+        />
       )}
     </>
   ) : null
 
-  const onStaffRoute = location.pathname.startsWith("/staff")
+  const name = user?.username || user?.email || t("common.user")
 
   return (
-    <>
-      <aside className="amk-sidebar" aria-label={t("common.menu")}>
-        {LINKS.map(({ to, key, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={linkClass}>
-            <Icon size={18} />
-            <span>{t(key)}</span>
-          </NavLink>
-        ))}
+    <aside
+      className="amk-sidebar"
+      aria-label={t("common.menu")}
+      style={{ background: "var(--c-sidebar-bg)" }}
+    >
+      <div className="amk-sidebar__brand">
+        <span className="amk-sidebar__logo" aria-hidden="true">
+          <IconShield size={24} />
+        </span>
+        <span className="amk-sidebar__brandtext">
+          <strong className="amk-sidebar__brandname">AMANAK</strong>
+          <span className="amk-sidebar__brandsub">أمانك</span>
+        </span>
+      </div>
+
+      {showUpgrade && !staff && (
+        <div className="nav-upgrade-card">
+          <span className="nav-upgrade-icon" aria-hidden="true">
+            <IconSparkles size={18} />
+          </span>
+          <div className="nav-upgrade-text">
+            <strong>{t("nav.upgrade.title")}</strong>
+            <span>{t("nav.upgrade.subtitle")}</span>
+          </div>
+          <Button
+            variant="primary"
+            size="sm"
+            fullWidth
+            className="btn"
+            onClick={() => navigate("/plans")}
+          >
+            {t("nav.upgrade.action")}
+          </Button>
+        </div>
+      )}
+
+      <div className="amk-sidebar__nav">
+        <div className="amk-navgroup">
+          {PERSONAL_LINKS.map(({ to, key, icon, end }) => (
+            <NavItem key={to} to={to} labelKey={key} icon={icon} end={end} />
+          ))}
+        </div>
         {staff && (
           <NavSection
             title={t("nav.staff")}
@@ -311,34 +343,14 @@ export function Nav({
             {staffItems}
           </NavSection>
         )}
-      </aside>
+      </div>
 
-      <nav className="amk-bottomnav" aria-label={t("common.menu")}>
-        {LINKS.map(({ to, key, icon: Icon, end }) => (
-          <NavLink key={to} to={to} end={end} className={linkClass}>
-            <Icon size={20} />
-            <span>{t(key)}</span>
-          </NavLink>
-        ))}
-        {staff && (
-          <button
-            type="button"
-            className={`amk-navlink amk-navbutton${onStaffRoute ? " is-active" : ""}`}
-            aria-haspopup="dialog"
-            aria-expanded={drawerOpen}
-            onClick={() => setDrawerOpen(true)}
-          >
-            <IconStaff size={20} />
-            <span>{t("staff.nav")}</span>
-          </button>
+      <div className="amk-sidebar__bottom">
+        <NavItem to={SETTINGS_LINK.to} labelKey={SETTINGS_LINK.key} icon={SETTINGS_LINK.icon} />
+        {user && (
+          <UserArea name={name} email={user.email} onSignOut={onSignOut} />
         )}
-      </nav>
-
-      {staff && (
-        <StaffDrawer open={drawerOpen} title={t("staff.nav.menu")} onClose={closeDrawer}>
-          {staffItems}
-        </StaffDrawer>
-      )}
-    </>
+      </div>
+    </aside>
   )
 }

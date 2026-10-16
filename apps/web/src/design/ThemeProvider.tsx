@@ -24,9 +24,9 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
 function readTheme(): Theme {
-  if (typeof localStorage === "undefined") return "dark"
+  if (typeof localStorage === "undefined") return "light"
   const v = localStorage.getItem(THEME_KEY)
-  return v === "light" || v === "dark" ? v : "dark"
+  return v === "light" || v === "dark" ? v : "light"
 }
 
 function readLocale(): Locale {

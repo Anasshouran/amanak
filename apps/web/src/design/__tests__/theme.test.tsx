@@ -20,21 +20,21 @@ function Probe() {
 }
 
 describe("ThemeProvider", () => {
-  it("defaults to dark theme and Arabic locale and sets document attributes", () => {
+  it("defaults to light theme and Arabic locale and sets document attributes", () => {
     render(
       <ThemeProvider>
         <Probe />
       </ThemeProvider>,
     )
 
-    expect(screen.getByTestId("theme").textContent).toBe("dark")
+    expect(screen.getByTestId("theme").textContent).toBe("light")
     expect(screen.getByTestId("locale").textContent).toBe("ar")
-    expect(document.documentElement.getAttribute("data-theme")).toBe("dark")
+    expect(document.documentElement.getAttribute("data-theme")).toBe("light")
     expect(document.documentElement.getAttribute("lang")).toBe("ar")
     expect(document.documentElement.getAttribute("dir")).toBe("rtl")
   })
 
-  it("toggles theme to light and locale to English", async () => {
+  it("toggles theme to dark and locale to English", async () => {
     const user = userEvent.setup()
     render(
       <ThemeProvider>
@@ -45,11 +45,11 @@ describe("ThemeProvider", () => {
     await user.click(screen.getByRole("button", { name: "toggle-theme" }))
     await user.click(screen.getByRole("button", { name: "toggle-locale" }))
 
-    expect(screen.getByTestId("theme").textContent).toBe("light")
+    expect(screen.getByTestId("theme").textContent).toBe("dark")
     expect(screen.getByTestId("locale").textContent).toBe("en")
-    expect(document.documentElement.getAttribute("data-theme")).toBe("light")
+    expect(document.documentElement.getAttribute("data-theme")).toBe("dark")
     expect(document.documentElement.getAttribute("dir")).toBe("ltr")
-    expect(localStorage.getItem("amanak.theme")).toBe("light")
+    expect(localStorage.getItem("amanak.theme")).toBe("dark")
     expect(localStorage.getItem("amanak.locale")).toBe("en")
   })
 })

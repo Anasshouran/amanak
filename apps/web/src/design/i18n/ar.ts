@@ -12,6 +12,11 @@ export const ar: Record<string, string> = {
   "nav.ai": "المساعد الذكي",
   "nav.2fa": "مدير 2FA",
   "nav.settings": "الإعدادات",
+  "nav.notifications": "الإشعارات",
+  "nav.billing": "الفواتير",
+  "nav.upgrade.title": "الترقية إلى برو",
+  "nav.upgrade.subtitle": "افتح الذكاء الاصطناعي والعائلة والفحص غير المحدود.",
+  "nav.upgrade.action": "ترقية",
 
   "actions.save": "حفظ",
   "actions.cancel": "إلغاء",
@@ -38,6 +43,8 @@ export const ar: Record<string, string> = {
   "common.score": "النتيجة",
   "common.menu": "القائمة",
   "common.user": "الحساب",
+  "user.menu": "قائمة الحساب",
+  "user.profile": "الملف الشخصي",
 
   "theme.toggle": "تبديل المظهر",
   "theme.light": "فاتح",
@@ -45,6 +52,9 @@ export const ar: Record<string, string> = {
   "locale.toggle": "تغيير اللغة",
   "locale.ar": "العربية",
   "locale.en": "English",
+
+  "header.search": "ابحث عن أي شيء…",
+  "header.searchLabel": "بحث سريع",
 
   "login.title": "تسجيل الدخول إلى أمانك",
   "login.subtitle": "سجّل الدخول لحماية حياتك الرقمية.",

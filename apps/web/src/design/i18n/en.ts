@@ -12,6 +12,11 @@ export const en: Record<string, string> = {
   "nav.ai": "AI Assistant",
   "nav.2fa": "2FA Manager",
   "nav.settings": "Settings",
+  "nav.notifications": "Notifications",
+  "nav.billing": "Billing",
+  "nav.upgrade.title": "Upgrade to Pro",
+  "nav.upgrade.subtitle": "Unlock AI, family and unlimited scanning.",
+  "nav.upgrade.action": "Upgrade",
 
   "actions.save": "Save",
   "actions.cancel": "Cancel",
@@ -38,6 +43,8 @@ export const en: Record<string, string> = {
   "common.score": "Score",
   "common.menu": "Menu",
   "common.user": "Account",
+  "user.menu": "Account menu",
+  "user.profile": "Profile",
 
   "theme.toggle": "Toggle theme",
   "theme.light": "Light",
@@ -45,6 +52,9 @@ export const en: Record<string, string> = {
   "locale.toggle": "Switch language",
   "locale.ar": "العربية",
   "locale.en": "English",
+
+  "header.search": "Search anything…",
+  "header.searchLabel": "Quick find",
 
   "login.title": "Sign in to AMANAK",
   "login.subtitle": "Sign in to protect your digital life.",

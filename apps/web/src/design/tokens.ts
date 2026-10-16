@@ -1,53 +1,61 @@
 export const tokens = {
   color: {
-    // Brand — burnt orange
+    // Primary blue (replaces burnt orange)
     brand: {
-      50: "#fff7ed",
-      100: "#ffedd5",
-      200: "#fed7aa",
-      300: "#fdba74",
-      400: "#fb923c",
-      500: "#f97316",
-      600: "#ea580c", // primary
-      700: "#c2410c",
-      800: "#9a3412",
-      900: "#7c2d12",
-      gradient: "linear-gradient(135deg, #ea580c, #f97316)",
+      50: "#eff6ff",
+      100: "#dbeafe",
+      200: "#bfdbfe",
+      300: "#93c5fd",
+      400: "#60a5fa",
+      500: "#3b82f6",
+      600: "#2563eb", // primary
+      700: "#1d4ed8", // hover
+      800: "#1e40af",
+      900: "#1e3a8a",
+      gradient: "linear-gradient(135deg, #2563eb, #3b82f6)",
     },
-    // Neutral scale (10 steps) — 900/950 slightly bluer for the dark theme
+    // Navy (sidebar + dark surfaces)
+    navy: {
+      700: "#1e293b",
+      800: "#0f1b2d", // sidebar background
+      900: "#0b1220", // sidebar darker / overlays
+      950: "#050a15",
+    },
+    // Slate neutrals
     neutral: {
       0: "#ffffff",
       50: "#f8fafc",
       100: "#f1f5f9",
-      200: "#e2e8f0",
+      200: "#e5eaf2", // borders
       300: "#cbd5e1",
       400: "#94a3b8",
-      500: "#64748b",
+      500: "#64748b", // muted text
       600: "#475569",
       700: "#334155",
       800: "#1e293b",
-      900: "#0b1220",
-      950: "#050a15",
+      900: "#172033", // primary text
+      950: "#0f172a",
     },
-    // Semantic
-    success: { light: "#10b981", dark: "#34d399" },
-    warning: { light: "#f59e0b", dark: "#fbbf24" },
+    // Semantic (unchanged names, refined values)
+    success: { light: "#059669", dark: "#34d399" },
+    warning: { light: "#d97706", dark: "#fbbf24" },
     danger: { light: "#dc2626", dark: "#f87171" },
-    info: { light: "#0ea5e9", dark: "#38bdf8" },
+    info: { light: "#2563eb", dark: "#60a5fa" },
+    purple: { light: "#7c3aed", dark: "#a78bfa" },
     // Severity (used by scanner/breach UIs)
     severity: {
-      low: { light: "#0ea5e9", dark: "#38bdf8" },
-      medium: { light: "#f59e0b", dark: "#fbbf24" },
+      low: { light: "#2563eb", dark: "#60a5fa" },
+      medium: { light: "#d97706", dark: "#fbbf24" },
       high: { light: "#ea580c", dark: "#fb923c" },
       critical: { light: "#dc2626", dark: "#f87171" },
     },
     // Overlay backdrops
     overlay: {
-      dark: "rgba(2, 6, 23, 0.6)",
+      dark: "rgba(15, 27, 45, 0.5)",
       light: "rgba(255, 255, 255, 0.8)",
     },
-    // Focus ring colour (brand-500 in light, brand-400 in dark)
-    focus: { light: "#ea580c", dark: "#fb923c" },
+    // Focus ring colour (brand-600 in light, brand-500 in dark)
+    focus: { light: "#2563eb", dark: "#3b82f6" },
   },
   space: { 0: 0, 1: 4, 2: 8, 3: 12, 4: 16, 5: 20, 6: 24, 8: 32, 10: 40, 12: 48, 16: 64 },
   radius: { sm: 6, md: 10, lg: 14, xl: 20, full: 9999 },
@@ -99,7 +107,7 @@ export const tokens = {
     md: "0 4px 12px rgba(0,0,0,0.08)",
     lg: "0 12px 32px rgba(0,0,0,0.12)",
   },
-  ring: "0 0 0 4px rgba(234,88,12,0.15)",
+  ring: "0 0 0 3px rgba(37,99,235,0.15)",
   motion: {
     fast: "120ms cubic-bezier(0.2, 0, 0, 1)",
     base: "200ms cubic-bezier(0.2, 0, 0, 1)",
