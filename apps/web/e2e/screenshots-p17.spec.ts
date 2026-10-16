@@ -83,3 +83,63 @@ test("captures the P17.1 redesign", async ({ page }) => {
 
   expect(count).toBe(9)
 })
+
+/**
+ * P17.3 scanner redesign — 4 PNGs:
+ *   idle (light/ar), safe result (light/ar), malicious result (light/ar),
+ *   message tab (light/en).
+ */
+test("captures the P17.3 scanner redesign", async ({ page }) => {
+  test.setTimeout(180_000)
+  await mkdir(OUT_DIR, { recursive: true })
+
+  // Register while English so the auth labels are stable, then switch locale.
+  await page.goto("/")
+  await setThemeLocale(page, "light", "en")
+  await registerUser(page, testUser())
+
+  // 1. idle input, light, Arabic
+  await setThemeLocale(page, "light", "ar")
+  await gotoApp(page, "/scanner")
+  await expect(page).toHaveURL(/\/scanner/)
+  await page.locator("#scan-input").waitFor({ state: "visible" })
+  await page.waitForTimeout(400)
+  await page.screenshot({
+    path: resolve(OUT_DIR, "scanner-idle-light-ar.png"),
+    fullPage: true,
+  })
+
+  // 2. safe result, light, Arabic
+  await page.locator("#scan-input").fill("https://example.com")
+  await page.locator(".scan-input__actions .amk-btn").click()
+  await expect(page.locator(".scan-result-card")).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({
+    path: resolve(OUT_DIR, "scanner-result-safe-light-ar.png"),
+    fullPage: true,
+  })
+
+  // 3. malicious result + populated history, light, Arabic
+  await page.locator("#scan-input").fill("http://paypal-secure.com/signin")
+  await page.locator(".scan-input__actions .amk-btn").click()
+  await expect(page.locator(".scan-result-card")).toBeVisible()
+  await expect(page.locator(".scan-history__button").first()).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({
+    path: resolve(OUT_DIR, "scanner-result-malicious-light-ar.png"),
+    fullPage: true,
+  })
+
+  // 4. message tab with a phishing message, light, English
+  await setThemeLocale(page, "light", "en")
+  await gotoApp(page, "/scanner")
+  await page.getByRole("tab", { name: "Message Scan" }).click()
+  await page.locator("#scan-input").fill("URGENT: your account is locked, verify at http://paypal-secure.com")
+  await page.locator(".scan-input__actions .amk-btn").click()
+  await expect(page.locator(".scan-result-card")).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({
+    path: resolve(OUT_DIR, "scanner-message-tab-light-en.png"),
+    fullPage: true,
+  })
+})

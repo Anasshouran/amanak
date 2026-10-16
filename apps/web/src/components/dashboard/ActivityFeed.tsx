@@ -6,6 +6,7 @@ import { useT } from "../../design/i18n"
 import { IconScanner } from "../../design/icons"
 import { useTheme } from "../../design/ThemeProvider"
 import { verdictVariant } from "../../lib/labels"
+import { formatRelativeTime } from "../../lib/format"
 
 export type ActivityFeedProps = {
   items: ScanResultRecord[]
@@ -25,24 +26,6 @@ function verdictColor(variant: BadgeVariant): string {
   }
 }
 
-function relativeTime(iso: string, locale: string): string {
-  const then = new Date(iso).getTime()
-  if (Number.isNaN(then)) return ""
-  const bcp47 = locale === "ar" ? "ar" : "en"
-  const diff = then - Date.now()
-  const abs = Math.abs(diff)
-  const minute = 60_000
-  const hour = 60 * minute
-  const day = 24 * hour
-  try {
-    const rtf = new Intl.RelativeTimeFormat(bcp47, { numeric: "auto" })
-    if (abs < hour) return rtf.format(Math.round(diff / minute), "minute")
-    if (abs < day) return rtf.format(Math.round(diff / hour), "hour")
-    return rtf.format(Math.round(diff / day), "day")
-  } catch {
-    return new Date(then).toLocaleDateString(bcp47)
-  }
-}
 
 export function ActivityFeed({ items, loading }: ActivityFeedProps) {
   const t = useT()
@@ -75,7 +58,7 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
       ) : (
         <ul className="dash-activity" role="list">
           {visible.map((scan) => {
-            const color = verdictColor(verdictVariant(scan.verdict))
+  const color = verdictColor(verdictVariant(scan.verdict))
             return (
               <li className="dash-activity__item" key={scan.id}>
                 <span
@@ -90,7 +73,7 @@ export function ActivityFeed({ items, loading }: ActivityFeedProps) {
                   </span>
                 </div>
                 <time className="dash-activity__time" dateTime={scan.created_at}>
-                  {relativeTime(scan.created_at, locale)}
+                  {formatRelativeTime(scan.created_at, locale)}
                 </time>
               </li>
             )
