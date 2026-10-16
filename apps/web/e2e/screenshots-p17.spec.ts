@@ -71,5 +71,15 @@ test("captures the P17.1 redesign", async ({ page }) => {
     count += 1
   }
 
-  expect(count).toBe(8)
+  // P17.2: dashboard empty-state (fresh user, no data) in light + Arabic.
+  await setThemeLocale(page, "light", "ar")
+  await gotoApp(page, "/dashboard")
+  await page.waitForTimeout(400)
+  await page.screenshot({
+    path: resolve(OUT_DIR, "dashboard-empty-light-ar.png"),
+    fullPage: true,
+  })
+  count += 1
+
+  expect(count).toBe(9)
 })
