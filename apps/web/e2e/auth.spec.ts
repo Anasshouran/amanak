@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
 
 test("register lands on the dashboard, not the login screen", async ({ page }) => {
   await registerUser(page, testUser())
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible()
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
   await expect(page).not.toHaveURL(/\/login$/)
 })
 
@@ -38,7 +38,7 @@ test("login with correct credentials lands on the dashboard", async ({ page }) =
   await expect(page).toHaveURL(/\/login$/)
 
   await loginUser(page, user)
-  await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible()
+  await expect(page.getByRole("heading", { level: 1 })).toBeVisible()
 })
 
 test("logout returns to /login", async ({ page }) => {

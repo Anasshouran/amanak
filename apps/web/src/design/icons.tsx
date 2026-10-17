@@ -344,6 +344,15 @@ export function IconPlans(p: IconProps) {
   )
 }
 
+export function IconSparkles(p: IconProps) {
+  return (
+    <svg {...base(p)}>
+      <path d="M12 3l1.8 4.7L18.5 9.5 13.8 11.3 12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3Z" />
+      <path d="M19 14l.7 1.8L21.5 16.5l-1.8.7L19 19l-.7-1.8L16.5 16.5l1.8-.7L19 14Z" />
+    </svg>
+  )
+}
+
 export function IconBell(p: IconProps) {
   return (
     <svg {...base(p)}>

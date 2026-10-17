@@ -1,116 +1,74 @@
-import type { ScanKind, ScanResponse, ScanResultRecord } from "@amanak/shared-types"
+import type { ScanKind, ScanResultRecord, ScanResponse } from "@amanak/shared-types"
 import { useState } from "react"
 import { useSearchParams } from "react-router-dom"
-import {
-  Badge,
-  Button,
-  Card,
-  ErrorState,
-  ProgressRing,
-  Skeleton,
-  Tabs,
-  Textarea,
-} from "../design/components"
-import { IconCopy, IconScanner } from "../design/icons"
+import { Card, ErrorState, Skeleton, useToast } from "../design/components"
+import { IconChevron } from "../design/icons"
 import { useT } from "../design/i18n"
-import { useTheme } from "../design/ThemeProvider"
 import { api } from "../lib/api"
-import { formatDateTime } from "../lib/format"
-import { severityVariant, verdictVariant } from "../lib/labels"
 import { errorMessage, useAsync } from "../lib/useAsync"
+import {
+  ScanHistory,
+  ScanInput,
+  ScanResult,
+  ScanTabs,
+  type ScanResultView,
+} from "../components/scanner"
 
-function CopyButton({ value }: { value: string }) {
-  const t = useT()
-  const [copied, setCopied] = useState(false)
-  return (
-    <button
-      type="button"
-      className="amk-copy"
-      onClick={() => {
-        void navigator.clipboard?.writeText(value)
-        setCopied(true)
-        window.setTimeout(() => setCopied(false), 1500)
-      }}
-    >
-      <IconCopy size={14} />
-      <span>{copied ? t("actions.copied") : t("actions.copy")}</span>
-    </button>
-  )
+function fromResponse(result: ScanResponse, input: string): ScanResultView {
+  return {
+    verdict: result.verdict,
+    score: result.score,
+    matches: result.matches,
+    rulesetVersion: result.ruleset_version,
+    input,
+    scannedAt: result.scanned_at,
+  }
 }
 
-function ScanResultCard({ result }: { result: ScanResponse }) {
-  const t = useT()
-  return (
-    <Card padded elevated title={t("scanner.result.title")}>
-      <div className="amk-row" style={{ justifyContent: "space-between" }}>
-        <Badge variant={verdictVariant(result.verdict)}>{t(`scanner.verdict.${result.verdict}`)}</Badge>
-        <ProgressRing size={64} stroke={6} value={result.score} caption={t("common.score")} />
-      </div>
-      <p className="amk-muted" style={{ fontSize: 12, marginTop: 4 }}>
-        {t("scanner.ruleset")}: {result.ruleset_version}
-      </p>
-      <hr className="amk-divider" />
-      {result.matches.length === 0 ? (
-        <p className="amk-muted">{t("scanner.noMatches")}</p>
-      ) : (
-        <div className="amk-match-list">
-          {result.matches.map((match, index) => (
-            <details className="amk-match" key={`${match.rule_id}-${index}`}>
-              <summary>
-                <span className="amk-mono">
-                  {t("scanner.match.rule")}: {match.rule_id}
-                </span>
-                <Badge variant={severityVariant(match.severity)}>
-                  {t(`scanner.severity.${match.severity}`)}
-                </Badge>
-              </summary>
-              <div className="amk-match__body">
-                <p>{match.description}</p>
-                {match.evidence_redacted && (
-                  <div className="amk-row" style={{ justifyContent: "space-between", gap: 8 }}>
-                    <code className="amk-mono amk-muted">{match.evidence_redacted}</code>
-                    <CopyButton value={match.evidence_redacted} />
-                  </div>
-                )}
-              </div>
-            </details>
-          ))}
-        </div>
-      )}
-    </Card>
-  )
+function fromHistory(item: ScanResultRecord): ScanResultView {
+  return {
+    verdict: item.verdict,
+    score: item.score,
+    matches: item.matches,
+    rulesetVersion: item.ruleset_version,
+    input: item.preview,
+    scannedAt: item.created_at,
+  }
 }
 
 export function Scanner() {
   const t = useT()
-  const { locale } = useTheme()
+  const { push } = useToast()
   const [params, setParams] = useSearchParams()
   const kind: ScanKind = params.get("tab") === "message" ? "message" : "url"
 
   const [value, setValue] = useState("")
-  const [result, setResult] = useState<ScanResponse | null>(null)
+  const [result, setResult] = useState<ScanResultView | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [historyExpanded, setHistoryExpanded] = useState(false)
 
   const history = useAsync<ScanResultRecord[]>(() => api.scanHistory())
+  const allHistory = history.data ?? []
 
-  function setKind(next: string) {
-    const next_params = new URLSearchParams(params)
-    if (next === "message") next_params.set("tab", "message")
-    else next_params.delete("tab")
-    setParams(next_params, { replace: true })
+  function setKind(next: ScanKind) {
+    const nextParams = new URLSearchParams(params)
+    if (next === "message") nextParams.set("tab", "message")
+    else nextParams.delete("tab")
+    setParams(nextParams, { replace: true })
+    setValue("")
     setResult(null)
     setError(null)
   }
 
-  async function onScan() {
-    if (!value.trim()) return
+  async function onScan(input: string) {
+    if (!input.trim()) return
     setBusy(true)
     setError(null)
     setResult(null)
     try {
-      const res = kind === "url" ? await api.scanUrl(value) : await api.scanMessage(value)
-      setResult(res)
+      const res = kind === "url" ? await api.scanUrl(input) : await api.scanMessage(input)
+      setResult(fromResponse(res, input))
       history.reload()
     } catch (err) {
       setError(errorMessage(err, t("common.error")))
@@ -119,8 +77,30 @@ export function Scanner() {
     }
   }
 
+  function onScanAnother() {
+    setResult(null)
+    setError(null)
+    setValue("")
+  }
+
+  async function onCopyReport() {
+    if (!result) return
+    const lines = [
+      `${t("scanner.result.title")}: ${t(`scanner.verdict.${result.verdict}`)}`,
+      `${t("scanner.result.details.url")}: ${result.input}`,
+      `${t("scanner.result.details.riskLevel")}: ${result.verdict}`,
+      ...result.matches.map((m) => `- ${m.rule_id} (${m.severity}): ${m.description}`),
+    ]
+    await navigator.clipboard?.writeText(lines.join("\n"))
+    push(t("actions.copied"), "success")
+  }
+
+  function onReportFalsePositive() {
+    push(t("scanner.falsePositive.reported"), "success")
+  }
+
   return (
-    <div className="amk-page">
+    <div className="amk-page scan-page">
       <div className="amk-page-head">
         <div>
           <h1>{t("scanner.title")}</h1>
@@ -128,99 +108,96 @@ export function Scanner() {
         </div>
       </div>
 
-      <div className="amk-grid amk-grid--two">
-        <div className="amk-stack">
-          <Card padded elevated>
-            <Tabs
-              ariaLabel={t("scanner.title")}
-              value={kind}
-              onChange={setKind}
-              items={[
-                { id: "url", label: t("scanner.tab.url") },
-                { id: "message", label: t("scanner.tab.message") },
-              ]}
+      <div className="scan-layout">
+        <div className="scan-layout__main">
+          <ScanTabs value={kind} onChange={setKind} />
+
+          <Card padded elevated className="scan-input-card">
+            <ScanInput
+              kind={kind}
+              value={value}
+              onChange={setValue}
+              onSubmit={(v) => void onScan(v)}
+              busy={busy}
             />
-            <div style={{ marginTop: 16, display: "grid", gap: 12 }}>
-              <Textarea
-                aria-label={kind === "url" ? t("scanner.tab.url") : t("scanner.tab.message")}
-                placeholder={kind === "url" ? t("scanner.input.url") : t("scanner.input.message")}
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-                dir="ltr"
-              />
-              <div className="amk-row">
-                <Button
-                  loading={busy}
-                  disabled={!value.trim()}
-                  icon={<IconScanner size={16} />}
-                  onClick={() => void onScan()}
-                >
-                  {busy ? t("scanner.scanning") : t("scanner.submit")}
-                </Button>
-              </div>
-            </div>
           </Card>
 
           {busy && (
-            <Card padded elevated>
+            <Card padded elevated className="scan-result-skeleton" aria-hidden="true">
               <div className="amk-stack">
                 <Skeleton width={140} height={20} />
                 <Skeleton height={120} />
+                <Skeleton height={80} />
                 <Skeleton height={40} />
               </div>
             </Card>
           )}
 
-          {error && (
+          {!busy && error && (
             <ErrorState
               title={t("common.error")}
               message={error}
-              onRetry={() => void onScan()}
-              retryLabel={t("actions.retry")}
+              onRetry={() => void onScan(value)}
+              retryLabel={t("scanner.action.tryAgain")}
             />
           )}
 
-          {result && <ScanResultCard result={result} />}
+          {!busy && !error && result && (
+            <ScanResult
+              result={result}
+              onScanAnother={onScanAnother}
+              onCopyReport={() => void onCopyReport()}
+              onReportFalsePositive={onReportFalsePositive}
+            />
+          )}
         </div>
 
-        <Card padded elevated title={t("scanner.history.title")}>
-          {history.loading ? (
-            <div className="amk-stack">
-              <Skeleton height={44} />
-              <Skeleton height={44} />
-              <Skeleton height={44} />
-            </div>
-          ) : history.error ? (
-            <ErrorState
-              title={t("common.error")}
-              onRetry={history.reload}
-              retryLabel={t("actions.retry")}
-            />
-          ) : !history.data || history.data.length === 0 ? (
-            <p className="amk-muted">{t("scanner.history.empty")}</p>
-          ) : (
-            <ul className="amk-list">
-              {history.data.slice(0, 10).map((scan) => (
-                <li className="amk-listitem" key={scan.id}>
-                  <div style={{ display: "grid", gap: 2, minWidth: 0, flex: 1 }}>
-                    <span
-                      className="amk-mono"
-                      style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {scan.preview}
-                    </span>
-                    <span className="amk-muted" style={{ fontSize: 12 }}>
-                      {t(`scanner.tab.${scan.kind}`)} · {formatDateTime(scan.created_at, locale)}
-                    </span>
-                  </div>
-                  <Badge variant={verdictVariant(scan.verdict)}>
-                    {t(`scanner.verdict.${scan.verdict}`)}
-                  </Badge>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <details
+          open
+          className="amk-card amk-card--padded amk-card--elevated scan-sidebar"
+        >
+          <summary className="scan-sidebar__summary">
+            <h2 className="amk-card__title">{t("scanner.history.title")}</h2>
+            <IconChevron size={16} className="scan-sidebar__chevron" />
+          </summary>
+          <div className="scan-sidebar__body">
+            {history.loading ? (
+              <div className="amk-stack">
+                <Skeleton height={44} />
+                <Skeleton height={44} />
+                <Skeleton height={44} />
+              </div>
+            ) : history.error ? (
+              <ErrorState
+                title={t("common.error")}
+                onRetry={history.reload}
+                retryLabel={t("scanner.action.tryAgain")}
+              />
+            ) : (
+              <>
+                <ScanHistory
+                  items={historyExpanded ? allHistory : allHistory.slice(0, 5)}
+                  onSelect={(item) => {
+                    setKind(item.kind)
+                    setResult(fromHistory(item))
+                    setError(null)
+                  }}
+                />
+                {allHistory.length > 5 && (
+                  <button
+                    type="button"
+                    className="scan-sidebar__viewall"
+                    onClick={() => setHistoryExpanded((v) => !v)}
+                  >
+                    {historyExpanded
+                      ? t("scanner.history.showLess")
+                      : t("scanner.history.viewAll")}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        </details>
       </div>
     </div>
   )

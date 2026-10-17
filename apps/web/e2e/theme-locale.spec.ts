@@ -1,15 +1,15 @@
 import { test, expect } from "./fixtures"
 
-test("theme defaults to dark, toggles to light, and persists", async ({ page }) => {
+test("theme defaults to light, toggles to dark, and persists", async ({ page }) => {
   await page.goto("/login")
   const html = page.locator("html")
 
-  await expect(html).toHaveAttribute("data-theme", "dark")
-  await page.getByRole("button", { name: "تبديل المظهر" }).click()
   await expect(html).toHaveAttribute("data-theme", "light")
+  await page.getByRole("button", { name: "تبديل المظهر" }).click()
+  await expect(html).toHaveAttribute("data-theme", "dark")
 
   await page.reload()
-  await expect(html).toHaveAttribute("data-theme", "light")
+  await expect(html).toHaveAttribute("data-theme", "dark")
 })
 
 test("locale defaults to Arabic, toggles to English, and persists", async ({ page }) => {

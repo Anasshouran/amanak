@@ -14,7 +14,7 @@ async function createVault(page: Page): Promise<void> {
   await page.getByLabel("Master password", { exact: true }).fill(MASTER)
   await page.getByLabel("Confirm master password", { exact: true }).fill(MASTER)
   await page.getByRole("button", { name: "Create vault" }).click()
-  await expect(page.getByText("No passwords yet")).toBeVisible()
+  await expect(page.getByText("Your vault is empty")).toBeVisible()
 }
 
 async function unlockVault(page: Page): Promise<void> {
@@ -27,26 +27,25 @@ test("setup, add a password, reveal it, lock and unlock", async ({ page }) => {
   await createVault(page)
 
   // Empty vault → add an entry.
-  await page.getByRole("button", { name: "Add password" }).click()
+  await page.getByRole("button", { name: "Add Entry" }).click()
   await page.getByLabel("Title", { exact: true }).fill("GitHub")
   await page.getByLabel("Username", { exact: true }).fill("octocat")
   await page.getByLabel("Website URL", { exact: true }).fill("https://github.com")
-  const secretField = page.locator("#password-vault-secret")
-  await secretField.fill(SECRET)
-  await page.getByRole("button", { name: "Save", exact: true }).click()
+  await page.getByLabel("Password", { exact: true }).fill(SECRET)
+  await page.getByRole("button", { name: "Add password", exact: true }).click()
 
   // The card is shown and the secret is masked until revealed.
   await expect(page.getByRole("heading", { name: "GitHub" })).toBeVisible()
-  const reveal = page.getByTestId("password-reveal")
+  const reveal = page.getByTestId("password-masked")
   await expect(reveal).toHaveText("••••••••")
 
-  await page.getByRole("button", { name: "Show" }).click()
-  await expect(reveal).toHaveText(SECRET)
+  await page.getByRole("button", { name: "Reveal" }).click()
+  await expect(page.getByTestId("password-revealed")).toHaveText(SECRET)
 
   // Lock hides everything behind the unlock screen.
   await page.getByRole("button", { name: "Lock", exact: true }).click()
-  await expect(page.getByRole("heading", { name: "Unlock your password vault" })).toBeVisible()
-  await expect(page.getByTestId("password-reveal")).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Vault locked" })).toBeVisible()
+  await expect(page.getByTestId("password-revealed")).toHaveCount(0)
 
   // A wrong master password is rejected locally (server-blind check).
   await page.getByLabel("Master password", { exact: true }).fill("not-the-master-password")
@@ -56,8 +55,8 @@ test("setup, add a password, reveal it, lock and unlock", async ({ page }) => {
   // The correct master password re-unlocks the vault.
   await unlockVault(page)
   await expect(page.getByRole("heading", { name: "GitHub" })).toBeVisible()
-  await page.getByRole("button", { name: "Show" }).click()
-  await expect(reveal).toHaveText(SECRET)
+  await page.getByRole("button", { name: "Reveal" }).click()
+  await expect(page.getByTestId("password-revealed")).toHaveText(SECRET)
 })
 
 test("an empty vault still rejects a wrong master password", async ({ page }) => {
@@ -66,7 +65,7 @@ test("an empty vault still rejects a wrong master password", async ({ page }) =>
 
   // Lock before adding anything: the vault has no entries to decrypt.
   await page.getByRole("button", { name: "Lock", exact: true }).click()
-  await expect(page.getByRole("heading", { name: "Unlock your password vault" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Vault locked" })).toBeVisible()
 
   await page.getByLabel("Master password", { exact: true }).fill("definitely-not-the-master")
   await page.getByRole("button", { name: "Unlock", exact: true }).click()
@@ -75,16 +74,16 @@ test("an empty vault still rejects a wrong master password", async ({ page }) =>
   // The correct master password still unlocks the empty vault.
   await page.getByLabel("Master password", { exact: true }).fill(MASTER)
   await page.getByRole("button", { name: "Unlock", exact: true }).click()
-  await expect(page.getByText("No passwords yet")).toBeVisible()
+  await expect(page.getByText("Your vault is empty")).toBeVisible()
 })
 
 test("the vault is per-user: a second account never sees another vault", async ({ page }) => {
   await registerUser(page, testUser())
   await createVault(page)
-  await page.getByRole("button", { name: "Add password" }).click()
+  await page.getByRole("button", { name: "Add Entry" }).click()
   await page.getByLabel("Title", { exact: true }).fill("GitHub")
-  await page.locator("#password-vault-secret").fill(SECRET)
-  await page.getByRole("button", { name: "Save", exact: true }).click()
+  await page.getByLabel("Password", { exact: true }).fill(SECRET)
+  await page.getByRole("button", { name: "Add password", exact: true }).click()
   await expect(page.getByRole("heading", { name: "GitHub" })).toBeVisible()
 
   // Sign out and register a brand-new account.
@@ -95,7 +94,7 @@ test("the vault is per-user: a second account never sees another vault", async (
   // The new account has no vault, so it must see the setup screen.
   await page.goto("/passwords")
   await expect(page.getByRole("heading", { name: "Create your password vault" })).toBeVisible()
-  await expect(page.getByTestId("password-reveal")).toHaveCount(0)
+  await expect(page.getByTestId("password-masked")).toHaveCount(0)
 })
 
 test("deleting the entire vault requires the account password and returns to setup", async ({
