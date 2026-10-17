@@ -14,7 +14,7 @@ async function createVault(page: Page): Promise<void> {
   await page.getByLabel("Master password", { exact: true }).fill(MASTER)
   await page.getByLabel("Confirm master password", { exact: true }).fill(MASTER)
   await page.getByRole("button", { name: "Create vault" }).click()
-  await expect(page.getByText("No 2FA entries yet")).toBeVisible()
+  await expect(page.getByText("No authenticator apps yet")).toBeVisible()
 }
 
 async function unlockVault(page: Page): Promise<void> {
@@ -47,7 +47,8 @@ test("setup, add an entry, watch the code rotate, lock and unlock", async ({ pag
   await page.getByRole("button", { name: "Edit", exact: true }).click()
   await page.getByLabel("Label", { exact: true }).fill("GitHub (work)")
   await page.getByRole("button", { name: "Save", exact: true }).click()
-  await expect(page.getByRole("heading", { name: "Example Corp · GitHub (work)" })).toBeVisible()
+  await expect(page.getByText("Example Corp", { exact: true })).toBeVisible()
+  await expect(page.getByText("GitHub (work)", { exact: true })).toBeVisible()
 
   // Locking shows the unlock screen and hides the code.
   await page.getByRole("button", { name: "Lock", exact: true }).click()

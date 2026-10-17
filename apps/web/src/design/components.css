@@ -2181,3 +2181,234 @@
     margin-top: var(--space-4);
   }
 }
+
+/* ============================================================ Vault (2FA) */
+
+.vault-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+  justify-content: space-between;
+}
+
+.vault-2fa-row {
+  display: block;
+}
+
+.vault-2fa-row__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.vault-2fa-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  flex: none;
+  font-weight: 700;
+  color: #ffffff;
+  font-size: var(--text-lg);
+}
+
+.vault-2fa-row__icon-letter {
+  line-height: 1;
+}
+
+.vault-2fa-row__info {
+  flex: 1;
+  min-width: 180px;
+  display: grid;
+  gap: 2px;
+}
+
+.vault-2fa-row__issuer {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--c-text-strong);
+  margin: 0;
+}
+
+.vault-2fa-row__label {
+  color: var(--c-muted);
+  font-size: var(--text-xs);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.vault-2fa-row__totp {
+  flex: 1;
+  min-width: 200px;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.vault-2fa-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+
+.vault-2fa-code {
+  font-family: var(--font-mono);
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: var(--c-text-strong);
+  word-break: keep-all;
+}
+
+.totp-display {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.totp-display__code {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+}
+
+.totp-display__countdown {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.totp-display__progress {
+  position: relative;
+  height: 6px;
+  width: 100%;
+  background: var(--c-border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.totp-display__progress-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--c-brand);
+  transition: width var(--motion-fast);
+}
+
+.totp-display__progress-bar.is-warning {
+  background: var(--c-warning);
+}
+
+.totp-display__countdown-text {
+  font-size: var(--text-xs);
+  color: var(--c-muted);
+  white-space: nowrap;
+}
+
+.totp-display__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.vault-2fa-list {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.vault-2fa-list__add {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-2);
+}
+
+/* Responsive */
+@media (min-width: 1280px) {
+  .vault-2fa-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .vault-2fa-row__content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .vault-2fa-row__totp {
+    max-width: 100%;
+  }
+  .vault-2fa-row__actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
+/* Danger zone card (vault deletion) */
+.amk-card--danger {
+  border-color: color-mix(in srgb, var(--c-danger) 35%, var(--c-border));
+}
+
+.amk-card--danger .amk-card__title,
+.amk-card--danger .amk-card__head h3 {
+  color: var(--c-danger);
+}
+
+/* Inline informational note */
+.amk-note {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-border);
+  color: var(--c-muted);
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+/* Inline error panel */
+.amk-error-state {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--c-danger) 35%, var(--c-border));
+  background: color-mix(in srgb, var(--c-danger) 6%, var(--c-surface));
+}
+
+/* File picker as a button-like label */
+.amk-file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-border-strong);
+  background: var(--c-surface);
+  color: var(--c-text);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+
+.amk-file:hover {
+  background: var(--c-surface-2);
+}
+
+.amk-file input[type="file"] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}

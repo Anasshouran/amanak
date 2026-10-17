@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises"
 import { resolve } from "node:path"
+import type { Page } from "@playwright/test"
 import { test, expect, testUser, registerUser } from "./fixtures"
 
 const ENABLED = process.env.E2E_SCREENSHOTS === "1"
@@ -140,6 +141,89 @@ test("captures the P17.3 scanner redesign", async ({ page }) => {
   await page.waitForTimeout(400)
   await page.screenshot({
     path: resolve(OUT_DIR, "scanner-message-tab-light-en.png"),
+    fullPage: true,
+  })
+})
+
+/**
+ * P17.4a 2FA redesign — 2 PNGs:
+ *   list view in light/Arabic and dark/English.
+ */
+const TWO_FA_MASTER = "Screenshot2026!Sec"
+const TWO_FA_SECRET = "JBSWY3DPEHPK3PXP"
+
+/**
+ * The derived vault key is in-memory only (see src/crypto/unlock.ts), so any
+ * full navigation re-locks the vault. After switching theme/locale we reload,
+ * which means we must unlock again before the list is visible. The selectors
+ * here are locale-agnostic on purpose.
+ */
+async function unlockIfLocked(page: Page) {
+  const password = page.locator('input[autocomplete="current-password"]')
+  await password.waitFor({ state: "visible", timeout: 5_000 }).catch(() => {})
+  if (await password.isVisible().catch(() => false)) {
+    await password.fill(TWO_FA_MASTER)
+    await password.locator("xpath=ancestor::form").getByRole("button").click()
+    await expect(password).toHaveCount(0)
+  }
+}
+
+async function addManualEntry(
+  page: Page,
+  entry: { issuer: string; label: string; secret: string },
+) {
+  await page.getByRole("button", { name: "Add entry" }).click()
+  await page.getByRole("tab", { name: "Manual" }).click()
+  await page.getByLabel("Label", { exact: true }).fill(entry.label)
+  await page.getByLabel("Issuer", { exact: true }).fill(entry.issuer)
+  await page.getByLabel("Secret (base32)", { exact: true }).fill(entry.secret)
+  await page.getByRole("button", { name: "Add code" }).click()
+  await expect(page.getByText(entry.issuer, { exact: true })).toBeVisible()
+}
+
+test("captures the P17.4a 2FA redesign", async ({ page }) => {
+  test.setTimeout(180_000)
+  await mkdir(OUT_DIR, { recursive: true })
+
+  // Fresh, unique account for this run.
+  const user = { ...testUser(), email: `e2e-2fa-${Date.now()}@test.local` }
+
+  // Register in English so the auth/setup labels are stable.
+  await page.goto("/")
+  await setThemeLocale(page, "light", "en")
+  await registerUser(page, user)
+
+  // Create the vault, then wait for the empty list.
+  await page.goto("/vault")
+  await expect(page.getByRole("heading", { name: "Create your vault" })).toBeVisible()
+  await page.getByLabel("Master password", { exact: true }).fill(TWO_FA_MASTER)
+  await page.getByLabel("Confirm master password", { exact: true }).fill(TWO_FA_MASTER)
+  await page.getByRole("button", { name: "Create vault" }).click()
+  await expect(page.getByText("No authenticator apps yet")).toBeVisible()
+
+  // Add two entries manually.
+  await addManualEntry(page, { issuer: "Google", label: "user@example.com", secret: TWO_FA_SECRET })
+  await addManualEntry(page, { issuer: "GitHub", label: "dev@example.com", secret: TWO_FA_SECRET })
+
+  // 1. Light + Arabic list view.
+  await setThemeLocale(page, "light", "ar")
+  await gotoApp(page, "/vault")
+  await unlockIfLocked(page)
+  await expect(page.getByText("Google", { exact: true })).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({
+    path: resolve(OUT_DIR, "2fa-list-light-ar.png"),
+    fullPage: true,
+  })
+
+  // 2. Dark + English list view.
+  await setThemeLocale(page, "dark", "en")
+  await gotoApp(page, "/vault")
+  await unlockIfLocked(page)
+  await expect(page.getByText("Google", { exact: true })).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({
+    path: resolve(OUT_DIR, "2fa-list-dark-en.png"),
     fullPage: true,
   })
 })
