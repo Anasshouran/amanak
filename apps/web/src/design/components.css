@@ -2412,3 +2412,146 @@
   white-space: nowrap;
   border: 0;
 }
+
+
+/* ============================================================ Vault (Passwords) */
+
+.vault-row {
+  display: block;
+}
+
+.vault-row__content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.vault-row__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-full);
+  flex: none;
+  font-weight: 700;
+  color: #ffffff;
+  font-size: var(--text-lg);
+}
+
+.vault-row__icon-letter {
+  line-height: 1;
+}
+
+.vault-row__info {
+  flex: 1;
+  min-width: 180px;
+  display: grid;
+  gap: 2px;
+}
+
+.vault-row__title {
+  font-weight: 600;
+  font-size: var(--text-sm);
+  color: var(--c-text-strong);
+  margin: 0;
+}
+
+.vault-row__username,
+.vault-row__url {
+  color: var(--c-muted);
+  font-size: var(--text-xs);
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono);
+  direction: ltr;
+  text-align: left;
+}
+
+.vault-row__password {
+  flex: 1;
+  min-width: 200px;
+  max-width: 380px;
+  display: grid;
+  gap: var(--space-1);
+}
+
+.vault-row__password-display {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  color: var(--c-text-strong);
+  word-break: keep-all;
+  direction: ltr;
+  text-align: left;
+}
+
+.vault-row__countdown {
+  font-size: var(--text-xs);
+  color: var(--c-muted);
+}
+
+.vault-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex: none;
+}
+
+.vault-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vault-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.vault-select {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--c-border-strong);
+  background: var(--c-surface);
+  color: var(--c-text);
+}
+
+.vault-list {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.vault-link {
+  background: transparent;
+  border: none;
+  color: var(--c-brand);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  text-decoration: underline;
+  padding: 0;
+}
+
+@media (min-width: 1280px) {
+  .vault-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .vault-row__content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .vault-row__password,
+  .vault-row__actions {
+    max-width: 100%;
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

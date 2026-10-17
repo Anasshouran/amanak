@@ -227,3 +227,72 @@ test("captures the P17.4a 2FA redesign", async ({ page }) => {
     fullPage: true,
   })
 })
+
+
+/**
+ * P17.4b Password Vault redesign — 3 PNGs:
+ *   unlocked list (light/ar), revealed (light/ar), locked (light/ar)
+ */
+const PASS_MASTER = "Screenshot2026!Sec"
+
+async function unlockPassVault(page: Page, master: string) {
+  const pwd = page.locator('input[autocomplete="current-password"]')
+  if (await pwd.isVisible().catch(() => false)) {
+    await pwd.fill(master)
+    await pwd.locator("xpath=ancestor::form").locator('button[type="submit"]').click()
+  }
+}
+
+test("captures the P17.4b password vault redesign", async ({ page }) => {
+  test.setTimeout(180_000)
+  await mkdir(OUT_DIR, { recursive: true })
+  const user = { ...testUser(), email: `e2e-vault-${Date.now()}@test.local` }
+  await page.goto("/")
+  await setThemeLocale(page, "light", "en")
+  await registerUser(page, user)
+  await page.goto("/passwords")
+  await expect(page.getByRole("heading", { name: "Create your password vault" })).toBeVisible()
+  await page.getByLabel("Master password", { exact: true }).fill(PASS_MASTER)
+  await page.getByLabel("Confirm master password", { exact: true }).fill(PASS_MASTER)
+  await page.getByRole("button", { name: "Create vault" }).click()
+  await expect(page.getByRole("heading", { name: "Password Vault", exact: true })).toBeVisible()
+  await page.getByRole("button", { name: "Add Entry" }).click()
+  await page.getByLabel("Title", { exact: true }).fill("GitHub")
+  await page.getByLabel("Username", { exact: true }).fill("user@example.com")
+  await page.getByLabel("Password", { exact: true }).fill("testpass123")
+  await page.getByLabel("Website URL", { exact: true }).fill("https://github.com")
+  await page.getByRole("button", { name: "Add password" }).click()
+  // Wait for the two-phase create (POST → AAD rebind PATCH → list reload) to
+  // finish before touching the page again: the modal closes only after the
+  // save handler resolves, i.e. once the rebind PATCH has committed. Navigating
+  // away mid-rebind aborts the PATCH and leaves the blob bound to the
+  // placeholder AAD(0), which would make the entry undecryptable.
+  await expect(page.getByRole("button", { name: "Add password" })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "GitHub" })).toBeVisible()
+  await page.getByRole("button", { name: "Add Entry" }).click()
+  await page.getByLabel("Title", { exact: true }).fill("Google")
+  await page.getByLabel("Username", { exact: true }).fill("gmail@example.com")
+  await page.getByLabel("Password", { exact: true }).fill("testpass123")
+  await page.getByLabel("Website URL", { exact: true }).fill("https://gmail.com")
+  await page.getByRole("button", { name: "Add password" }).click()
+  await expect(page.getByRole("button", { name: "Add password" })).toHaveCount(0)
+  await expect(page.getByRole("heading", { name: "Google" })).toBeVisible()
+  await setThemeLocale(page, "light", "ar")
+  await gotoApp(page, "/passwords")
+  await unlockPassVault(page, PASS_MASTER)
+  await expect(page.getByText("GitHub", { exact: true })).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: resolve(OUT_DIR, "vault-unlocked-light-ar.png"), fullPage: true })
+  const rows = page.locator('.vault-row')
+  // Locale-agnostic: the first action button of a masked row is "Reveal".
+  const firstReveal = rows.first().locator(".vault-row__actions button").first()
+  if (await firstReveal.count() > 0) await firstReveal.click()
+  await expect(rows.first().getByTestId("reveal-timer")).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: resolve(OUT_DIR, "vault-revealed-light-ar.png"), fullPage: true })
+  // Locale-agnostic: the first header button is "Lock".
+  await page.locator(".amk-page-head button").first().click()
+  await expect(page.locator('input[autocomplete="current-password"]')).toBeVisible()
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: resolve(OUT_DIR, "vault-locked-light-ar.png"), fullPage: true })
+})

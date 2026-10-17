@@ -1,37 +1,43 @@
-import { describe, expect, it } from "vitest"
+import { describe, it, expect } from "vitest"
+import { readFileSync, readdirSync } from "node:fs"
+import { dirname, join } from "node:path"
+import { fileURLToPath } from "node:url"
 
-describe("Vault security", () => {
-  it("no component calls console.log with secret keywords", () => {
-    // We'll inspect the component source files and verify there are no dangerous log statements.
-    // We'll read the files and assert they don't contain "console.log" followed by secret keywords.
-    const fs = require("fs")
-    const path = require("path")
-    const vaultDir = path.resolve(__dirname, "../")
-    const files = fs.readdirSync(vaultDir).filter((f: string) => f.endsWith(".tsx") || f.endsWith(".ts"))
-    for (const file of files) {
-      const content = fs.readFileSync(path.join(vaultDir, file), "utf8")
-      const logMatches = content.match(/console\.(log|debug|info)/g) || []
-      for (const match of logMatches) {
-        const line = content.split("\n").filter((l: string) => l.includes(match))[0] || ""
-        expect(line.toLowerCase()).not.toMatch(/password|secret|totp|master/)
-      }
-    }
-    expect(true).toBe(true)
+// The vault components live one level up from this __tests__ directory.
+const vaultDir = join(dirname(fileURLToPath(import.meta.url)), "..")
+const sourceFiles = readdirSync(vaultDir).filter((f) => /\.(ts|tsx)$/.test(f))
+
+function linesMatching(file: string, pattern: RegExp): string[] {
+  const content = readFileSync(join(vaultDir, file), "utf8")
+  return content.split("\n").filter((line) => pattern.test(line))
+}
+
+describe("password vault security checks", () => {
+  it("scans the vault component sources", () => {
+    expect(sourceFiles.length).toBeGreaterThan(0)
   })
 
-  it("no component writes secrets to localStorage or sessionStorage", () => {
-    const fs = require("fs")
-    const path = require("path")
-    const vaultDir = path.resolve(__dirname, "../")
-    const files = fs.readdirSync(vaultDir).filter((f: string) => f.endsWith(".tsx") || f.endsWith(".ts"))
-    for (const file of files) {
-      const content = fs.readFileSync(path.join(vaultDir, file), "utf8")
-      const storageMatches = content.match(/localStorage|sessionStorage/g) || []
-      for (const match of storageMatches) {
-        const line = content.split("\n").filter((l: string) => l.includes(match))[0] || ""
-        expect(line.toLowerCase()).not.toMatch(/password|secret|totp|master/)
+  it("no component logs secret material", () => {
+    const unsafe: string[] = []
+    for (const file of sourceFiles) {
+      for (const line of linesMatching(file, /console\.(log|debug|info)/)) {
+        if (/password|secret|totp|master/.test(line.toLowerCase())) {
+          unsafe.push(`${file}: ${line.trim()}`)
+        }
       }
     }
-    expect(true).toBe(true)
+    expect(unsafe).toEqual([])
+  })
+
+  it("no component writes secrets to web storage", () => {
+    const unsafe: string[] = []
+    for (const file of sourceFiles) {
+      for (const line of linesMatching(file, /(localStorage|sessionStorage)/)) {
+        if (/password|secret|totp|master/.test(line.toLowerCase())) {
+          unsafe.push(`${file}: ${line.trim()}`)
+        }
+      }
+    }
+    expect(unsafe).toEqual([])
   })
 })
