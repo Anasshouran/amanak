@@ -1,42 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  ActivityIndicator,
-  Alert,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from "react-native"
-import * as Clipboard from "expo-clipboard"
-import { PASSWORD_CATEGORIES, type PasswordEntry, type PasswordVaultProfile } from "@amanak/shared-types"
+import { Alert, Clipboard, Modal, Pressable, ScrollView, Text, TextInput, View } from "react-native"
+import type { PasswordEntry, PasswordVaultProfile } from "@amanak/shared-types"
+import { Header } from "../../src/components/Header"
+import { VaultLockScreenMobile } from "../../src/components/vault/VaultLockScreenMobile"
+import { PasswordEntryListMobile } from "../../src/components/vault/PasswordEntryListMobile"
+import { EntryModalMobile } from "../../src/components/vault/EntryModalMobile"
+import { useLocale } from "../../src/design/LocaleProvider"
+import { useTokens } from "../../src/design/tokens"
 import { api } from "../../src/lib/api"
 import { b64Decode, b64Encode } from "../../src/lib/vault/bytes"
-import { defaultGeneratorOptions, generatePassword } from "../../src/lib/vault/generator"
-import {
-  decryptPayload,
-  encryptPayload,
-  type CustomField,
-  type PasswordPayload,
-} from "../../src/lib/vault/passwordPayload"
+import { decryptPayload, encryptPayload } from "../../src/lib/vault/passwordPayload"
 import { randomBytes } from "../../src/lib/vault/random"
 import { aadFromEntryId, deriveKeyBytes } from "../../src/lib/vault/vault"
 import { createVerification, verifyKey } from "../../src/lib/vault/verification"
 
 const AUTO_LOCK_MS = 5 * 60 * 1000
-const MAX_ATTEMPTS = 5
-const ATTEMPT_WINDOW_MS = 5 * 60 * 1000
-const LOCKOUT_MS = 15 * 60 * 1000
-
-type EntryMeta = {
-  title: string
-  username: string
-  url: string
-  category: string
-  tags: string[]
-}
+const MIN_PASSWORD_LENGTH = 12
 
 function errorCode(err: unknown): string | undefined {
   if (err && typeof err === "object" && "code" in err) {
@@ -46,24 +25,14 @@ function errorCode(err: unknown): string | undefined {
 }
 
 function messageOf(err: unknown, fallback: string): string {
-  if (
-    err &&
-    typeof err === "object" &&
-    "message" in err &&
-    typeof (err as { message: unknown }).message === "string"
-  ) {
+  if (err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string") {
     return (err as { message: string }).message
   }
   return fallback
 }
 
 function parseTags(value: string): string[] {
-  return value
-    .split(",")
-    .map((tag) => tag.trim())
-    .filter(Boolean)
-    .slice(0, 20)
-    .map((tag) => tag.slice(0, 32))
+  return value.split(",").map((tag) => tag.trim()).filter(Boolean).slice(0, 20).map((tag) => tag.slice(0, 32))
 }
 
 function isValidUrl(value: string): boolean {
@@ -76,11 +45,40 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+/** Shared page shell: header + padded scroll area, matching the P17.6a screens. */
+function ScreenShell({ title, children }: { title: string; children: React.ReactNode }) {
+  const tokens = useTokens()
+  return (
+    <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+      <Header title={title} />
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: tokens.space[4], paddingBottom: tokens.space[12], gap: tokens.space[4] }}>
+        {children}
+      </ScrollView>
+    </View>
+  )
+}
+
+/**
+ * Password Vault — mobile parity with the web P17.4b vault.
+ *
+ * State machine: no profile → setup wizard; profile but no key → unlock;
+ * key held → entry list. Every secret stays a server-blind blob; `lib/vault/**`
+ * is only read, never modified.
+ */
 export default function Passwords() {
+  const tokens = useTokens()
+  const { t, isRTL } = useLocale()
+
   const [profile, setProfile] = useState<PasswordVaultProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [key, setKey] = useState<Uint8Array | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [entries, setEntries] = useState<PasswordEntry[]>([])
+  const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<PasswordEntry | null>(null)
+  const [deleteVaultOpen, setDeleteVaultOpen] = useState(false)
+  const [deleteAccountPassword, setDeleteAccountPassword] = useState("")
 
   const loadProfile = useCallback(async () => {
     setLoading(true)
@@ -89,790 +87,417 @@ export default function Passwords() {
       setProfile(await api.getPasswordVaultProfile())
     } catch (err) {
       if (errorCode(err) === "not_found") setProfile(null)
-      else setError(messageOf(err, "Could not load your vault."))
+      else setError(messageOf(err, t("common.error")))
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void loadProfile()
   }, [loadProfile])
 
+  const lock = useCallback(() => {
+    setKey(null)
+    setNotice(null)
+  }, [])
+
+  // Inactivity auto-lock: drop the in-memory key after five idle minutes.
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pokeRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    pokeRef.current = () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+      idleTimerRef.current = setTimeout(() => {
+        lock()
+        setNotice(t("vault.autoLocked"))
+      }, AUTO_LOCK_MS)
+    }
+    pokeRef.current()
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
+    }
+  }, [lock, t])
+
+  async function unlockKey(password: string, profile: PasswordVaultProfile): Promise<void> {
+    const salt = b64Decode(profile.kdf_salt)
+    const derivedKey = deriveKeyBytes(password, salt, profile.kdf_iterations)
+    const ok = verifyKey(derivedKey, b64Decode(profile.verification_iv), b64Decode(profile.verification_ciphertext))
+    if (!ok) throw new Error("wrong_password")
+    setKey(derivedKey)
+  }
+
+  async function reloadEntries() {
+    setLoading(true)
+    setError(null)
+    try {
+      setEntries(await api.listPasswordEntries())
+    } catch (err) {
+      setError(messageOf(err, t("common.error")))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  async function addEntryEncrypted(values: {
+    title: string
+    username: string
+    password: string
+    url: string
+    notes: string
+    category: string
+  }) {
+    const keyValue = key
+    if (!keyValue) return
+    const payload = { password: values.password, notes: values.notes, customFields: [] }
+    const placeholderIv = randomBytes(12)
+    const placeholder = await encryptPayload(keyValue, payload, aadFromEntryId(0), placeholderIv)
+    const row = await api.createPasswordEntry({
+      title: values.title,
+      username: values.username,
+      url: values.url,
+      category: values.category,
+      tags: [],
+      ciphertext: b64Encode(placeholder),
+      iv: b64Encode(placeholderIv),
+    })
+    try {
+      const boundIv = randomBytes(12)
+      const bound = await encryptPayload(keyValue, payload, aadFromEntryId(row.id), boundIv)
+      await api.updatePasswordEntry(row.id, {
+        ciphertext: b64Encode(bound),
+        iv: b64Encode(boundIv),
+      })
+    } catch {
+      try {
+        await api.deletePasswordEntry(row.id)
+      } catch {
+        /* best effort */
+      }
+      throw new Error(t("passwords.setup.err.create"))
+    }
+  }
+
+  async function saveEdit(entry: PasswordEntry, values: {
+    title: string
+    username: string
+    password: string
+    url: string
+    notes: string
+    category: string
+  }) {
+    const keyValue = key
+    if (!keyValue) return
+    const payload = { password: values.password, notes: values.notes, customFields: [] }
+    const sealIv = randomBytes(12)
+    const sealed = await encryptPayload(keyValue, payload, aadFromEntryId(entry.id), sealIv)
+    await api.updatePasswordEntry(entry.id, {
+      title: values.title,
+      username: values.username,
+      url: values.url,
+      category: values.category,
+      tags: entry.tags,
+      ciphertext: b64Encode(sealed),
+      iv: b64Encode(sealIv),
+    })
+  }
+
+  async function revealPassword(entry: PasswordEntry): Promise<string | null> {
+    const keyValue = key
+    if (!keyValue) return null
+    try {
+      const payload = await decryptPayload(keyValue, b64Decode(entry.ciphertext), b64Decode(entry.iv), aadFromEntryId(entry.id))
+      return payload.password
+    } catch {
+      return null
+    }
+  }
+
+  async function deleteEntry(entry: PasswordEntry) {
+    await api.deletePasswordEntry(entry.id)
+    await reloadEntries()
+  }
+
+  async function deleteVault() {
+    await api.deletePasswordVaultProfile(deleteAccountPassword)
+    setDeleteVaultOpen(false)
+    setDeleteAccountPassword("")
+    setKey(null)
+    setProfile(null)
+    setEntries([])
+    await reloadEntries()
+  }
+
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator color="#38bdf8" />
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: tokens.c.bg }}>
+        <Text style={{ color: tokens.c.muted }}>{t("common.loading")}</Text>
       </View>
     )
   }
 
   if (error) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.error}>{error}</Text>
-        <Pressable style={styles.button} onPress={() => void loadProfile()}>
-          <Text style={styles.buttonText}>Retry</Text>
+      <ScreenShell title={t("vault.title")}>
+        <Text accessibilityRole="alert" style={{ color: tokens.c.danger, textAlign: "center" }}>
+          {error}
+        </Text>
+        <Pressable accessibilityRole="button" onPress={() => void loadProfile()} style={{ padding: tokens.space[2] }}>
+          <Text style={{ color: tokens.c.brand, fontWeight: "600" }}>{t("actions.retry")}</Text>
         </Pressable>
-      </View>
+      </ScreenShell>
     )
   }
 
   if (!profile) {
     return (
-      <SetupScreen
-        onCreated={(created, derivedKey) => {
+      <ScreenShell title={t("passwords.setup.title")}>
+        <SetupScreen onCreated={async (password) => {
+          const salt = randomBytes(32)
+          const derivedKey = deriveKeyBytes(password, salt)
+          const verification = createVerification(derivedKey, randomBytes(12))
+          const created = await api.createPasswordVaultProfile({
+            kdf_salt: b64Encode(salt),
+            verification_iv: b64Encode(verification.iv),
+            verification_ciphertext: b64Encode(verification.ciphertext),
+          })
           setProfile(created)
           setKey(derivedKey)
-        }}
-      />
+        }} />
+      </ScreenShell>
     )
   }
 
   if (!key) {
-    return <UnlockScreen profile={profile} onUnlocked={setKey} />
+    return (
+      <ScreenShell title={t("vault.locked.title")}>
+        <VaultLockScreenMobile profile={profile} autoLockNotice={!!notice} onUnlocked={() => { setNotice(null) }} verify={unlockKey} />
+      </ScreenShell>
+    )
   }
 
   return (
-    <VaultList
-      profile={profile}
-      vaultKey={key}
-      onLock={() => setKey(null)}
-      onVaultDeleted={() => {
-        setKey(null)
-        setProfile(null)
-      }}
-    />
-  )
-}
+    <ScreenShell title={t("vault.title")}>
+      <View style={{ gap: tokens.space[2] }}>
+        <Text style={{ color: tokens.c.textStrong, fontWeight: "700", fontSize: tokens.size.lg }}>{t("vault.title")}</Text>
+        <Text style={{ color: tokens.c.muted }}>{t("vault.subtitle")}</Text>
+      </View>
 
-function SetupScreen({
-  onCreated,
-}: {
-  onCreated: (p: PasswordVaultProfile, key: Uint8Array) => void
-}) {
-  const [password, setPassword] = useState("")
-  const [confirm, setConfirm] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+      <View style={{ flexDirection: isRTL ? "row-reverse" : "row", justifyContent: "space-between", alignItems: "center", gap: tokens.space[3] }}>
+        <Pressable accessibilityRole="button" onPress={lock} style={{ paddingHorizontal: tokens.space[4], paddingVertical: tokens.space[2], borderRadius: tokens.radius.md, borderWidth: 1, borderColor: tokens.c.borderStrong }}>
+          <Text style={{ color: tokens.c.text, fontWeight: "600" }}>{t("vault.lock")}</Text>
+        </Pressable>
+        <Pressable accessibilityRole="button" onPress={() => setAddOpen(true)} style={{ backgroundColor: tokens.c.brand, paddingHorizontal: tokens.space[4], paddingVertical: tokens.space[2], borderRadius: tokens.radius.md }}>
+          <Text style={{ color: tokens.c.brandContrast, fontWeight: "700" }}>{t("vault.add")}</Text>
+        </Pressable>
+      </View>
 
-  async function submit() {
-    if (password.length < 12) {
-      setError("Use at least 12 characters.")
-      return
-    }
-    if (password !== confirm) {
-      setError("The passwords do not match.")
-      return
-    }
-    setBusy(true)
-    setError(null)
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 0))
-      const salt = randomBytes(32)
-      const derivedKey = deriveKeyBytes(password, salt)
-      const verification = createVerification(derivedKey, randomBytes(12))
-      const created = await api.createPasswordVaultProfile({
-        kdf_salt: b64Encode(salt),
-        verification_iv: b64Encode(verification.iv),
-        verification_ciphertext: b64Encode(verification.ciphertext),
-      })
-      onCreated(created, derivedKey)
-    } catch (err) {
-      setError(messageOf(err, "Could not create your vault."))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-      <Text style={styles.h1}>Create your password vault</Text>
-      <Text style={styles.muted}>
-        Your master password is never sent to the server and cannot be reset. Only this device can
-        read your passwords.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Master password"
-        placeholderTextColor="#64748b"
-        secureTextEntry
-        autoCapitalize="none"
-        value={password}
-        onChangeText={setPassword}
+      <PasswordEntryListMobile
+        entries={entries}
+        loading={loading}
+        error={error}
+        onAdd={() => setAddOpen(true)}
+        onEdit={(entry) => void setEditTarget(entry)}
+        onDelete={deleteEntry}
+        onRevealPassword={revealPassword}
+        onReload={reloadEntries}
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Confirm master password"
-        placeholderTextColor="#64748b"
-        secureTextEntry
-        autoCapitalize="none"
-        value={confirm}
-        onChangeText={setConfirm}
-      />
-      {error && <Text style={styles.error}>{error}</Text>}
-      <Pressable style={styles.button} disabled={busy} onPress={() => void submit()}>
-        {busy ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.buttonText}>Create vault</Text>}
-      </Pressable>
-    </ScrollView>
-  )
-}
 
-function UnlockScreen({
-  profile,
-  onUnlocked,
-}: {
-  profile: PasswordVaultProfile
-  onUnlocked: (key: Uint8Array) => void
-}) {
-  const [password, setPassword] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [now, setNow] = useState(Date.now())
-  const attemptsRef = useRef(0)
-  const firstFailRef = useRef<number | null>(null)
-  const lockedUntilRef = useRef(0)
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000)
-    return () => clearInterval(id)
-  }, [])
-
-  const lockedFor = Math.max(0, lockedUntilRef.current - now)
-  const locked = lockedFor > 0
-
-  async function attempt() {
-    if (locked) return
-    setBusy(true)
-    setError(null)
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 0))
-      const salt = b64Decode(profile.kdf_salt)
-      const derivedKey = deriveKeyBytes(password, salt, profile.kdf_iterations)
-      const ok = verifyKey(
-        derivedKey,
-        b64Decode(profile.verification_iv),
-        b64Decode(profile.verification_ciphertext),
-      )
-      if (!ok) throw new Error("wrong_password")
-      attemptsRef.current = 0
-      firstFailRef.current = null
-      onUnlocked(derivedKey)
-    } catch {
-      const failedAt = Date.now()
-      if (firstFailRef.current === null || failedAt - firstFailRef.current > ATTEMPT_WINDOW_MS) {
-        attemptsRef.current = 1
-        firstFailRef.current = failedAt
-      } else {
-        attemptsRef.current += 1
-      }
-      if (attemptsRef.current >= MAX_ATTEMPTS) {
-        lockedUntilRef.current = Date.now() + LOCKOUT_MS
-        attemptsRef.current = 0
-        firstFailRef.current = null
-        setError("")
-      } else {
-        setError(`Wrong password. ${MAX_ATTEMPTS - attemptsRef.current} attempt(s) left.`)
-      }
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled">
-      <Text style={styles.h1}>Unlock your password vault</Text>
-      <Text style={styles.muted}>
-        The master password decrypts the vault locally. Nothing is sent to the server.
-      </Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Master password"
-        placeholderTextColor="#64748b"
-        secureTextEntry
-        autoCapitalize="none"
-        value={password}
-        onChangeText={setPassword}
-      />
-      {locked ? (
-        <Text style={styles.error}>
-          Too many failed attempts. Try again in {Math.max(1, Math.ceil(lockedFor / 60_000))} min.
-        </Text>
-      ) : (
-        error && <Text style={styles.error}>{error}</Text>
-      )}
-      <Pressable style={styles.button} disabled={busy || locked} onPress={() => void attempt()}>
-        {busy ? <ActivityIndicator color="#0f172a" /> : <Text style={styles.buttonText}>Unlock</Text>}
-      </Pressable>
-    </ScrollView>
-  )
-}
-
-function VaultList({
-  profile,
-  vaultKey,
-  onLock,
-  onVaultDeleted,
-}: {
-  profile: PasswordVaultProfile
-  vaultKey: Uint8Array
-  onLock: () => void
-  onVaultDeleted: () => void
-}) {
-  const [entries, setEntries] = useState<PasswordEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [nonce, setNonce] = useState(0)
-  const [addOpen, setAddOpen] = useState(false)
-  const [editTarget, setEditTarget] = useState<PasswordEntry | null>(null)
-  const [revealed, setRevealed] = useState<Record<number, boolean>>({})
-  const [deleteVaultOpen, setDeleteVaultOpen] = useState(false)
-
-  const reload = useCallback(() => setNonce((n) => n + 1), [])
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    setError(null)
-    api
-      .listPasswordEntries()
-      .then((data) => {
-        if (active) setEntries(data)
-      })
-      .catch((err) => {
-        if (active) setError(messageOf(err, "Could not load your passwords."))
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-    return () => {
-      active = false
-    }
-  }, [nonce])
-
-  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pokeRef = useRef<() => void>(() => {})
-  useEffect(() => {
-    pokeRef.current = () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
-      idleTimerRef.current = setTimeout(onLock, AUTO_LOCK_MS)
-    }
-    pokeRef.current()
-    return () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current)
-    }
-  }, [onLock])
-
-  const decrypted = useMemo(
-    () =>
-      entries.map((entry) => {
-        try {
-          const payload = decryptPayload(
-            vaultKey,
-            b64Decode(entry.ciphertext),
-            b64Decode(entry.iv),
-            aadFromEntryId(entry.id),
-          )
-          return { entry, payload }
-        } catch {
-          return { entry, payload: null }
-        }
-      }),
-    [entries, vaultKey],
-  )
-
-  function confirmDelete(entry: PasswordEntry) {
-    Alert.alert("Delete password", `Remove “${entry.title}” from your vault?`, [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Delete",
-        style: "destructive",
-        onPress: () => {
-          void api.deletePasswordEntry(entry.id).then(reload)
-        },
-      },
-    ])
-  }
-
-  return (
-    <View
-      style={styles.container}
-      onStartShouldSetResponderCapture={() => {
-        pokeRef.current()
-        return false
-      }}
-    >
-      <ScrollView
-        onScrollBeginDrag={() => pokeRef.current()}
-        contentContainerStyle={styles.listContent}
+      <View
+        style={{
+          borderWidth: 1,
+          borderColor: tokens.c.danger,
+          borderRadius: tokens.radius.md,
+          padding: tokens.space[4],
+          gap: tokens.space[2],
+          marginTop: tokens.space[2],
+        }}
       >
-        <View style={styles.headerRow}>
-          <Text style={styles.h1}>Passwords</Text>
-          <Pressable onPress={onLock}>
-            <Text style={styles.link}>Lock</Text>
-          </Pressable>
-        </View>
-
-        {loading && <ActivityIndicator color="#38bdf8" />}
-        {error && <Text style={styles.error}>{error}</Text>}
-
-        {!loading && entries.length === 0 && (
-          <Text style={styles.muted}>No passwords yet. Add your first login.</Text>
-        )}
-
-        {decrypted.map(({ entry, payload }) => (
-          <View key={entry.id} style={styles.card}>
-            <Text style={styles.cardTitle}>{entry.title}</Text>
-            {!!entry.username && <Text style={styles.muted}>{entry.username}</Text>}
-            {!!entry.url && <Text style={styles.muted}>{entry.url}</Text>}
-            {!!entry.category && <Text style={styles.badge}>{entry.category}</Text>}
-            {payload ? (
-              <Text style={styles.secret}>
-                {revealed[entry.id] ? payload.password : "••••••••"}
-              </Text>
-            ) : (
-              <Text style={styles.error}>Unable to decrypt this entry.</Text>
-            )}
-            <View style={styles.cardFooter}>
-              {decrypted.find((d) => entry.id === entry.id) && revealed[entry.id] ? (
-                <Pressable onPress={() => setRevealed((r) => ({ ...r, [entry.id]: false }))}>
-                  <Text style={styles.link}>Hide</Text>
-                </Pressable>
-              ) : (
-                <Pressable onPress={() => setRevealed((r) => ({ ...r, [entry.id]: true }))}>
-                  <Text style={styles.link}>Show</Text>
-                </Pressable>
-              )}
-              <Pressable
-                onPress={() => {
-                  const payload = decrypted.find((row) => row.entry.id === entry.id)?.payload
-                  if (payload) void Clipboard.setStringAsync(payload.password)
-                }}
-              >
-                <Text style={styles.link}>Copy</Text>
-              </Pressable>
-              <Pressable onPress={() => setEditTarget(entry)}>
-                <Text style={styles.link}>Edit</Text>
-              </Pressable>
-              <Pressable onPress={() => confirmDelete(entry)}>
-                <Text style={styles.danger}>Delete</Text>
-              </Pressable>
-            </View>
-          </View>
-        ))}
-
-        <Pressable style={styles.button} onPress={() => setAddOpen(true)}>
-          <Text style={styles.buttonText}>Add password</Text>
+        <Text style={{ color: tokens.c.textStrong, fontWeight: "700", textAlign: "left" }}>{t("passwords.danger.title")}</Text>
+        <Text style={{ color: tokens.c.muted }}>{t("passwords.deleteVault.description")}</Text>
+        <Pressable accessibilityRole="button" onPress={() => setDeleteVaultOpen(true)} style={{ paddingVertical: tokens.space[2], alignItems: "flex-start" }}>
+          <Text style={{ color: tokens.c.danger, fontWeight: "700" }}>{t("passwords.deleteVault.action")}</Text>
         </Pressable>
-        <Pressable style={styles.dangerButton} onPress={() => setDeleteVaultOpen(true)}>
-          <Text style={styles.dangerButtonText}>Delete vault</Text>
-        </Pressable>
-        <Text style={styles.note}>
-          Passwords live encrypted on the server; only this device holds the key. The master password
-          is never sent.
-        </Text>
-      </ScrollView>
+      </View>
 
-      <EntryModal
-        visible={addOpen}
-        vaultKey={vaultKey}
+      <EntryModalMobile
+        open={addOpen}
+        mode="add"
         onClose={() => setAddOpen(false)}
-        onSaved={() => {
-          setAddOpen(false)
-          reload()
+        onSave={async (values) => {
+          if (!values.title.trim()) return
+          if (!isValidUrl(values.url)) return
+          try {
+            await addEntryEncrypted(values)
+            setAddOpen(false)
+            await reloadEntries()
+          } catch (err) {
+            setError(messageOf(err, t("common.error")))
+          }
         }}
       />
+
       {editTarget && (
-        <EntryModal
-          visible
-          vaultKey={vaultKey}
-          entry={editTarget}
+        <EntryModalMobile
+          open
+          mode="edit"
+          initialTitle={editTarget.title}
+          initialUsername={editTarget.username ?? ""}
+          initialPassword=""
+          initialUrl={editTarget.url ?? ""}
+          initialNotes=""
+          initialCategory={editTarget.category}
           onClose={() => setEditTarget(null)}
-          onSaved={() => {
-            setEditTarget(null)
-            reload()
+          onSave={async (values) => {
+            if (!values.title.trim()) return
+            if (!isValidUrl(values.url)) return
+            try {
+              await saveEdit(editTarget, values)
+              setEditTarget(null)
+              await reloadEntries()
+            } catch (err) {
+              setError(messageOf(err, t("common.error")))
+            }
           }}
         />
       )}
+
       <DeleteVaultModal
-        visible={deleteVaultOpen}
+        open={deleteVaultOpen}
+        accountPassword={deleteAccountPassword}
+        setAccountPassword={setDeleteAccountPassword}
         onClose={() => setDeleteVaultOpen(false)}
-        onDeleted={onVaultDeleted}
+        onDeleted={deleteVault}
       />
-    </View>
+    </ScreenShell>
   )
-}
 
-function EntryModal({
-  visible,
-  vaultKey,
-  entry,
-  onClose,
-  onSaved,
-}: {
-  visible: boolean
-  vaultKey: Uint8Array
-  entry?: PasswordEntry
-  onClose: () => void
-  onSaved: () => void
-}) {
-  const [title, setTitle] = useState("")
-  const [username, setUsername] = useState("")
-  const [url, setUrl] = useState("")
-  const [category, setCategory] = useState("")
-  const [tags, setTags] = useState("")
-  const [password, setPassword] = useState("")
-  const [notes, setNotes] = useState("")
-  const [customFields, setCustomFields] = useState<CustomField[]>([])
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  function SetupScreen({ onCreated }: { onCreated: (password: string) => void }) {
+    const [password, setPassword] = useState("")
+    const [confirm, setConfirm] = useState("")
+    const [busy, setBusy] = useState(false)
+    const [err, setErr] = useState<string | null>(null)
 
-  useEffect(() => {
-    setTitle(entry?.title ?? "")
-    setUsername(entry?.username ?? "")
-    setUrl(entry?.url ?? "")
-    setCategory(entry?.category ?? "")
-    setTags(entry?.tags.join(", ") ?? "")
-    setError(null)
-    setPassword("")
-    setNotes("")
-    setCustomFields([])
-    if (entry) {
+    async function submit() {
+      if (password.length < MIN_PASSWORD_LENGTH) {
+        setErr(t("passwords.setup.err.weak"))
+        return
+      }
+      if (password !== confirm) {
+        setErr(t("passwords.setup.err.mismatch"))
+        return
+      }
+      setBusy(true)
+      setErr(null)
       try {
-        const payload = decryptPayload(
-          vaultKey,
-          b64Decode(entry.ciphertext),
-          b64Decode(entry.iv),
-          aadFromEntryId(entry.id),
-        )
-        setPassword(payload.password)
-        setNotes(payload.notes)
-        setCustomFields(payload.customFields)
-      } catch {
-        setError("Could not decrypt this entry.")
+        await onCreated(password)
+      } catch (err) {
+        setErr(messageOf(err, t("common.error")))
+      } finally {
+        setBusy(false)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entry, visible])
 
-  function updateField(index: number, changes: Partial<CustomField>) {
-    setCustomFields((rows) => rows.map((row, i) => (i === index ? { ...row, ...changes } : row)))
-  }
-
-  function applyGenerated() {
-    setPassword(generatePassword(defaultGeneratorOptions()))
-  }
-
-  async function save() {
-    if (!title.trim()) {
-      setError("A title is required.")
-      return
-    }
-    if (!isValidUrl(url)) {
-      setError("Enter a valid URL (or leave it empty).")
-      return
-    }
-    setBusy(true)
-    setError(null)
-    const meta: EntryMeta = {
-      title: title.trim(),
-      username: username.trim(),
-      url: url.trim(),
-      category,
-      tags: parseTags(tags),
-    }
-    const payload: PasswordPayload = {
-      password,
-      notes,
-      customFields: customFields.filter((field) => field.name.trim()),
-    }
-    try {
-      if (entry) {
-        const iv = randomBytes(12)
-        const ciphertext = encryptPayload(vaultKey, payload, aadFromEntryId(entry.id), iv)
-        await api.updatePasswordEntry(entry.id, {
-          ...meta,
-          ciphertext: b64Encode(ciphertext),
-          iv: b64Encode(iv),
-        })
-      } else {
-        const placeholderIv = randomBytes(12)
-        const placeholder = encryptPayload(vaultKey, payload, aadFromEntryId(0), placeholderIv)
-        const created = await api.createPasswordEntry({
-          ...meta,
-          ciphertext: b64Encode(placeholder),
-          iv: b64Encode(placeholderIv),
-        })
-        try {
-          const iv = randomBytes(12)
-          const ciphertext = encryptPayload(vaultKey, payload, aadFromEntryId(created.id), iv)
-          await api.updatePasswordEntry(created.id, {
-            ciphertext: b64Encode(ciphertext),
-            iv: b64Encode(iv),
-          })
-        } catch (rebindError) {
-          await api.deletePasswordEntry(created.id).catch(() => {})
-          throw rebindError
-        }
-      }
-      onSaved()
-    } catch (err) {
-      setError(messageOf(err, "Could not save this password."))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalBackdrop}>
-        <ScrollView contentContainerStyle={styles.modal} keyboardShouldPersistTaps="handled">
-          <Text style={styles.h1}>{entry ? "Edit password" : "Add password"}</Text>
+    return (
+      <ScrollView contentContainerStyle={{ padding: tokens.space[4], gap: tokens.space[3], paddingBottom: tokens.space[12] }} keyboardShouldPersistTaps="handled">
+        <Text style={{ color: tokens.c.textStrong, fontWeight: "700", fontSize: tokens.size.lg }}>{t("passwords.setup.title")}</Text>
+        <Text style={{ color: tokens.c.muted }}>{t("passwords.setup.description")}</Text>
+        <View style={{ gap: tokens.space[1] }}>
+          <Text style={{ color: tokens.c.muted, fontSize: tokens.size.sm }}>{t("passwords.setup.master")}</Text>
           <TextInput
-            style={styles.input}
-            placeholder="Title"
-            placeholderTextColor="#64748b"
-            value={title}
-            onChangeText={setTitle}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Username"
-            placeholderTextColor="#64748b"
-            autoCapitalize="none"
-            value={username}
-            onChangeText={setUsername}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Website URL"
-            placeholderTextColor="#64748b"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={url}
-            onChangeText={setUrl}
-          />
-          <View style={styles.chips}>
-            <Pressable
-              style={[styles.chip, category === "" && styles.chipActive]}
-              onPress={() => setCategory("")}
-            >
-              <Text style={styles.chipText}>None</Text>
-            </Pressable>
-            {PASSWORD_CATEGORIES.map((value) => (
-              <Pressable
-                key={value}
-                style={[styles.chip, category === value && styles.chipActive]}
-                onPress={() => setCategory(value)}
-              >
-                <Text style={styles.chipText}>{value}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Tags (comma separated)"
-            placeholderTextColor="#64748b"
-            value={tags}
-            onChangeText={setTags}
-          />
-          <View style={styles.rowInput}>
-            <TextInput
-              style={[styles.input, styles.flex]}
-              placeholder="Password"
-              placeholderTextColor="#64748b"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={password}
-              onChangeText={setPassword}
-            />
-            <Pressable style={styles.smallButton} onPress={applyGenerated}>
-              <Text style={styles.buttonText}>Generate</Text>
-            </Pressable>
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Notes"
-            placeholderTextColor="#64748b"
-            multiline
-            value={notes}
-            onChangeText={setNotes}
-          />
-
-          <Text style={styles.muted}>Custom fields</Text>
-          {customFields.map((field, index) => (
-            <View key={index} style={styles.rowInput}>
-              <TextInput
-                style={[styles.input, styles.flex]}
-                placeholder="Name"
-                placeholderTextColor="#64748b"
-                value={field.name}
-                onChangeText={(value) => updateField(index, { name: value })}
-              />
-              <TextInput
-                style={[styles.input, styles.flex]}
-                placeholder="Value"
-                placeholderTextColor="#64748b"
-                value={field.value}
-                onChangeText={(value) => updateField(index, { value })}
-              />
-              <Pressable
-                onPress={() => setCustomFields((rows) => rows.filter((_, i) => i !== index))}
-              >
-                <Text style={styles.danger}>×</Text>
-              </Pressable>
-            </View>
-          ))}
-          <Pressable
-            onPress={() =>
-              setCustomFields((rows) => [...rows, { name: "", value: "", sensitive: false }])
-            }
-          >
-            <Text style={styles.link}>Add custom field</Text>
-          </Pressable>
-
-          {error && <Text style={styles.error}>{error}</Text>}
-          <View style={styles.modalActions}>
-            <Pressable onPress={onClose}>
-              <Text style={styles.link}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.button} disabled={busy} onPress={() => void save()}>
-              {busy ? (
-                <ActivityIndicator color="#0f172a" />
-              ) : (
-                <Text style={styles.buttonText}>{entry ? "Save" : "Add"}</Text>
-              )}
-            </Pressable>
-          </View>
-        </ScrollView>
-      </View>
-    </Modal>
-  )
-}
-
-function DeleteVaultModal({
-  visible,
-  onClose,
-  onDeleted,
-}: {
-  visible: boolean
-  onClose: () => void
-  onDeleted: () => void
-}) {
-  const [accountPassword, setAccountPassword] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!visible) {
-      setAccountPassword("")
-      setError(null)
-      setBusy(false)
-    }
-  }, [visible])
-
-  async function confirm() {
-    setBusy(true)
-    setError(null)
-    try {
-      await api.deletePasswordVaultProfile(accountPassword)
-      onDeleted()
-    } catch {
-      setError("That account password is incorrect.")
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <View style={styles.modalBackdrop}>
-        <View style={styles.modal}>
-          <Text style={styles.h1}>Delete the entire vault?</Text>
-          <Text style={styles.muted}>
-            Every password is destroyed immediately. This cannot be undone. Confirm with your AMANAK
-            account password.
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Account password"
-            placeholderTextColor="#64748b"
+            placeholder={t("common.none")}
             secureTextEntry
             autoCapitalize="none"
-            value={accountPassword}
-            onChangeText={setAccountPassword}
+            value={password}
+            onChangeText={setPassword}
+            style={inputStyle()}
           />
-          {error && <Text style={styles.error}>{error}</Text>}
-          <View style={styles.modalActions}>
-            <Pressable onPress={onClose}>
-              <Text style={styles.link}>Cancel</Text>
-            </Pressable>
-            <Pressable style={styles.dangerButton} disabled={busy} onPress={() => void confirm()}>
-              {busy ? (
-                <ActivityIndicator color="#f87171" />
-              ) : (
-                <Text style={styles.dangerButtonText}>Delete vault</Text>
-              )}
-            </Pressable>
+        </View>
+        <View style={{ gap: tokens.space[1] }}>
+          <Text style={{ color: tokens.c.muted, fontSize: tokens.size.sm }}>{t("passwords.setup.confirm")}</Text>
+          <TextInput
+            placeholder={t("common.none")}
+            secureTextEntry
+            autoCapitalize="none"
+            value={confirm}
+            onChangeText={setConfirm}
+            style={inputStyle()}
+          />
+        </View>
+        <Text style={{ color: tokens.c.muted, fontSize: tokens.size.xs }}>{t("passwords.setup.min")}</Text>
+        <Text style={{ color: tokens.c.muted, fontSize: tokens.size.xs }}>{t("passwords.setup.warning")}</Text>
+        {err && <Text accessibilityRole="alert" style={{ color: tokens.c.danger, fontSize: tokens.size.sm }}>{err}</Text>}
+        <Pressable accessibilityRole="button" disabled={busy} onPress={() => void submit()} style={{ backgroundColor: tokens.c.brand, borderRadius: tokens.radius.md, paddingVertical: tokens.space[3], alignItems: "center", opacity: busy ? 0.6 : 1 }}>
+          <Text style={{ color: tokens.c.brandContrast, fontWeight: "700" }}>{busy ? t("passwords.setup.create") : t("passwords.setup.create")}</Text>
+        </Pressable>
+      </ScrollView>
+    )
+  }
+
+  function DeleteVaultModal({ open, accountPassword, setAccountPassword, onClose, onDeleted }: {
+    open: boolean
+    accountPassword: string
+    setAccountPassword: (v: string) => void
+    onClose: () => void
+    onDeleted: () => Promise<void>
+  }) {
+    const [busy, setBusy] = useState(false)
+    const [err, setErr] = useState<string | null>(null)
+
+    async function confirm() {
+      setBusy(true)
+      setErr(null)
+      try {
+        await onDeleted()
+      } catch {
+        setErr(t("passwords.deleteVault.err"))
+      } finally {
+        setBusy(false)
+      }
+    }
+
+    return (
+      <Modal visible={open} animationType="slide" transparent onRequestClose={onClose}>
+        <View style={{ flex: 1, backgroundColor: "rgba(2,6,23,0.4)", justifyContent: "center", padding: tokens.space[4] }}>
+          <View style={{ backgroundColor: tokens.c.elevated, borderRadius: tokens.radius.lg, borderWidth: 1, borderColor: tokens.c.border, padding: tokens.space[5], gap: tokens.space[3] }}>
+            <Text style={{ color: tokens.c.textStrong, fontWeight: "700" }}>{t("passwords.deleteVault.title")}</Text>
+            <Text style={{ color: tokens.c.muted }}>{t("passwords.deleteVault.description")}</Text>
+            <View style={{ gap: tokens.space[1] }}>
+              <Text style={{ color: tokens.c.muted, fontSize: tokens.size.sm }}>{t("passwords.deleteVault.account")}</Text>
+              <TextInput
+                placeholder=""
+                secureTextEntry
+                autoCapitalize="none"
+                value={accountPassword}
+                onChangeText={setAccountPassword}
+                style={inputStyle()}
+              />
+            </View>
+            {err && <Text accessibilityRole="alert" style={{ color: tokens.c.danger, fontSize: tokens.size.sm }}>{err}</Text>}
+            <View style={{ flexDirection: "row", justifyContent: "flex-end", gap: tokens.space[2] }}>
+              <Pressable accessibilityRole="button" onPress={onClose} style={{ padding: tokens.space[2] }}>
+                <Text style={{ color: tokens.c.muted }}>{t("actions.cancel")}</Text>
+              </Pressable>
+              <Pressable accessibilityRole="button" disabled={busy} onPress={() => void confirm()} style={{ backgroundColor: tokens.c.danger, borderRadius: tokens.radius.md, paddingHorizontal: tokens.space[4], paddingVertical: tokens.space[2], opacity: busy ? 0.6 : 1 }}>
+                <Text style={{ color: tokens.c.brandContrast, fontWeight: "700" }}>{t("actions.delete")}</Text>
+              </Pressable>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
-  )
-}
+      </Modal>
+    )
+  }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a" },
-  listContent: { padding: 16, gap: 12, paddingBottom: 48 },
-  page: { padding: 16, gap: 12, backgroundColor: "#0f172a", flexGrow: 1 },
-  centered: {
-    flex: 1,
-    backgroundColor: "#0f172a",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-    gap: 12,
-  },
-  h1: { color: "#e2e8f0", fontSize: 22, fontWeight: "700" },
-  muted: { color: "#94a3b8" },
-  note: { color: "#64748b", fontSize: 12, marginTop: 4 },
-  input: { backgroundColor: "#1e293b", color: "#e2e8f0", borderRadius: 12, padding: 14 },
-  flex: { flex: 1 },
-  rowInput: { flexDirection: "row", alignItems: "center", gap: 8 },
-  smallButton: { backgroundColor: "#38bdf8", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12 },
-  button: { backgroundColor: "#38bdf8", borderRadius: 12, padding: 14, alignItems: "center" },
-  buttonText: { color: "#0f172a", fontWeight: "700" },
-  dangerButton: {
-    borderColor: "#7f1d1d",
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    alignItems: "center",
-  },
-  dangerButtonText: { color: "#f87171", fontWeight: "700" },
-  error: { color: "#f87171" },
-  link: { color: "#38bdf8", fontWeight: "600" },
-  danger: { color: "#f87171", fontWeight: "600" },
-  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
-  card: { backgroundColor: "#1e293b", borderRadius: 16, padding: 16, gap: 8 },
-  cardTitle: { color: "#e2e8f0", fontWeight: "600", fontSize: 16 },
-  secret: { color: "#e2e8f0", fontSize: 18, fontWeight: "700", letterSpacing: 1 },
-  badge: {
-    alignSelf: "flex-start",
-    color: "#94a3b8",
-    backgroundColor: "#0ea5e922",
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    overflow: "hidden",
-    fontSize: 12,
-  },
-  cardFooter: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 12 },
-  chips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: { borderColor: "#334155", borderWidth: 1, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
-  chipActive: { borderColor: "#38bdf8", backgroundColor: "#0ea5e922" },
-  chipText: { color: "#94a3b8", fontSize: 12 },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(2,6,23,0.7)", justifyContent: "center", padding: 16 },
-  modal: { backgroundColor: "#0f172a", borderRadius: 20, padding: 16, gap: 12, maxHeight: "90%" },
-  modalActions: { flexDirection: "row", justifyContent: "flex-end", alignItems: "center", gap: 12 },
-})
+  function inputStyle() {
+    return {
+      backgroundColor: tokens.c.surface2,
+      borderWidth: 1,
+      borderColor: tokens.c.border,
+      borderRadius: tokens.radius.md,
+      paddingHorizontal: tokens.space[3],
+      paddingVertical: tokens.space[2],
+      color: tokens.c.text,
+      minHeight: 44,
+    }
+  }
+}

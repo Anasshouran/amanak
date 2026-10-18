@@ -182,6 +182,13 @@ function TabsNavigator() {
           }}
         />
         <Tabs.Screen
+          name="settings"
+          options={{
+            title: t("nav.settings"),
+            tabBarIcon: ({ color, size }) => <TabIcon name="settings-outline" color={color} size={size} />,
+          }}
+        />
+        <Tabs.Screen
           name="more"
           options={{
             title: t("nav.more"),

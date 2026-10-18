@@ -15,7 +15,10 @@ import { loadStore, readStoreSync, writeStore } from "./storage"
 const THEME_KEY = "amanak.theme"
 
 type ThemeContextValue = {
+  /** Raw stored preference: "light" | "dark" | "system". */
   theme: Theme
+  /** Resolved theme actually applied to colours ("light" or "dark"). */
+  resolvedTheme: "light" | "dark"
   setTheme: (theme: Theme) => void
   toggleTheme: () => void
 }
@@ -23,11 +26,10 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
 function initialTheme(system: string | null | undefined): Theme {
-  // On web the preference is read synchronously so there is no light/dark
-  // flash; on device the async keystore value lands in the hydration effect.
   const stored = readStoreSync(THEME_KEY)
   if (stored === "light" || stored === "dark") return stored
-  return system === "light" ? "light" : "dark"
+  // No stored preference → follow the device scheme ("system").
+  return "system"
 }
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -35,13 +37,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => initialTheme(system))
   const hydrated = useRef(readStoreSync(THEME_KEY) !== null)
 
+  /** "system" resolves to the device colour scheme; otherwise the stored choice. */
+  const resolvedTheme = useMemo(() => {
+    if (theme !== "system") return theme
+    return system === "light" ? "light" : "dark"
+  }, [theme, system])
+
   useEffect(() => {
     if (hydrated.current) return
     let cancelled = false
     void loadStore(THEME_KEY).then((value) => {
       if (cancelled || hydrated.current) return
       hydrated.current = true
-      if (value === "light" || value === "dark") setThemeState(value)
+      if (value === "light" || value === "dark" || value === "system") setThemeState(value)
     })
     return () => {
       cancelled = true
@@ -51,9 +59,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void writeStore(THEME_KEY, theme)
     if (typeof document !== "undefined") {
-      document.documentElement.setAttribute("data-theme", theme)
+      document.documentElement.setAttribute("data-theme", resolvedTheme)
     }
-  }, [theme])
+  }, [theme, resolvedTheme])
 
   const setTheme = useCallback((next: Theme) => setThemeState(next), [])
   const toggleTheme = useCallback(
@@ -62,8 +70,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ theme, setTheme, toggleTheme }),
-    [theme, setTheme, toggleTheme],
+    () => ({ theme, resolvedTheme, setTheme, toggleTheme }),
+    [theme, resolvedTheme, setTheme, toggleTheme],
   )
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>

@@ -129,7 +129,7 @@ export const tokens = {
 } as const
 
 export type Tokens = typeof tokens
-export type Theme = "light" | "dark"
+export type Theme = "light" | "dark" | "system"
 export type Locale = "ar" | "en"
 
 /**
@@ -168,7 +168,7 @@ export type SemanticColors = {
   sidebarActiveText: string
 }
 
-export const semantic: Record<Theme, SemanticColors> = {
+export const semantic: Record<Exclude<Theme, "system">, SemanticColors> = {
   light: {
     bg: "#f5f7fb",
     surface: "#ffffff",
@@ -239,6 +239,6 @@ export type ActiveTokens = Tokens & { c: SemanticColors }
  * only needs `type` imports from this file, which are erased at compile time.
  */
 export function useTokens(): ActiveTokens {
-  const { theme } = useTheme()
-  return useMemo(() => ({ ...tokens, c: semantic[theme] }), [theme])
+  const { resolvedTheme } = useTheme()
+  return useMemo(() => ({ ...tokens, c: semantic[resolvedTheme] }), [resolvedTheme])
 }

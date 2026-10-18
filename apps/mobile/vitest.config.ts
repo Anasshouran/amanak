@@ -29,7 +29,9 @@ export default defineConfig({
       { find: /^react-dom\/client$/, replacement: root("react-dom/client") },
       { find: /^react-dom\/test-utils$/, replacement: root("react-dom/test-utils") },
       { find: /^react-native$/, replacement: "react-native-web" },
-    ],
+      // `@expo/vector-icons` is installed at the workspace root but its compiled
+      // `createIconSet.js` is absent here, so tests use a lightweight stub.
+      { find: /^@expo\/vector-icons$/, replacement: join(__dirname, "test", "mocks", "vector-icons") },    ],
   },
   esbuild: {
     jsx: "automatic",

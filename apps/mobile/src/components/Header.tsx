@@ -22,7 +22,7 @@ const HEADER_HEIGHT = 56
  */
 export function Header({ title }: HeaderProps) {
   const tokens = useTokens()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, resolvedTheme, toggleTheme } = useTheme()
   const { toggleLocale, t, isRTL } = useLocale()
   const { user, logout } = useAuth()
   const router = useRouter()
@@ -205,16 +205,16 @@ export function Header({ title }: HeaderProps) {
               </Text>
             </Pressable>
 
-            {/* Settings lands in P17.6c — no route exists yet. */}
             <Pressable
               accessibilityRole="menuitem"
-              accessibilityState={{ disabled: true }}
-              disabled
-              onPress={() => undefined}
-              style={menuItem(true)}
+              onPress={() => {
+                setMenuOpen(false)
+                router.push("/settings")
+              }}
+              style={menuItem()}
             >
-              <Ionicons name="settings-outline" size={18} color={tokens.c.muted} />
-              <Text style={{ color: tokens.c.muted, fontSize: tokens.size.sm }}>
+              <Ionicons name="settings-outline" size={18} color={tokens.c.text} />
+              <Text style={{ color: tokens.c.text, fontSize: tokens.size.sm }}>
                 {t("nav.settings")}
               </Text>
             </Pressable>
