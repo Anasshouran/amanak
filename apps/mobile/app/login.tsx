@@ -14,7 +14,7 @@ export default function Login() {
     setError(null)
     try {
       await login(email, password)
-      router.replace("/(tabs)")
+      router.replace("/dashboard")
     } catch (e) {
       setError((e as { message?: string }).message ?? "Login failed")
     }

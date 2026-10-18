@@ -22,6 +22,19 @@ export default defineConfig({
         },
       },
     },
+    {
+      name: "mobile-screenshots",
+      testMatch: /mobile-screenshots\.spec\.ts/,
+      use: {
+        browserName: "chromium",
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 2,
+        baseURL: process.env.E2E_MOBILE_BASE_URL || "http://localhost:8081",
+        launchOptions: {
+          args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        },
+      },
+    },
   ],
   webServer: process.env.E2E_BASE_URL
     ? undefined

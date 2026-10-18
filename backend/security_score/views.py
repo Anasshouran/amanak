@@ -41,6 +41,18 @@ def dashboard(request):
     from incidents.models import Incident
 
     score, _ = SecurityScore.objects.get_or_create(user=request.user)
+
+    # get_or_create() leaves a fresh row at the model default of 0, and the
+    # only place compute_security_score() ran was POST /dashboard/security-score/
+    # -- a helper with zero callers. So every user saw security_score: 0 and the
+    # post_save signal faithfully snapshotted that 0. Recompute on read instead.
+    computed = compute_security_score(request.user)
+    if score.score != computed:
+        # Plain save() (no update_fields) so the auto_now computed_at refreshes;
+        # the post_save signal writes the snapshot for us when the value moves.
+        score.score = computed
+        score.save()
+
     return Response(
         {
             "accounts": Account.objects.filter(user=request.user).count(),
@@ -58,12 +70,21 @@ class SecurityScoreViewSet(viewsets.ViewSet):
 
     def list(self, request):
         score, _ = SecurityScore.objects.get_or_create(user=request.user)
+        # Same defect as fd4ceba on GET /dashboard/: get_or_create() hands back
+        # the model default of 0 and nothing here ever computed it. Keep the
+        # plain save() so computed_at (auto_now) refreshes with the score.
+        computed = compute_security_score(request.user)
+        if score.score != computed:
+            score.score = computed
+            score.save()
         return Response(SecurityScoreSerializer(score).data)
 
     def compute(self, request):
         score, _ = SecurityScore.objects.get_or_create(user=request.user)
         score.score = compute_security_score(request.user)
-        score.save(update_fields=["score"])
+        # No update_fields: computed_at is auto_now and only refreshes when the
+        # field is part of the save, so an explicit recompute must write it too.
+        score.save()
         return Response(SecurityScoreSerializer(score).data)
 
 
