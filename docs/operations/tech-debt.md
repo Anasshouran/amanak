@@ -119,3 +119,13 @@ The script is not committed. Reproducing mobile screenshots in CI
 requires formalizing it as a proper Playwright project or spec.
 
 P17.6c will fold this into the standard screenshot pipeline.
+
+## CI=1 disables Metro file watching in dev
+
+Setting CI=1 (common in automated checks) disables Metro's file
+watcher on Expo web. Result: code changes on disk are not re-bundled
+and the served bundle is stale. Symptom: aria-* props, new text, or
+new components don't appear after edits despite typecheck/test passing.
+
+Fix: unset CI before `npx expo start --web`, or restart Metro after
+edits. Keep CI=1 only for one-shot builds.
