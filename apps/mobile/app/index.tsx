@@ -1,37 +1,37 @@
-import { useRouter } from "expo-router"
-import { Pressable, StyleSheet, Text, View } from "react-native"
+import { Redirect } from "expo-router"
+import { ActivityIndicator, View } from "react-native"
+import { useTokens } from "../src/design/tokens"
+import { useAuth } from "../src/state/AuthContext"
 
-export default function Welcome() {
-  const router = useRouter()
+/**
+ * Root route (`/`).
+ *
+ * This file and `app/(tabs)/dashboard.tsx` previously both resolved to `/`, so
+ * a cold page load served the Welcome screen while post-login navigation served
+ * the dashboard — a user reloading the dashboard landed back on Welcome. The
+ * dashboard now lives at `/dashboard`, leaving `/` as a single auth-aware
+ * redirect with no competing route.
+ */
+export default function RootIndex() {
+  const { user, loading } = useAuth()
+  const tokens = useTokens()
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>AMANAK أمانك</Text>
-      <Text style={styles.subtitle}>
-        Your personal defensive cybersecurity companion. Track accounts, devices and
-        incidents — and get a live security score.
-      </Text>
-      <Pressable style={styles.button} onPress={() => router.push("/login")}>
-        <Text style={styles.buttonText}>Sign in</Text>
-      </Pressable>
-      <Pressable style={[styles.button, styles.ghost]} onPress={() => router.push("/register")}>
-        <Text style={styles.buttonText}>Create account</Text>
-      </Pressable>
-    </View>
-  )
+  // `AuthProvider` resolves `me()` once on mount; hold briefly rather than
+  // bouncing a signed-in user to the wrong screen.
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: tokens.c.bg,
+        }}
+      >
+        <ActivityIndicator color={tokens.c.brand} />
+      </View>
+    )
+  }
+
+  return <Redirect href={user ? "/dashboard" : "/welcome"} />
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", justifyContent: "center", padding: 24 },
-  title: { color: "#38bdf8", fontSize: 36, fontWeight: "800", textAlign: "center", marginBottom: 16 },
-  subtitle: { color: "#94a3b8", fontSize: 16, textAlign: "center", marginBottom: 32, lineHeight: 24 },
-  button: {
-    backgroundColor: "#38bdf8",
-    borderRadius: 12,
-    padding: 16,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  ghost: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#38bdf8" },
-  buttonText: { color: "#0f172a", fontWeight: "700", fontSize: 16 },
-})

@@ -20,7 +20,7 @@ export default function Register() {
     }
     try {
       await register(email, username, password)
-      router.replace("/(tabs)")
+      router.replace("/dashboard")
     } catch (e) {
       setError((e as { message?: string }).message ?? "Registration failed")
     }

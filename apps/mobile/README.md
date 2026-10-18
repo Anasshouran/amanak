@@ -73,3 +73,11 @@ mocking Expo.
 ```bash
 npm test
 ```
+
+## First-time setup
+
+Metro generates `.expo/types/router.d.ts` on first run. Run:
+
+    npx expo start --web
+
+once after clone to populate typed routes for `tsc --noEmit`.
