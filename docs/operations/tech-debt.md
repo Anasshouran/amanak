@@ -214,3 +214,21 @@ Decision: raise P17.6b budget to 10 KiB temporarily.
 P17.6c will address via route-level code splitting: tab screens load
 as separate chunks, reducing initial entry bundle size across ALL
 screens. New permanent budget TBD after splitting.
+
+## Bundle budget update (P17.6c2a)
+
+Metro 0.80.12 does not support code splitting for web — Expo Router's
+lazy mode (`EXPO_ROUTER_IMPORT_MODE=lazy`) wraps each screen in
+`React.lazy` + `Suspense` but Metro emits a single chunk. The entry
+bundle stayed at ~454 KB gzip (453.89 KB with lazy mode enabled vs
+453.77 KB baseline) and no deferred chunks were produced.
+
+Measured:
+- Entry chunk (initial load): 453.89 KB gzip
+- Deferred chunks (per tab): 0
+- Total (all chunks): 453.89 KB gzip
+
+The lazy-mode metro.config.js change was reverted to keep the build
+clean and avoid dev-mode `SuspenseFallback` toasts. The budget is
+unchanged (10 KiB overage documented above). Revisit when Metro ships
+web code splitting or via a bundler change (Vite) — see ADR-0013.
