@@ -25,6 +25,8 @@ export default function RootLayout() {
               <Stack.Screen name="login" options={{ title: "Sign in" }} />
               <Stack.Screen name="register" options={{ title: "Register" }} />
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              {/* Legacy `/vault` deep link → `/2fa` (P17.6b rename). */}
+              <Stack.Screen name="vault" options={{ headerShown: false }} />
             </Stack>
           </AuthProvider>
         </LocaleProvider>

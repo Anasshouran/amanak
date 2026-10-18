@@ -10,7 +10,7 @@ export type ActionCardsProps = {
 }
 
 type ActionDef = {
-  href: "/scanner" | "/breach" | "/vault" | "/passwords"
+  href: "/scanner" | "/breach" | "/2fa" | "/passwords"
   titleKey: string
   descKey: string
   ctaKey: string
@@ -35,7 +35,7 @@ const ACTIONS: ActionDef[] = [
     icon: "shield-outline",
   },
   {
-    href: "/vault",
+    href: "/2fa",
     titleKey: "dashboard.actions.twofa.title",
     descKey: "dashboard.actions.twofa.desc",
     ctaKey: "dashboard.actions.twofa.cta",

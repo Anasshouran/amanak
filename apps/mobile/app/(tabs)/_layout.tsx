@@ -168,7 +168,7 @@ function TabsNavigator() {
           }}
         />
         <Tabs.Screen
-          name="vault"
+          name="2fa"
           options={{
             title: t("nav.2fa"),
             tabBarIcon: ({ color, size }) => <TabIcon name="shield-outline" color={color} size={size} />,
