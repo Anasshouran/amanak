@@ -70,3 +70,21 @@ def test_get_dashboard_recomputes_on_each_call(client_a, user_a):
     user_a.is_verified = True
     user_a.save()
     assert client_a.get(URL).data["security_score"] == 100
+
+
+@pytest.mark.django_db
+def test_list_endpoint_returns_computed_score(client_a, user_a):
+    """GET /dashboard/security-score/ must compute, not return the default 0.
+
+    Same bug class as fd4ceba. ``api.securityScore()`` has no callers, so no
+    screen ever hit this path — but the endpoint itself was still wrong.
+    """
+    user_a.is_verified = True
+    user_a.save()
+
+    resp = client_a.get("/api/v1/dashboard/security-score/")
+
+    assert resp.status_code == 200
+    # 50 base + 20 verified + 0 accounts + 0 devices + 10 no open incidents
+    assert resp.data["score"] == 80
+    assert resp.data["score"] > 0  # the bug, stated explicitly

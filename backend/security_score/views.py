@@ -70,6 +70,13 @@ class SecurityScoreViewSet(viewsets.ViewSet):
 
     def list(self, request):
         score, _ = SecurityScore.objects.get_or_create(user=request.user)
+        # Same defect as fd4ceba on GET /dashboard/: get_or_create() hands back
+        # the model default of 0 and nothing here ever computed it. Keep the
+        # plain save() so computed_at (auto_now) refreshes with the score.
+        computed = compute_security_score(request.user)
+        if score.score != computed:
+            score.score = computed
+            score.save()
         return Response(SecurityScoreSerializer(score).data)
 
     def compute(self, request):
