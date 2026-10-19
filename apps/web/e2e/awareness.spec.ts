@@ -9,7 +9,7 @@ test("start session, answer a few, see progress update", async ({ page }) => {
   await page.goto("/awareness")
   await waitForApiIdle(page)
   await expect(page.getByText("Phishing Awareness")).toBeVisible()
-  await page.getByRole("button", { name: /Start training/i }).click()
+  await page.getByRole("button", { name: /Start training/i }).first().click()
   await waitForApiIdle(page)
   // answer first scenario if present
   const phishingBtn = page.getByRole("button", { name: /Phishing/i }).first()

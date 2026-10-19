@@ -296,3 +296,36 @@ test("captures the P17.4b password vault redesign", async ({ page }) => {
   await page.waitForTimeout(400)
   await page.screenshot({ path: resolve(OUT_DIR, "vault-locked-light-ar.png"), fullPage: true })
 })
+
+test("captures the P17.8a awareness redesign", async ({ page }) => {
+  test.setTimeout(180_000)
+  await mkdir(OUT_DIR, { recursive: true })
+
+  await page.goto("/")
+  await setThemeLocale(page, "light", "en")
+  await registerUser(page, testUser())
+  await setThemeLocale(page, "light", "ar")
+
+  // landing
+  await gotoApp(page, "/awareness")
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: resolve(OUT_DIR, "awareness-landing-light-ar.png"), fullPage: true })
+
+  // session
+  await page.locator(".amk-btn--primary").first().click()
+  await page.waitForTimeout(800)
+  await page.screenshot({ path: resolve(OUT_DIR, "awareness-session-light-ar.png"), fullPage: true })
+
+  // feedback
+  const answerBtn = page.locator(".amk-btn--full:not([disabled])").first()
+  await answerBtn.waitFor({ state: "visible", timeout: 10000 })
+  await answerBtn.click()
+  await page.waitForTimeout(1200)
+  await page.screenshot({ path: resolve(OUT_DIR, "awareness-feedback-light-ar.png"), fullPage: true })
+
+  // badges (dark en)
+  await setThemeLocale(page, "dark", "en")
+  await page.reload({ waitUntil: "domcontentloaded" })
+  await page.waitForTimeout(800)
+  await page.screenshot({ path: resolve(OUT_DIR, "awareness-badges-dark-en.png"), fullPage: true })
+})
