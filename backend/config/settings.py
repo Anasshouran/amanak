@@ -97,6 +97,19 @@ SCAN_GLOBAL_RATE = _resolve_throttle_rate(
     DEBUG, os.environ.get("SCAN_GLOBAL_THROTTLE_RATE"), "1000/min"
 )
 
+# P17.7b self-service endpoint rates. Same debug-only override policy: the E2E
+# suite edits the profile, flips preferences and exports repeatedly from a
+# single account, which would otherwise trip the production defaults.
+ME_UPDATE_RATE = _resolve_throttle_rate(
+    DEBUG, os.environ.get("ME_UPDATE_THROTTLE_RATE"), "20/min"
+)
+NOTIF_PREFS_RATE = _resolve_throttle_rate(
+    DEBUG, os.environ.get("NOTIF_PREFS_THROTTLE_RATE"), "30/min"
+)
+ME_EXPORT_RATE = _resolve_throttle_rate(
+    DEBUG, os.environ.get("ME_EXPORT_THROTTLE_RATE"), "5/hour"
+)
+
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
 
 
@@ -448,6 +461,9 @@ REST_FRAMEWORK = {
         "staff_write_user": "60/min",
         "staff_metrics_user": "60/min",
         "dashboard-history-user": "60/min",
+        "me_update_user": ME_UPDATE_RATE,
+        "notif_prefs_user": NOTIF_PREFS_RATE,
+        "me_export_user": ME_EXPORT_RATE,
     },
 }
 

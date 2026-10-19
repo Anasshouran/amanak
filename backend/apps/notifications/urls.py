@@ -7,6 +7,11 @@ from . import views
 urlpatterns = [
     path("", views.notifications_list, name="notifications-list"),
     path(
+        "preferences/",
+        views.notification_preferences,
+        name="notification-preferences",
+    ),
+    path(
         "mark-all-read/",
         views.notifications_mark_all_read,
         name="notifications-mark-all-read",

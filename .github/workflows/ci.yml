@@ -96,6 +96,11 @@ jobs:
           SCAN_USER_THROTTLE_RATE: "1000/min"
           SCAN_IP_THROTTLE_RATE: "3000/min"
           SCAN_GLOBAL_THROTTLE_RATE: "10000/min"
+          # P17.7b: the E2E suite edits the profile, flips notification toggles
+          # and requests exports repeatedly from one account.
+          ME_UPDATE_THROTTLE_RATE: "1000/min"
+          NOTIF_PREFS_THROTTLE_RATE: "1000/min"
+          ME_EXPORT_THROTTLE_RATE: "1000/hour"
         run: |
           pip install -r backend/requirements.txt pyyaml==5.4.1
           python backend/manage.py migrate

@@ -6,8 +6,17 @@ from django.utils.translation import gettext_lazy as _
 class User(AbstractUser):
     """Custom User model with email login."""
 
+    LOCALE_CHOICES = [("ar", "Arabic"), ("en", "English")]
+
     email = models.EmailField(_("email address"), unique=True)
     is_verified = models.BooleanField(default=False)
+    # P17.7b: user-editable profile fields. `display_name` is shown in the UI;
+    # `locale` mirrors the interface language the user picked on the server so
+    # it survives a device switch. Never used for auth or authorization.
+    display_name = models.CharField(max_length=100, blank=True, default="")
+    locale = models.CharField(
+        max_length=2, choices=LOCALE_CHOICES, default="ar", blank=True
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

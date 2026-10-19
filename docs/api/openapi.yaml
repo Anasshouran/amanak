@@ -114,6 +114,69 @@ paths:
           content:
             application/json:
               schema: User
+    patch:
+      summary: Partially update the caller's own profile
+      description: |
+        Accepts only `display_name` (2–100 characters, trimmed, no control
+        characters) and `locale` (`ar` or `en`). Any other field — including
+        `email`, `username`, `is_staff` and `is_verified` — is rejected with
+        400 rather than silently ignored. Returns the full updated user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateMeInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: User
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          description: Rate limited
+
+  /me/export/:
+    post:
+      summary: Request a one-time export of the caller's own data
+      description: |
+        Creates a single-use token that expires after one hour. Download the
+        document with `GET /me/export/{token}/`. The export excludes secrets by
+        construction (vault ciphertext/IVs, password hashes, refresh tokens,
+        TOTP seeds).
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportRequestResponse"
+
+  /me/export/{token}/:
+    parameters:
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      summary: Download a previously requested self-service export
+      description: |
+        Single-use and strictly user-scoped: a token belonging to another user
+        returns 404; a used or expired token returns 410.
+      responses:
+        "200":
+          description: The export document
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: true
+        "404":
+          description: Unknown token
+        "410":
+          description: Token already used or expired
 
   /dashboard/:
     get:
@@ -835,6 +898,40 @@ paths:
         "404":
           description: Not found
 
+  /notifications/preferences/:
+    get:
+      summary: Read the caller's notification preferences
+      description: |
+        Returns the five notification toggles, creating the row with defaults
+        on first read.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+    patch:
+      summary: Update one or more notification toggles
+      description: |
+        Partial update; only the five known toggles are accepted, and unknown
+        keys are rejected with 400.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationPreferences"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationPreferences"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -879,9 +976,33 @@ components:
         id: { type: integer }
         email: { type: string, format: email }
         username: { type: string }
+        display_name: { type: string }
+        locale: { type: string, enum: [ar, en] }
         is_verified: { type: boolean }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
+
+    UpdateMeInput:
+      type: object
+      properties:
+        display_name: { type: string, minLength: 2, maxLength: 100 }
+        locale: { type: string, enum: [ar, en] }
+
+    NotificationPreferences:
+      type: object
+      properties:
+        security_alerts: { type: boolean }
+        breach_alerts: { type: boolean }
+        scan_results: { type: boolean }
+        family_activity: { type: boolean }
+        product_updates: { type: boolean }
+
+    ExportRequestResponse:
+      type: object
+      properties:
+        token: { type: string }
+        download_url: { type: string }
+        expires_at: { type: string, format: date-time }
 
     AuthTokens:
       type: object

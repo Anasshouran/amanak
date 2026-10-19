@@ -152,6 +152,13 @@ only honored in debug mode; production always enforces the defaults. The local
 Compose stack sets all four in `docker-compose.local-prod.yml`, and the CI E2E
 job sets them in `.github/workflows/ci.yml`.
 
+P17.7b adds three more debug-only overrides for the self-service Settings
+endpoints: `ME_UPDATE_THROTTLE_RATE` (`PATCH /me/`, default `20/min`),
+`NOTIF_PREFS_THROTTLE_RATE` (`/notifications/preferences/`, default `30/min`)
+and `ME_EXPORT_THROTTLE_RATE` (`POST /me/export/`, default `5/hour`). The E2E
+suite edits the profile, flips toggles and requests exports from a single
+account, so both the Compose stack and the CI E2E job raise them.
+
 ## Key security notes for P1
 
 - Every user-scoped queryset filters by `request.user`; verified by the

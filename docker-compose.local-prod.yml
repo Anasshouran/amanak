@@ -35,3 +35,8 @@ services:
       SCAN_USER_THROTTLE_RATE: "1000/min"
       SCAN_IP_THROTTLE_RATE: "3000/min"
       SCAN_GLOBAL_THROTTLE_RATE: "10000/min"
+      # P17.7b: settings edits / preference flips / export requests from the
+      # single E2E account would otherwise trip the production defaults.
+      ME_UPDATE_THROTTLE_RATE: "1000/min"
+      NOTIF_PREFS_THROTTLE_RATE: "1000/min"
+      ME_EXPORT_THROTTLE_RATE: "1000/hour"

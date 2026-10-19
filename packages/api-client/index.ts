@@ -66,8 +66,11 @@ import type {
   ImpersonationStartResponse,
   NotificationItem,
   NotificationList,
+  NotificationPreferences,
   StaffAnnouncement,
   StaffSubscriptionRow,
+  UpdateMeInput,
+  UserExportResponse,
 } from "@amanak/shared-types"
 
 export type { ApiError }
@@ -236,6 +239,35 @@ export class ApiClient {
 
   async me() {
     return this.request<User>("GET", "/me/")
+  }
+
+  /** Partially update the caller's own profile (P17.7b). */
+  updateProfile(input: UpdateMeInput) {
+    return this.request<User>("PATCH", "/me/", input)
+  }
+
+  /** Read the caller's notification preferences (P17.7b). */
+  getNotificationPreferences() {
+    return this.request<NotificationPreferences>("GET", "/notifications/preferences/")
+  }
+
+  /** Update one or more notification toggles (P17.7b). */
+  updateNotificationPreferences(input: Partial<NotificationPreferences>) {
+    return this.request<NotificationPreferences>(
+      "PATCH",
+      "/notifications/preferences/",
+      input,
+    )
+  }
+
+  /** Request a one-time token to download the caller's own data (P17.7b). */
+  requestMyExport() {
+    return this.request<UserExportResponse>("POST", "/me/export/")
+  }
+
+  /** Download a previously requested self-service export (single-use). */
+  downloadMyExport(token: string) {
+    return this.request<Record<string, unknown>>("GET", `/me/export/${token}/`)
   }
 
   // ---- dashboard ----

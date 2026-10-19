@@ -18,6 +18,8 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "username",
+            "display_name",
+            "locale",
             "is_verified",
             "created_at",
             "updated_at",
@@ -68,6 +70,51 @@ class UserLoginSerializer(serializers.Serializer):
             raise serializers.ValidationError({"non_field_errors": ["Invalid credentials"]})
         self.validated_user = user
         return data
+
+
+class UpdateMeSerializer(serializers.Serializer):
+    """Partial update of the caller's own profile (P17.7b).
+
+    Only ``display_name`` and ``locale`` are accepted. Every other key — most
+    importantly ``email``, ``username``, ``is_staff`` and ``is_verified`` — is
+    rejected rather than silently ignored so a client cannot believe it changed
+    something the backend dropped.
+    """
+
+    UPDATE_FIELDS = ("display_name", "locale")
+
+    display_name = serializers.CharField(
+        required=False,
+        allow_blank=False,
+        min_length=2,
+        max_length=100,
+        trim_whitespace=True,
+        error_messages={
+            "blank": "Display name cannot be blank.",
+            "min_length": "Display name must be at least 2 characters.",
+            "max_length": "Display name must be at most 100 characters.",
+        },
+    )
+    locale = serializers.ChoiceField(required=False, choices=["ar", "en"])
+
+    def validate_display_name(self, value):
+        if any(ord(char) < 32 or ord(char) == 127 for char in value):
+            raise serializers.ValidationError(
+                "Display name must not contain control characters."
+            )
+        return value
+
+    def validate(self, attrs):
+        unknown = sorted(set(self.initial_data.keys()) - set(self.UPDATE_FIELDS))
+        if unknown:
+            raise serializers.ValidationError(
+                {field: ["This field cannot be updated."] for field in unknown}
+            )
+        if not attrs:
+            raise serializers.ValidationError(
+                {"detail": "No updatable fields provided."}
+            )
+        return attrs
 
 
 class AccountSerializer(serializers.ModelSerializer):

@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import secrets
+from datetime import timedelta
+
 from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
@@ -5,24 +10,28 @@ from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth.tokens import default_token_generator
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
+from django.utils import timezone
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status, viewsets
-from rest_framework.decorators import action, api_view, permission_classes
-from rest_framework.exceptions import AuthenticationFailed
+from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
+from rest_framework.exceptions import AuthenticationFailed, NotFound
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.throttling import AnonRateThrottle, ScopedRateThrottle
+from rest_framework.throttling import AnonRateThrottle, UserRateThrottle
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
     OutstandingToken,
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from .throttles import MeExportUserRateThrottle, MeUpdateUserRateThrottle
+
 from .models import Account
 from .serializers import (
     AccountSerializer,
+    UpdateMeSerializer,
     UserLoginSerializer,
     UserRegistrationSerializer,
     UserSerializer,
@@ -266,11 +275,91 @@ class UserViewSet(viewsets.ViewSet):
         return Response({"status": "reset_complete"})
 
 
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle, MeUpdateUserRateThrottle])
+def me(request):
+    """Read, or partially update, the currently authenticated user (P17.7b).
+
+    ``GET`` returns the caller's profile. ``PATCH`` accepts only
+    ``display_name`` and ``locale``; any other key is rejected with 400.
+    """
+    if request.method == "PATCH":
+        serializer = UpdateMeSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = request.user
+        update_fields = [
+            field for field in UpdateMeSerializer.UPDATE_FIELDS
+            if field in serializer.validated_data
+        ]
+        for field in update_fields:
+            setattr(user, field, serializer.validated_data[field])
+        user.save(update_fields=update_fields + ["updated_at"])
+        return Response(UserSerializer(user).data)
+    return Response(UserSerializer(request.user).data)
+
+
+# One-time self-service exports expire after an hour, matching the staff flow.
+EXPORT_TOKEN_TTL = timedelta(hours=1)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([MeExportUserRateThrottle])
+def me_export(request):
+    """Create a one-time token to download the caller's own data (P17.7b).
+
+    Reuses the P13.3 export document and single-use token model so the payload
+    and its secret-exclusion guarantees are identical to the staff export.
+    """
+    from apps.staff.models import ExportRequest
+
+    export = ExportRequest.objects.create(
+        user=request.user,
+        requested_by=request.user,
+        token=secrets.token_hex(32),
+        expires_at=timezone.now() + EXPORT_TOKEN_TTL,
+        reason="self-service",
+    )
+    return Response(
+        {
+            "token": export.token,
+            "download_url": f"/api/v1/me/export/{export.token}/",
+            "expires_at": export.expires_at.isoformat(),
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
-def me(request):
-    """Return the currently authenticated user."""
-    return Response(UserSerializer(request.user).data)
+def me_export_download(request, token):
+    """Download a previously requested export (single-use, user-scoped)."""
+    from apps.staff.export import build_user_export
+    from apps.staff.models import ExportRequest
+
+    export = (
+        ExportRequest.objects.filter(token=token, user=request.user)
+        .select_related("user")
+        .first()
+    )
+    if export is None:
+        raise NotFound("not_found")
+    if export.used_at is not None:
+        return Response(
+            {"code": "export_already_used"}, status=status.HTTP_410_GONE
+        )
+    if export.expires_at < timezone.now():
+        return Response({"code": "export_expired"}, status=status.HTTP_410_GONE)
+
+    export.used_at = timezone.now()
+    export.save(update_fields=["used_at"])
+
+    response = Response(build_user_export(export.user))
+    response["Content-Disposition"] = (
+        f'attachment; filename="amanak-export-{export.user_id}.json"'
+    )
+    return response
 
 
 class AccountViewSet(viewsets.ModelViewSet):

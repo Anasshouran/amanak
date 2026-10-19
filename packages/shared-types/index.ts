@@ -4,11 +4,19 @@ export type User = {
   id: number
   email: string
   username: string
+  display_name?: string
+  locale?: "ar" | "en"
   is_verified: boolean
   created_at: string
   updated_at: string
   is_staff?: boolean
   roles?: string[]
+}
+
+/** Body for `PATCH /me/`. Only these fields may change (P17.7b). */
+export type UpdateMeInput = {
+  display_name?: string
+  locale?: "ar" | "en"
 }
 
 export type AuthTokens = {
@@ -647,8 +655,24 @@ export type NotificationList = {
   results: NotificationItem[]
 }
 
+/** The five user-facing notification toggles (P17.7b). */
+export type NotificationPreferences = {
+  security_alerts: boolean
+  breach_alerts: boolean
+  scan_results: boolean
+  family_activity: boolean
+  product_updates: boolean
+}
+
 export type ExportRequestResponse = {
   token: string
   url: string
+  expires_at: string
+}
+
+/** Response from `POST /me/export/` — a one-time self-service download (P17.7b). */
+export type UserExportResponse = {
+  token: string
+  download_url: string
   expires_at: string
 }

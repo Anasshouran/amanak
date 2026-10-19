@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
-import { Alert, Pressable, ScrollView, Text, View } from "react-native"
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native"
 import { Header } from "../../src/components/Header"
 import { SettingsSection } from "../../src/components/settings/SettingsSection"
 import { SettingsRow } from "../../src/components/settings/SettingsRow"
+import { SettingsNotifications } from "../../src/components/settings/SettingsNotifications"
+import { SettingsPrivacy } from "../../src/components/settings/SettingsPrivacy"
 import { ThemePicker } from "../../src/components/settings/ThemePicker"
 import { LocalePicker } from "../../src/components/settings/LocalePicker"
 import { useRouter } from "expo-router"
@@ -15,16 +17,19 @@ type User = {
   id: number
   email: string
   username?: string
+  display_name?: string
   created_at?: string
 }
+
+type SaveStatus = "idle" | "saving" | "saved" | "error"
 
 /**
  * Settings screen — device preferences, profile and account actions.
  *
- * Profile display-name editing is read-only here because the backend exposes
- * `GET /me/` only (no `PATCH /me/`); it is shown as disabled with a hint.
- * Notifications / data-download have no user-facing endpoint yet, so they
- * render the "Coming soon" hint per the P17.6c spec.
+ * P17.7b wires the three previously-missing endpoints: an editable display
+ * name (`PATCH /me/`), notification preferences
+ * (`/notifications/preferences/`) and the self-service data download
+ * (`POST /me/export/`).
  */
 export default function Settings() {
   const tokens = useTokens()
@@ -34,13 +39,17 @@ export default function Settings() {
 
   const [profile, setProfile] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [displayName, setDisplayName] = useState("")
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle")
 
   useEffect(() => {
     let active = true
     api
       .me()
       .then((data) => {
-        if (active) setProfile(data as User)
+        if (!active) return
+        setProfile(data as User)
+        setDisplayName(data.display_name ?? data.username ?? "")
       })
       .catch(() => undefined)
       .finally(() => {
@@ -50,6 +59,18 @@ export default function Settings() {
       active = false
     }
   }, [])
+
+  async function saveDisplayName() {
+    setSaveStatus("saving")
+    try {
+      const updated = await api.updateProfile({ display_name: displayName.trim() })
+      setProfile((prev) => ({ ...(prev as User), ...updated }))
+      setDisplayName(updated.display_name ?? updated.username ?? "")
+      setSaveStatus("saved")
+    } catch {
+      setSaveStatus("error")
+    }
+  }
 
   async function signOut() {
     await Alert.alert(
@@ -77,7 +98,51 @@ export default function Settings() {
       <Text style={{ color: tokens.c.muted }}>{t("settings.subtitle")}</Text>
 
       <SettingsSection label={t("settings.section.profile")}>
-        <SettingsRow label={t("settings.profile.name")} value={profile?.username ?? t("common.none")} disabled />
+        <View style={{ gap: tokens.space[2] }}>
+          <Text style={{ color: tokens.c.muted, fontSize: tokens.size.sm }}>{t("settings.profile.name")}</Text>
+          <TextInput
+            accessibilityLabel={t("settings.profile.name")}
+            value={displayName}
+            onChangeText={(value) => {
+              setDisplayName(value)
+              setSaveStatus("idle")
+            }}
+            autoCapitalize="words"
+            maxLength={100}
+            style={{
+              borderWidth: 1,
+              borderColor: tokens.c.border,
+              borderRadius: tokens.radius.md,
+              paddingHorizontal: tokens.space[3],
+              paddingVertical: tokens.space[2],
+              color: tokens.c.text,
+            }}
+          />
+          <Pressable
+            accessibilityRole="button"
+            disabled={saveStatus === "saving"}
+            onPress={() => void saveDisplayName()}
+            style={{
+              alignSelf: "flex-start",
+              paddingVertical: tokens.space[2],
+              paddingHorizontal: tokens.space[4],
+              borderWidth: 1,
+              borderColor: tokens.c.border,
+              borderRadius: tokens.radius.md,
+              opacity: saveStatus === "saving" ? 0.5 : 1,
+            }}
+          >
+            <Text style={{ color: tokens.c.text, fontWeight: "600" }}>
+              {saveStatus === "saving" ? t("common.loading") : t("actions.save")}
+            </Text>
+          </Pressable>
+          {saveStatus === "saved" ? (
+            <Text style={{ color: tokens.c.muted }}>{t("settings.profile.saved")}</Text>
+          ) : null}
+          {saveStatus === "error" ? (
+            <Text style={{ color: tokens.c.danger }}>{t("settings.profile.save_error")}</Text>
+          ) : null}
+        </View>
         <SettingsRow label={t("settings.profile.email")} value={profile?.email ?? t("common.none")} disabled />
         <SettingsRow
           label={t("settings.profile.joined")}
@@ -98,11 +163,11 @@ export default function Settings() {
       </SettingsSection>
 
       <SettingsSection label={t("settings.section.notifications")}>
-        <SettingsRow label={t("settings.notifications.coming_soon")} disabled />
+        <SettingsNotifications />
       </SettingsSection>
 
       <SettingsSection label={t("settings.section.privacy")}>
-        {/* Data download has no user-facing endpoint yet; omitted per P17.6c spec. */}
+        <SettingsPrivacy />
       </SettingsSection>
 
       <SettingsSection label={t("settings.section.about")}>

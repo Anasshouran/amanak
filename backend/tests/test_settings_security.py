@@ -171,3 +171,18 @@ def test_rest_framework_uses_resolved_scan_throttles():
     assert rates["scan_user"] == settings.SCAN_USER_RATE
     assert rates["scan_ip"] == settings.SCAN_IP_RATE
     assert rates["scan_global"] == settings.SCAN_GLOBAL_RATE
+
+
+# ---- P17.7b: self-service throttle rates are env-overridable only in debug --
+
+
+def test_self_service_throttle_rates_locked_in_production():
+    assert settings._resolve_throttle_rate(False, "1000/min", "20/min") == "20/min"
+    assert settings._resolve_throttle_rate(False, "1000/min", "5/hour") == "5/hour"
+
+
+def test_self_service_throttle_rates_registered():
+    rates = settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]
+    assert rates["me_update_user"] == settings.ME_UPDATE_RATE
+    assert rates["notif_prefs_user"] == settings.NOTIF_PREFS_RATE
+    assert rates["me_export_user"] == settings.ME_EXPORT_RATE

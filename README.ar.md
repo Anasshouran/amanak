@@ -134,7 +134,9 @@ npm test -w @amanak/mobile
 يتجاوز حد المصادقة في الإنتاج (20/دقيقة)، كما تُجري الاختبارات عمليات فحص أكثر بكثير
 من مستخدم حقيقي فتتجاوز حد الفحص لكل عنوان IP (60/دقيقة). لذا استهدف خادماً يعمل بـ
 `DJANGO_DEBUG=true` مع رفع `AUTH_THROTTLE_RATE` و`SCAN_*_THROTTLE_RATE`
-(قابلة للتجاوز في وضع التصحيح فقط):
+(قابلة للتجاوز في وضع التصحيح فقط). كما تُرفع مسارات الإعدادات المضافة في
+P17.7b عبر `ME_UPDATE_THROTTLE_RATE` و`NOTIF_PREFS_THROTTLE_RATE`
+و`ME_EXPORT_THROTTLE_RATE`:
 
 ```bash
 cd apps/web

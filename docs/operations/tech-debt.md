@@ -264,3 +264,47 @@ causes and fixes (all resolved):
 
 Verified: `npx playwright test` (full suite) green 5 consecutive runs; mobile
 75, web 166, backend 411 unit tests pass.
+
+## P17.7b — User.locale is server-persisted but not yet read by clients
+
+`PATCH /api/v1/me/` accepts `locale` and persists it on `User`, but neither the
+mobile `LocaleProvider` nor the web `ThemeProvider` reads `user.locale` on login —
+they still hydrate from `localStorage`/`SecureStore` only. On a new device the
+server value is therefore not applied, so `User.locale` is partially "dead data"
+until a client hydrates from it.
+
+Fix (future): on login, hydrate the locale from `user.locale` when present, then
+let local changes win.
+
+## P17.7b — self-service Settings endpoints
+
+Three gaps blocked a complete Settings UX. All three are now add-only
+endpoints; no existing contract changed.
+
+- **`PATCH /api/v1/me/`** — editable `display_name` (2–100 chars, trimmed, no
+  control characters) and `locale` (`ar`/`en`). Unknown keys (`email`,
+  `username`, `is_staff`, …) are rejected with 400 rather than silently
+  dropped. `User` gained `display_name` + `locale` fields (migration
+  `accounts/0003`).
+- **`GET|PATCH /api/v1/notifications/preferences/`** — five per-user toggles
+  (`security_alerts`, `breach_alerts`, `scan_results`, `family_activity`,
+  `product_updates`), created with conservative defaults on first read
+  (migration `notifications/0002`).
+- **`POST /api/v1/me/export/`** — one-time, user-scoped, one-hour download
+  token. Reuses the P13.3 `ExportRequest` model and `build_user_export`
+  document, so the secret-exclusion guarantees are identical to the staff
+  export. `GET /api/v1/me/export/{token}/` is single-use and returns 404 for
+  another user's token.
+
+New throttle scopes `me_update_user` (20/min), `notif_prefs_user` (30/min) and
+`me_export_user` (`5/hour`) follow the same debug-only env override policy;
+`ME_UPDATE_THROTTLE_RATE`, `NOTIF_PREFS_THROTTLE_RATE` and
+`ME_EXPORT_THROTTLE_RATE` are set in the CI E2E job and the local Compose stack.
+
+Client naming note: `ApiClient.updateMe` already exists for the Family
+`/family/me/` toggles, so the account profile edit is exposed as
+`updateProfile`; likewise the self-service export uses `requestMyExport` /
+`downloadMyExport` to avoid colliding with the staff `requestUserExport` /
+`downloadUserExport`. Web Settings is appearance/account-only and was left
+untouched; the new UI lives in the mobile Settings screen.
+

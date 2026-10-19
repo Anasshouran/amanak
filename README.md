@@ -136,7 +136,9 @@ refreshes the session, which exceeds the production auth throttle of 20/min, and
 the suite scans far more often than a real user, which exceeds the scanner
 per-IP throttle of 60/min. Target a backend running with `DJANGO_DEBUG=true` and
 raised `AUTH_THROTTLE_RATE` / `SCAN_*_THROTTLE_RATE` values (only overridable in
-debug; production always enforces the defaults):
+debug; production always enforces the defaults). The settings flows added in
+P17.7b are likewise raised via `ME_UPDATE_THROTTLE_RATE`,
+`NOTIF_PREFS_THROTTLE_RATE` and `ME_EXPORT_THROTTLE_RATE`:
 
 ```bash
 cd apps/web
