@@ -27,8 +27,14 @@ export function Family() {
   const [deletePwd, setDeletePwd] = useState("")
   const [leaving, setLeaving] = useState(false)
   const [pendingRemove, setPendingRemove] = useState<number | null>(null)
+  const [joinOpen, setJoinOpen] = useState(false)
+  const [joinToken, setJoinToken] = useState("")
+  const [joining, setJoining] = useState(false)
+  const [joinError, setJoinError] = useState<string | null>(null)
 
-  const setup = !family.data
+  const is404 = (family.error as { status?: number } | null)?.status === 404
+  const noFamily = !family.data && (!family.error || is404)
+  const realError = !!family.error && !is404
 
   async function onCreate() {
     if (!family.data && members.data) {
@@ -42,6 +48,24 @@ export function Family() {
       } finally {
         setCreating(false)
       }
+    }
+  }
+
+  async function onJoin() {
+    if (!joinToken.trim()) return
+    setJoining(true)
+    setJoinError(null)
+    try {
+      await api.acceptInvitation({ token: joinToken.trim() })
+      setJoinOpen(false)
+      setJoinToken("")
+      await family.reload()
+      await members.reload()
+      await meData.reload()
+    } catch (e: unknown) {
+      setJoinError(errorMessage(e, t("common.error")))
+    } finally {
+      setJoining(false)
     }
   }
 
@@ -105,7 +129,7 @@ export function Family() {
     )
   }
 
-  if (setup && !family.error) {
+  if (noFamily) {
     return (
       <div className="amk-page">
         <div className="amk-page-head">
@@ -115,16 +139,42 @@ export function Family() {
           </div>
         </div>
         <Card padded elevated>
-          <EmptyState icon={<IconFamily size={36} />} title={t("family.setup.create")} description={t("family.setup.desc")} />
-          <Button loading={creating} onClick={() => void onCreate()}>
-            {t("family.setup.create")}
-          </Button>
+          <EmptyState
+            icon={<IconFamily size={36} />}
+            title={t("family.empty.title")}
+            description={t("family.empty.subtitle")}
+          />
+          <div className="amk-row" style={{ gap: "var(--space-2)", justifyContent: "center" }}>
+            <Button loading={creating} onClick={() => void onCreate()}>
+              {t("family.empty.create")}
+            </Button>
+            <Button variant="secondary" onClick={() => { setJoinOpen(true); setJoinError(null) }}>
+              {t("family.empty.join")}
+            </Button>
+          </div>
         </Card>
+
+        <Modal
+          open={joinOpen}
+          onClose={() => { setJoinOpen(false); setJoinToken(""); setJoinError(null) }}
+          title={t("family.empty.join")}
+          actions={
+            <>
+              <Button variant="ghost" onClick={() => { setJoinOpen(false); setJoinToken(""); setJoinError(null) }}>{t("actions.cancel")}</Button>
+              <Button onClick={() => void onJoin()} loading={joining}>{t("family.empty.join")}</Button>
+            </>
+          }
+        >
+          <div className="amk-stack">
+            <Input label={t("family.setup.email")} value={joinToken} onChange={(e) => setJoinToken(e.target.value)} />
+            {joinError && <p className="amk-muted">{joinError}</p>}
+          </div>
+        </Modal>
       </div>
     )
   }
 
-  if (family.error) {
+  if (realError) {
     return (
       <div className="amk-page">
         <h1>{t("family.title")}</h1>
