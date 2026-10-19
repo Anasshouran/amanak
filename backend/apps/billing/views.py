@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-from .models import Plan, Subscription
+from .models import Plan
 from .serializers import PlanSerializer, SubscriptionSerializer
 from .throttles import BillingReadUserRateThrottle, BillingWriteUserRateThrottle
 from common.gating import current_usage, get_limit
@@ -30,12 +30,14 @@ class BillingViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["get"], url_path="subscription")
     def subscription(self, request):
-        sub, _ = Subscription.objects.get_or_create(user=request.user)
+        from apps.billing.signals import ensure_subscription
+        sub = ensure_subscription(request.user)
         return Response(SubscriptionSerializer(sub).data)
 
     @action(detail=False, methods=["post"], url_path="subscription/change", throttle_classes=[BillingWriteUserRateThrottle])
     def change(self, request):
-        sub, _ = Subscription.objects.get_or_create(user=request.user)
+        from apps.billing.signals import ensure_subscription
+        sub = ensure_subscription(request.user)
         if sub.provider != "manual":
             return Response({"code": "provider_not_configured"}, status=status.HTTP_400_BAD_REQUEST)
         plan_id = request.data.get("plan_id")
@@ -53,14 +55,16 @@ class BillingViewSet(viewsets.GenericViewSet):
 
     @action(detail=False, methods=["post"], url_path="subscription/cancel", throttle_classes=[BillingWriteUserRateThrottle])
     def cancel(self, request):
-        sub, _ = Subscription.objects.get_or_create(user=request.user)
+        from apps.billing.signals import ensure_subscription
+        sub = ensure_subscription(request.user)
         sub.cancel_at_period_end = True
         sub.save()
         return Response(SubscriptionSerializer(sub).data)
 
     @action(detail=False, methods=["post"], url_path="subscription/resume", throttle_classes=[BillingWriteUserRateThrottle])
     def resume(self, request):
-        sub, _ = Subscription.objects.get_or_create(user=request.user)
+        from apps.billing.signals import ensure_subscription
+        sub = ensure_subscription(request.user)
         sub.cancel_at_period_end = False
         sub.save()
         return Response(SubscriptionSerializer(sub).data)

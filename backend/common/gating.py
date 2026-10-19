@@ -12,10 +12,9 @@ def current_plan(user):
     try:
         return user.subscription.plan
     except Exception:
-        # ensure default
-        from apps.billing import signals  # ensure seeded
-        s, _ = Subscription.objects.get_or_create(user=user)
-        return s.plan
+        from apps.billing.signals import ensure_subscription
+
+        return ensure_subscription(user).plan
 
 
 def get_limit(user, feature: str) -> int:
