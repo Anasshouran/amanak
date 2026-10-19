@@ -308,3 +308,12 @@ Client naming note: `ApiClient.updateMe` already exists for the Family
 `downloadUserExport`. Web Settings is appearance/account-only and was left
 untouched; the new UI lives in the mobile Settings screen.
 
+
+## Awareness — no "recent attempts" endpoint
+
+P11's `GET /awareness/progress/` returns aggregates only
+(total, correct, streak, badges). The P17.8a landing omits a "recent
+attempts" list because there is no endpoint for it.
+
+Fix (future): `GET /awareness/attempts/?limit=5` returning the last N
+attempts (scenario_id, is_correct, answered_at). Scoped to request.user.
