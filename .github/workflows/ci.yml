@@ -90,6 +90,12 @@ jobs:
           USE_POSTGRES: "true"
           CORS_ALLOWED_ORIGINS: http://localhost:5173
           AUTH_THROTTLE_RATE: "1000/min"
+          # The E2E suite scans (and reads scanner history) from a single IP far
+          # more often than a real user, exceeding the production 60/min
+          # `scan_ip` limit and causing spurious 429s.
+          SCAN_USER_THROTTLE_RATE: "1000/min"
+          SCAN_IP_THROTTLE_RATE: "3000/min"
+          SCAN_GLOBAL_THROTTLE_RATE: "10000/min"
         run: |
           pip install -r backend/requirements.txt pyyaml==5.4.1
           python backend/manage.py migrate

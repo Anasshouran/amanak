@@ -25,3 +25,13 @@ services:
     environment:
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1
       CORS_ALLOWED_ORIGINS: http://localhost,http://localhost:5173,http://localhost:8080,http://localhost:8081
+      # E2E testing only: the Playwright suite performs far more auth calls
+      # (register/login/refresh) per minute than a real user, which trips the
+      # production `auth` throttle of 20/min and yields spurious 429s. The rate
+      # is only overridable in debug mode (see config/settings.py), so both are
+      # set here to mirror the CI E2E job (.github/workflows/ci.yml).
+      DJANGO_DEBUG: "true"
+      AUTH_THROTTLE_RATE: "1000/min"
+      SCAN_USER_THROTTLE_RATE: "1000/min"
+      SCAN_IP_THROTTLE_RATE: "3000/min"
+      SCAN_GLOBAL_THROTTLE_RATE: "10000/min"

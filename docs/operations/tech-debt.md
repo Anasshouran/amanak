@@ -232,3 +232,35 @@ The lazy-mode metro.config.js change was reverted to keep the build
 clean and avoid dev-mode `SuspenseFallback` toasts. The budget is
 unchanged (10 KiB overage documented above). Revisit when Metro ships
 web code splitting or via a bundler change (Vite) — see ADR-0013.
+
+## P17.7a — three E2E flakes fixed
+
+Three Playwright specs were flaky under the default parallel run. Root
+causes and fixes (all resolved):
+
+1. **`mobile-screenshots.spec.ts` crash on the entry modal.** Playwright
+   crashed Chromium when driving the password-vault add-entry modal on this
+   Expo web build. The vault section now captures the unlocked empty state
+   directly and skips the modal, still producing exactly 13 distinct
+   `mobile-*.png` files (`apps/web/screenshots/p17/`). The spec stays behind
+   `E2E_SCREENSHOTS=1`, so it is skipped in the default CI run.
+
+2. **`2fa.spec.ts` "code rotate" flake.** The rotation assertion polls until
+   the TOTP 30 s window rolls over, so it can legitimately run for ~30 s on top
+   of setup — longer than the default 30 s per-test budget, which made it fail
+   on the window boundary. The test now calls `test.setTimeout(60_000)`.
+
+3. **`scanner.spec.ts` flake under parallel workers.** The scan endpoints
+   enforce a shared per-IP throttle (`scan_ip`, 60/min). The regular suite
+   alone issues 60+ scan-scoped requests per minute from one IP, so scanner
+   tests intermittently received `429` and failed. Fixes: the scanner and
+   2FA specs are split into dedicated `scanner` / `two-factor` Playwright
+   projects (`fullyParallel: false`, `workers: 1`) and excluded from the
+   `chromium` project via `testIgnore`; and the scanner throttle rates are now
+   env-overridable in debug mode (`SCAN_USER_THROTTLE_RATE`,
+   `SCAN_IP_THROTTLE_RATE`, `SCAN_GLOBAL_THROTTLE_RATE`), mirroring
+   `AUTH_THROTTLE_RATE`. Production still enforces the built-in defaults; the
+   CI E2E job and the local Compose stack raise them.
+
+Verified: `npx playwright test` (full suite) green 5 consecutive runs; mobile
+75, web 166, backend 411 unit tests pass.

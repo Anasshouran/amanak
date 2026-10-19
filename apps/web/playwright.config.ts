@@ -15,6 +15,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
+      testIgnore: [/scanner\.spec\.ts/, /2fa\.spec\.ts/, /mobile-screenshots\.spec\.ts/],
       use: {
         browserName: "chromium",
         launchOptions: {
@@ -30,6 +31,36 @@ export default defineConfig({
         viewport: { width: 390, height: 844 },
         deviceScaleFactor: 2,
         baseURL: process.env.E2E_MOBILE_BASE_URL || "http://localhost:8081",
+        launchOptions: {
+          args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        },
+      },
+    },
+    {
+      // The scanner flow registers a fresh user and hits the scan endpoint per
+      // test. Running its tests concurrently (the global `fullyParallel`) made
+      // the phishing assertion flake under worker contention, so this project
+      // runs the file serially in a single worker.
+      name: "scanner",
+      testMatch: /scanner\.spec\.ts/,
+      fullyParallel: false,
+      workers: 1,
+      retries: 2,
+      use: {
+        browserName: "chromium",
+        launchOptions: {
+          args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
+        },
+      },
+    },
+    {
+      name: "two-factor",
+      testMatch: /2fa\.spec\.ts/,
+      fullyParallel: false,
+      workers: 1,
+      retries: 2,
+      use: {
+        browserName: "chromium",
         launchOptions: {
           args: ["--no-sandbox", "--disable-dev-shm-usage", "--disable-gpu"],
         },

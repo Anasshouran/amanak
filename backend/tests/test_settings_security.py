@@ -147,3 +147,27 @@ def test_auth_throttle_debug_without_override_uses_default():
 
 def test_rest_framework_uses_resolved_auth_throttle():
     assert settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]["auth"] == settings.AUTH_THROTTLE_RATE
+
+
+# ---- scanner throttle rates are env-overridable only in debug --------------
+
+
+def test_scan_throttles_locked_in_production():
+    """Production always enforces the defaults and ignores the environment."""
+    assert settings._resolve_throttle_rate(False, "1000/min", "60/min") == "60/min"
+    assert settings._resolve_throttle_rate(False, None, "60/min") == "60/min"
+
+
+def test_scan_throttles_overridable_in_debug():
+    assert settings._resolve_throttle_rate(True, "600/min", "60/min") == "600/min"
+
+
+def test_scan_throttles_debug_without_override_uses_default():
+    assert settings._resolve_throttle_rate(True, None, "60/min") == "60/min"
+
+
+def test_rest_framework_uses_resolved_scan_throttles():
+    rates = settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]
+    assert rates["scan_user"] == settings.SCAN_USER_RATE
+    assert rates["scan_ip"] == settings.SCAN_IP_RATE
+    assert rates["scan_global"] == settings.SCAN_GLOBAL_RATE

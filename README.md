@@ -132,10 +132,11 @@ npm test -w @amanak/mobile
 ### End-to-end (Playwright)
 
 The E2E suite drives the web app against the Docker backend. Each page load
-refreshes the session, which exceeds the production auth throttle of 20/min, so
-target a backend running with `DJANGO_DEBUG=true` and a raised
-`AUTH_THROTTLE_RATE` (only overridable in debug; production always enforces
-20/min):
+refreshes the session, which exceeds the production auth throttle of 20/min, and
+the suite scans far more often than a real user, which exceeds the scanner
+per-IP throttle of 60/min. Target a backend running with `DJANGO_DEBUG=true` and
+raised `AUTH_THROTTLE_RATE` / `SCAN_*_THROTTLE_RATE` values (only overridable in
+debug; production always enforces the defaults):
 
 ```bash
 cd apps/web

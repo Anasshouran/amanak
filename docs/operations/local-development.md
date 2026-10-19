@@ -143,6 +143,15 @@ must override `DEBUG`, `SECRET_KEY`, `ALLOWED_HOSTS` and use Postgres (see
 honored when `DJANGO_DEBUG=true`; production always enforces `20/min`. It exists
 so the E2E suite can run against a debug backend.
 
+`SCAN_USER_THROTTLE_RATE`, `SCAN_IP_THROTTLE_RATE` and
+`SCAN_GLOBAL_THROTTLE_RATE` do the same for the scanner endpoints (defaults
+`30/min`, `60/min`, `1000/min`). The regular E2E suite scans and reads scanner
+history from a single IP far more often than a real user, which exceeds the
+`60/min` per-IP limit and causes spurious `429`s. Like the auth rate they are
+only honored in debug mode; production always enforces the defaults. The local
+Compose stack sets all four in `docker-compose.local-prod.yml`, and the CI E2E
+job sets them in `.github/workflows/ci.yml`.
+
 ## Key security notes for P1
 
 - Every user-scoped queryset filters by `request.user`; verified by the

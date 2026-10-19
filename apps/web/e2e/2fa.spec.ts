@@ -23,6 +23,11 @@ async function unlockVault(page: Page): Promise<void> {
 }
 
 test("setup, add an entry, watch the code rotate, lock and unlock", async ({ page }) => {
+  // The TOTP code only rotates when the 30 s window rolls over, so the poll
+  // below can legitimately take up to ~30 s on top of the setup steps. The
+  // default 30 s per-test budget is too small and made this test flake on the
+  // window boundary.
+  test.setTimeout(60_000)
   await registerUser(page, testUser())
   await createVault(page)
 

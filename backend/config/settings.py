@@ -63,14 +63,38 @@ DEBUG = _env_bool("DJANGO_DEBUG", "false")
 _default_auth_throttle = "20/min"
 
 
-def _resolve_auth_throttle_rate(debug, override):
+def _resolve_throttle_rate(debug, override, default):
+    """Resolve a throttle rate, honouring env overrides only in debug mode.
+
+    Production always enforces the built-in default; the end-to-end suite runs
+    in debug and raises the limits because it drives far more requests per
+    minute than a real user.
+    """
     if debug and override:
         return override
-    return _default_auth_throttle
+    return default
+
+
+def _resolve_auth_throttle_rate(debug, override):
+    return _resolve_throttle_rate(debug, override, _default_auth_throttle)
 
 
 AUTH_THROTTLE_RATE = _resolve_auth_throttle_rate(
     DEBUG, os.environ.get("AUTH_THROTTLE_RATE")
+)
+
+# Scanner throttle rates. Same policy as the auth throttle: the E2E suite scans
+# (and reads scanner history) from a single IP many times per minute — the
+# regular suite alone exceeds the 60/min `scan_ip` limit — which trips spurious
+# 429s. Only debug/test mode may override; production keeps the defaults.
+SCAN_USER_RATE = _resolve_throttle_rate(
+    DEBUG, os.environ.get("SCAN_USER_THROTTLE_RATE"), "30/min"
+)
+SCAN_IP_RATE = _resolve_throttle_rate(
+    DEBUG, os.environ.get("SCAN_IP_THROTTLE_RATE"), "60/min"
+)
+SCAN_GLOBAL_RATE = _resolve_throttle_rate(
+    DEBUG, os.environ.get("SCAN_GLOBAL_THROTTLE_RATE"), "1000/min"
 )
 
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
@@ -400,9 +424,9 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "user": "1000/day",
         "auth": AUTH_THROTTLE_RATE,
-        "scan_user": "30/min",
-        "scan_ip": "60/min",
-        "scan_global": "1000/min",
+        "scan_user": SCAN_USER_RATE,
+        "scan_ip": SCAN_IP_RATE,
+        "scan_global": SCAN_GLOBAL_RATE,
         "ai_user": "10/min",
         "ai_daily": f"{AI_DAILY_LIMIT}/day",
         "breach_check_user": "2/min",
