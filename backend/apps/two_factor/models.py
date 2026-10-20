@@ -43,3 +43,26 @@ class TwoFactorEntry(models.Model):
 
     def __str__(self):
         return f"{self.issuer or '—'}: {self.label} (entry {self.pk})"
+
+class RecoveryCode(models.Model):
+    profile = models.ForeignKey(
+        TwoFactorProfile,
+        on_delete=models.CASCADE,
+        related_name="recovery_codes",
+    )
+    code_hash = models.CharField(max_length=64, db_index=True)
+    salt = models.BinaryField(max_length=16)
+    ciphertext = models.BinaryField()
+    iv = models.BinaryField(max_length=12)
+    created_at = models.DateTimeField(auto_now_add=True)
+    used_at = models.DateTimeField(null=True, blank=True)
+    used_from_ip = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        unique_together = [("profile", "code_hash")]
+        indexes = [
+            models.Index(fields=["profile", "used_at"]),
+        ]
+
+    def __str__(self):
+        return f"recovery-code[{self.pk}] profile={self.profile_id}"

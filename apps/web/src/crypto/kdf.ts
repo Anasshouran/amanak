@@ -16,6 +16,16 @@ export async function deriveKey(
   masterPassword: string,
   salt: Uint8Array,
   iterations: number,
+  /**
+   * Whether the derived AES-GCM key is extractable. Defaults to false (the
+   * normal unlock key is never extractable). The ONLY caller that needs
+   * extractable=true is recovery-code generation: `crypto.subtle.wrapKey`
+   * throws `InvalidAccessError` on a non-extractable key, so the key we wrap
+   * into recovery codes must be exportable. That key is still only ever held
+   * in memory and derived from the master password + salt; it is never sent
+   * to the server.
+   */
+  extractable: boolean = false,
 ): Promise<CryptoKey> {
   const keyMaterial = await crypto.subtle.importKey(
     "raw",
@@ -33,7 +43,7 @@ export async function deriveKey(
     },
     keyMaterial,
     { name: "AES-GCM", length: 256 },
-    false, // never extractable
+    extractable,
     ["encrypt", "decrypt"],
   )
 }

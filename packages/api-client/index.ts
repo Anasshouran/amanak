@@ -427,6 +427,10 @@ export class ApiClient {
     return this.request<TwoFactorProfile>("POST", "/two-factor/profile/", input)
   }
 
+  updateTwoFactorProfile(input: { kdf_salt: string }) {
+    return this.request<TwoFactorProfile>("PATCH", "/two-factor/profile/", input)
+  }
+
   deleteTwoFactorProfile() {
     return this.request<null>("DELETE", "/two-factor/profile/")
   }
@@ -445,6 +449,26 @@ export class ApiClient {
 
   deleteTwoFactorEntry(id: number) {
     return this.request<null>("DELETE", `/two-factor/entries/${id}/`)
+  }
+
+  createRecoveryCodes(codes: { code_hash: string; salt: string; ciphertext: string; iv: string }[]) {
+    return this.request<{ created: number }>("POST", "/two-factor/recovery-codes/", { codes })
+  }
+
+  getRecoveryCodeCount() {
+    return this.request<{ total: number; used: number; remaining: number }>("GET", "/two-factor/recovery-codes/count/")
+  }
+
+  redeemRecoveryCode(codeHash: string) {
+    return this.request<{ salt: string; ciphertext: string; iv: string }>("POST", "/two-factor/recovery-codes/redeem/", { code_hash: codeHash })
+  }
+
+  completeRecoveryCode(codeHash: string) {
+    return this.request<{ status: string }>("POST", "/two-factor/recovery-codes/complete/", { code_hash: codeHash })
+  }
+
+  deleteRecoveryCodes() {
+    return this.request<null>("DELETE", "/two-factor/recovery-codes/")
   }
 
   // ---- password manager (P9) ----

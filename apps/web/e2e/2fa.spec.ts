@@ -14,6 +14,10 @@ async function createVault(page: Page): Promise<void> {
   await page.getByLabel("Master password", { exact: true }).fill(MASTER)
   await page.getByLabel("Confirm master password", { exact: true }).fill(MASTER)
   await page.getByRole("button", { name: "Create vault" }).click()
+  // The recovery-codes screen is always shown after setup (P20.2/P20.2b).
+  await expect(page.locator("code")).toHaveCount(10)
+  await page.getByRole("checkbox").check()
+  await page.getByRole("button", { name: /Continue/i }).click()
   await expect(page.getByText("No authenticator apps yet")).toBeVisible()
 }
 

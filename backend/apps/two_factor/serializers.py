@@ -75,3 +75,36 @@ class TwoFactorEntrySerializer(serializers.ModelSerializer):
         if len(value) != 12:
             raise serializers.ValidationError("iv must be exactly 12 bytes.")
         return value
+
+class RecoveryCodeStoredSerializer(serializers.Serializer):
+    """One stored recovery code as sent by the client."""
+
+    code_hash = serializers.CharField(max_length=64)
+    salt = Base64Field()
+    ciphertext = Base64Field()
+    iv = Base64Field()
+
+    def validate_salt(self, value):
+        if len(value) != 16:
+            raise serializers.ValidationError("salt must be exactly 16 bytes.")
+        return value
+
+    def validate_iv(self, value):
+        if len(value) != 12:
+            raise serializers.ValidationError("iv must be exactly 12 bytes.")
+        return value
+
+    def validate_ciphertext(self, value):
+        if len(value) == 0:
+            raise serializers.ValidationError("ciphertext must not be empty.")
+        return value
+
+
+class RecoveryCodeRedeemSerializer(serializers.Serializer):
+    code_hash = serializers.CharField(max_length=64)
+
+
+class RecoveryCodeCountSerializer(serializers.Serializer):
+    total = serializers.IntegerField()
+    used = serializers.IntegerField()
+    remaining = serializers.IntegerField()

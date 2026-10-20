@@ -317,3 +317,24 @@ attempts" list because there is no endpoint for it.
 
 Fix (future): `GET /awareness/attempts/?limit=5` returning the last N
 attempts (scenario_id, is_correct, answered_at). Scoped to request.user.
+
+## P20.2 — Mobile recovery codes out of scope
+
+Recovery codes (P20.2) are web-only. Mobile users must use the web to
+recover a lost master password. Mobile recovery is P20.3.
+
+## P20.2b — 2FA profile has no verification blob
+
+Unlike the password vault (P9), the 2FA profile stores no verification blob;
+unlock is verified by decrypting an existing entry. Consequently the P20.2b
+`PATCH /two-factor/profile/` rotates only `kdf_salt`. If the 2FA vault is ever
+given a verification blob, this endpoint and the recovery re-encryption flow
+must also rewrite it with K_new.
+
+## P20.2b — Recovery regeneration re-derives K from the master password
+
+`RecoveryCodesCard`'s Regenerate action re-derives K from the entered master
+password (PBKDF2, `extractable=true`) to wrap fresh codes. This is correct for
+the current design (K is deterministic from password + salt) but means the user
+must be able to type the master password while unlocked. A future improvement
+could wrap codes against the in-memory K instead.
