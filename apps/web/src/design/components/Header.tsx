@@ -9,6 +9,10 @@ export type HeaderProps = {
   onSignOut?: () => void
   /** App-provided widget (e.g. the notifications bell) kept out of the design layer. */
   notifications?: ReactNode
+  /** Context switcher widget, rendered before the notifications bell (P18.1c2). */
+  context?: ReactNode
+  /** When set, replaces the user name in the account menu (e.g. the org name). */
+  subtitle?: string
 }
 
 /** Route prefix → i18n key used for the contextual page title. */
@@ -38,7 +42,7 @@ function initialsOf(value: string): string {
   return (first + second).toUpperCase()
 }
 
-export function Header({ user, onSignOut, notifications }: HeaderProps) {
+export function Header({ user, onSignOut, notifications, context, subtitle }: HeaderProps) {
   const { theme, locale, toggleTheme, toggleLocale } = useTheme()
   const t = useT()
   const location = useLocation()
@@ -79,6 +83,7 @@ export function Header({ user, onSignOut, notifications }: HeaderProps) {
       <div className="amk-header__spacer" />
 
       <div className="amk-header__actions">
+        {context}
         {notifications}
         <button
           type="button"
@@ -126,7 +131,7 @@ export function Header({ user, onSignOut, notifications }: HeaderProps) {
               </span>
               <span className="amk-usermenu__name">
                 <strong>{name}</strong>
-                <span>{user.email}</span>
+                <span>{subtitle ?? user.email}</span>
               </span>
               <IconChevron size={16} />
             </button>

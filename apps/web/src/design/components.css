@@ -2555,3 +2555,141 @@
     justify-content: flex-end;
   }
 }
+
+/* ---- Context switcher + badge (P18.1c2) ---------------------------------- */
+
+.amk-contextswitcher {
+  position: relative;
+}
+
+.amk-contextswitcher--static,
+.amk-contextswitcher__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text-strong);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.amk-contextswitcher__trigger {
+  cursor: pointer;
+  transition: background var(--motion-fast);
+}
+
+.amk-contextswitcher__trigger:hover {
+  background: var(--c-hover);
+}
+
+.amk-contextswitcher__label {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amk-contextswitcher__caret {
+  color: var(--c-muted);
+  font-size: 12px;
+}
+
+.amk-contextswitcher__panel {
+  position: absolute;
+  inset-inline-end: 0;
+  top: calc(100% + 8px);
+  z-index: 90;
+  min-width: 200px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg);
+}
+
+.amk-contextoption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--c-text);
+  font-size: 13px;
+  text-align: start;
+  cursor: pointer;
+}
+
+.amk-contextoption.is-active,
+.amk-contextoption:hover {
+  background: var(--c-hover);
+}
+
+.amk-contextoption__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.amk-contextbadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: 4px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-full);
+  background: var(--c-surface-2);
+  color: var(--c-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.amk-contextbadge--org {
+  border-color: color-mix(in srgb, var(--c-brand) 40%, transparent);
+  background: color-mix(in srgb, var(--c-brand) 14%, transparent);
+  color: var(--c-brand);
+}
+
+/* ---- Org dashboard v1 (P18.1c2) ------------------------------------------ */
+
+.org-dashboard__title {
+  margin: 0;
+  font-size: var(--text-xl);
+  color: var(--c-text-strong);
+}
+
+.org-dashboard__subtitle {
+  margin: 4px 0 0;
+  color: var(--c-muted);
+  font-size: var(--text-sm);
+}
+
+.org-dashboard__kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+.org-dashboard__coming {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--c-border);
+  color: var(--c-muted);
+  font-size: var(--text-sm);
+}
+
+.org-dashboard__coming ul {
+  margin: var(--space-2) 0 0;
+  padding-inline-start: var(--space-5);
+}

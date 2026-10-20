@@ -75,5 +75,56 @@ export async function refreshSession(page: Page): Promise<void> {
   await waitForApiIdle(page)
 }
 
+/**
+ * Create an organization owned by `email` (P18.1c2 e2e).
+ *
+ * The web client keeps its access token out of JS reach, so the org is created
+ * server-side via `manage.py shell` inside the backend container — the same
+ * approach `grantStaffRole` uses. Returns the new organization's id.
+ */
+export function createOrgForUser(email: string, name: string, slug: string): string {
+  return djangoShell([
+    "from apps.organizations.models import Organization, Membership",
+    `u = get_user_model().objects.get(email='${email}')`,
+    `org = Organization.objects.create(name='${name}', slug='${slug}', created_by=u)`,
+    "Membership.objects.create(organization=org, user=u, role='owner')",
+    "print(org.id)",
+  ]).split("\n").pop()!.trim()
+}
+
+/**
+ * Create an Account for `email`, optionally scoped to an organization context
+ * (`contextId`), for the isolation checks (P18.1c2 e2e).
+ */
+export function createAccountForUser(
+  email: string,
+  serviceName: string,
+  contextId?: string,
+): void {
+  const ctx = contextId ? `'${contextId}'` : "None"
+  djangoShell([
+    "from accounts.models import Account",
+    `u = get_user_model().objects.get(email='${email}')`,
+    `Account.objects.create(user=u, service_name='${serviceName}', context_id=${ctx})`,
+  ])
+}
+
+/** Run a snippet of Python inside the backend container's Django shell. */
+function djangoShell(lines: string[]): string {
+  const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"
+  const script = [
+    "import os, django",
+    "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')",
+    "django.setup()",
+    "from django.contrib.auth import get_user_model",
+    ...lines,
+  ].join("; ")
+  return execFileSync(
+    "docker",
+    ["exec", container, "python", "backend/manage.py", "shell", "-c", script],
+    { encoding: "utf8" },
+  )
+}
+
 export const test = base
 export { expect }

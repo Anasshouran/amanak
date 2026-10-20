@@ -106,6 +106,23 @@ export type IncidentInput = {
   incident_type?: string
 }
 
+export type Organization = {
+  id: string
+  name: string
+  slug: string
+  role?: string
+  created_at?: string
+}
+
+export type OrganizationOverview = {
+  organization: { id: string; name: string; slug: string }
+  member_count: number
+  device_count: number
+  open_incident_count: number
+  security_score: number
+  recent_activity: number
+}
+
 export type ApiError = {
   code: string
   message: string

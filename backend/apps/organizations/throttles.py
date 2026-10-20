@@ -22,3 +22,7 @@ class OrgWriteUserRateThrottle(_UserScopedThrottle):
 
 class OrgInviteUserRateThrottle(_UserScopedThrottle):
     scope = "org-invite-user"
+
+
+class OrgOverviewUserRateThrottle(_UserScopedThrottle):
+    scope = "org-overview-user"

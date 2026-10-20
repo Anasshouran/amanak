@@ -43,6 +43,7 @@ from .services import (
 )
 from .throttles import (
     OrgInviteUserRateThrottle,
+    OrgOverviewUserRateThrottle,
     OrgReadUserRateThrottle,
     OrgWriteUserRateThrottle,
 )
@@ -68,6 +69,7 @@ class OrganizationViewSet(viewsets.ViewSet):
         "invitations": OrgReadUserRateThrottle,
         "revoke_invitation": OrgWriteUserRateThrottle,
         "accept_invitation": OrgWriteUserRateThrottle,
+        "overview": OrgOverviewUserRateThrottle,
     }
 
     def get_throttles(self):
@@ -286,6 +288,98 @@ class OrganizationViewSet(viewsets.ViewSet):
                 status=status.HTTP_404_NOT_FOUND,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # ---- overview (P18.1c2) -------------------------------------------------
+
+    def overview(self, request, pk=None):
+        """GET /organizations/{id}/overview/ — aggregates only, members only.
+
+        Returns counts and a rolled-up score. Never returns member PII
+        (no emails, usernames, or secrets) — only aggregates.
+        """
+        org, _membership = self._org_for_member(request, pk)
+        if org is None:
+            # Distinguish "org does not exist / inactive" (404) from
+            # "org exists but caller is not a member" (403), as required by
+            # the P18.1c2 spec.
+            is_member = Membership.objects.filter(
+                organization_id=pk, user=request.user
+            ).exists()
+            exists_active = Organization.objects.filter(
+                pk=pk, is_active=True
+            ).exists()
+            if exists_active and not is_member:
+                return Response(
+                    _ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN
+                )
+            return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from accounts.models import LoginEvent
+        from devices.models import Device
+        from incidents.models import Incident
+
+        from security_score.views import compute_security_score
+
+        member_ids = list(
+            Membership.objects.filter(organization=org).values_list(
+                "user_id", flat=True
+            )
+        )
+
+        member_count = len(member_ids)
+        device_count = Device.objects.filter(context_id=org.id).count()
+        open_incident_count = Incident.objects.filter(
+            context_id=org.id, resolved=False
+        ).count()
+
+        # Average of members' current security scores (0 if no members).
+        if member_ids:
+            from django.contrib.auth import get_user_model
+
+            User = get_user_model()
+            scores = [
+                compute_security_score(u)
+                for u in User.objects.filter(pk__in=member_ids)
+            ]
+            security_score = round(sum(scores) / len(scores)) if scores else 0
+        else:
+            security_score = 0
+
+        # Recent activity: logins + incidents + devices in the org in 7 days.
+        since = timezone.now() - timedelta(days=7)
+        recent_logins = (
+            LoginEvent.objects.filter(
+                user_id__in=member_ids, timestamp__gte=since, success=True
+            ).count()
+            if member_ids
+            else 0
+        )
+        recent_incidents = Incident.objects.filter(
+            context_id=org.id, reported_at__gte=since
+        ).count()
+        recent_devices = Device.objects.filter(
+            context_id=org.id, last_reported__gte=since
+        ).count()
+        recent_activity = recent_logins + recent_incidents + recent_devices
+
+        return Response(
+            {
+                "organization": {
+                    "id": str(org.id),
+                    "name": org.name,
+                    "slug": org.slug,
+                },
+                "member_count": member_count,
+                "device_count": device_count,
+                "open_incident_count": open_incident_count,
+                "security_score": security_score,
+                "recent_activity": recent_activity,
+            }
+        )
 
     # ---- invitations --------------------------------------------------------
 

@@ -8,6 +8,9 @@ import { useAuth } from "../state/AuthContext"
 import { useLocale, useT } from "../design/LocaleProvider"
 import { useTheme } from "../design/ThemeProvider"
 import { useTokens } from "../design/tokens"
+import { useContext_ } from "../design/ContextProvider"
+import { ContextBadge } from "./ContextBadge"
+import { ContextSwitcher } from "./ContextSwitcher"
 
 export type HeaderProps = {
   /** Contextual page title, rendered at the start side. */
@@ -25,6 +28,7 @@ export function Header({ title }: HeaderProps) {
   const { theme, resolvedTheme, toggleTheme } = useTheme()
   const { toggleLocale, t, isRTL } = useLocale()
   const { user, logout } = useAuth()
+  const { contextId } = useContext_()
   const router = useRouter()
   const insets = useSafeAreaInsets()
 
@@ -152,6 +156,8 @@ export function Header({ title }: HeaderProps) {
           />
         </Pressable>
 
+        <ContextSwitcher />
+
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={t("header.toggleLocale")}
@@ -183,6 +189,12 @@ export function Header({ title }: HeaderProps) {
           </Text>
         </Pressable>
       </View>
+
+      {contextId ? (
+        <View style={{ paddingBottom: tokens.space[2] }}>
+          <ContextBadge />
+        </View>
+      ) : null}
 
       <Modal visible={menuOpen} transparent animationType="fade" onRequestClose={() => setMenuOpen(false)}>
         <Pressable

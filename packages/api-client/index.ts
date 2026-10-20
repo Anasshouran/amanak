@@ -71,9 +71,28 @@ import type {
   StaffSubscriptionRow,
   UpdateMeInput,
   UserExportResponse,
+  Organization,
+  OrganizationOverview,
 } from "@amanak/shared-types"
 
 export type { ApiError }
+
+/**
+ * Active tenant context (P18.1c2).
+ *
+ * `null` means the personal context. Every request carries an `X-Context-Id`
+ * header — `"personal"` is sent explicitly (rather than omitting the header) so
+ * the backend's `resolve_context` never falls back to a different default.
+ */
+let currentContextId: string | null = null
+
+export function setContextId(id: string | null): void {
+  currentContextId = id
+}
+
+export function getContextId(): string | null {
+  return currentContextId
+}
 
 export type TokenStore = {
   getAccessToken: () => Promise<string | null>
@@ -126,6 +145,9 @@ export class ApiClient {
     const access = await this.tokens.getAccessToken()
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
+      // Always sent: "personal" explicitly marks the personal context so the
+      // backend does not fall back to a different resolution (P18.1c2).
+      "X-Context-Id": currentContextId ?? "personal",
     }
     if (access) {
       headers.Authorization = `Bearer ${access}`
@@ -786,6 +808,16 @@ export class ApiClient {
       tickets_opened_per_day: Array<{ date: string; count: number }>
       tickets_closed_per_day: Array<{ date: string; count: number }>
     }>("GET", `/staff/metrics/${this._qs(params)}`)
+  }
+
+  // ---- organizations (P18.1c2) ----
+
+  listOrganizations() {
+    return this.request<Organization[]>("GET", "/organizations/")
+  }
+
+  getOrganizationOverview(id: string) {
+    return this.request<OrganizationOverview>("GET", `/organizations/${id}/overview/`)
   }
 
   listNotifications() {

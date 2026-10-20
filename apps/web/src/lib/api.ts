@@ -1,6 +1,21 @@
 import { ApiClient } from "@amanak/api-client"
 import { clearImpersonation, impersonationHeader } from "./impersonation"
 
+// Re-exported so callers import the context helpers from the app's api module
+// alongside `api` (P18.1c2).
+export { getContextId, setContextId } from "@amanak/api-client"
+
+// Initialize the tenant context before the first authenticated request fires
+// (AuthContext calls api.me() during mount; ContextProvider mounts later).
+if (typeof window !== "undefined") {
+  try {
+    const stored = window.localStorage.getItem("amanak.context")
+    setContextId(stored || null)
+  } catch {
+    /* ignore — non-browser or storage unavailable */
+  }
+}
+
 const BASE_URL =
   (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL ?? "http://127.0.0.1:8000"
 

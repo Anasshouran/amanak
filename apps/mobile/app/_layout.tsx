@@ -2,6 +2,7 @@ import { Stack } from "expo-router"
 import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { LocaleProvider } from "../src/design/LocaleProvider"
+import { ContextProvider } from "../src/design/ContextProvider"
 import { ThemeProvider, useTheme } from "../src/design/ThemeProvider"
 import { AuthProvider, useAuth } from "../src/state/AuthContext"
 import { registerForPush, setupNotificationTapHandler } from "../src/lib/push"
@@ -33,18 +34,20 @@ export default function RootLayout() {
       <ThemeProvider>
         <LocaleProvider>
           <AuthProvider>
-            <ThemedStatusBar />
-            <PushRegistrar />
-            <Stack>
-              {/* `/` is only an auth-aware redirect — no header over it. */}
-              <Stack.Screen name="index" options={{ headerShown: false }} />
-              <Stack.Screen name="welcome" options={{ title: "AMANAK أمانك" }} />
-              <Stack.Screen name="login" options={{ title: "Sign in" }} />
-              <Stack.Screen name="register" options={{ title: "Register" }} />
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              {/* Legacy `/vault` deep link → `/2fa` (P17.6b rename). */}
-              <Stack.Screen name="vault" options={{ headerShown: false }} />
-            </Stack>
+            <ContextProvider>
+              <ThemedStatusBar />
+              <PushRegistrar />
+              <Stack>
+                {/* `/` is only an auth-aware redirect — no header over it. */}
+                <Stack.Screen name="index" options={{ headerShown: false }} />
+                <Stack.Screen name="welcome" options={{ title: "AMANAK أمانك" }} />
+                <Stack.Screen name="login" options={{ title: "Sign in" }} />
+                <Stack.Screen name="register" options={{ title: "Register" }} />
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                {/* Legacy `/vault` deep link → `/2fa` (P17.6b rename). */}
+                <Stack.Screen name="vault" options={{ headerShown: false }} />
+              </Stack>
+            </ContextProvider>
           </AuthProvider>
         </LocaleProvider>
       </ThemeProvider>

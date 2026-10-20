@@ -319,6 +319,12 @@ CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = [o for o in os.environ.get("CORS_ORIGIN_WHITELIST", "").split(",") if o]
 CORS_ALLOWED_ORIGINS = [o for o in os.environ.get("CORS_ALLOWED_ORIGINS", "").split(",") if o]
+from corsheaders.defaults import default_headers
+
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "x-context-id",
+    "x-impersonate-user-id",
+]
 
 # Production environment marker. Only APP_ENV=production triggers the hardening
 # guard below; local development (default) and the test suite are unaffected.
@@ -477,6 +483,7 @@ REST_FRAMEWORK = {
         "org-read-user": "120/min",
         "org-write-user": "30/min",
         "org-invite-user": "10/hour",
+        "org-overview-user": "60/min",
     },
 }
 

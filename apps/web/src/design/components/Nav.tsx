@@ -236,6 +236,7 @@ export function Nav({
   user,
   onSignOut,
   showUpgrade = true,
+  inOrgContext = false,
 }: {
   staff?: boolean
   roles?: string[]
@@ -243,6 +244,8 @@ export function Nav({
   user?: { email: string; username?: string }
   onSignOut?: () => void
   showUpgrade?: boolean
+  /** Render the "Organization" entry when an org context is active (P18.1c2). */
+  inOrgContext?: boolean
 }) {
   const t = useT()
   const navigate = useNavigate()
@@ -329,6 +332,9 @@ export function Nav({
 
       <div className="amk-sidebar__nav">
         <div className="amk-navgroup">
+          {inOrgContext && (
+            <NavItem to="/org" labelKey="nav.organization" icon={IconUsers} />
+          )}
           {PERSONAL_LINKS.map(({ to, key, icon, end }) => (
             <NavItem key={to} to={to} labelKey={key} icon={icon} end={end} />
           ))}

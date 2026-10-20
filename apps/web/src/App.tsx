@@ -21,6 +21,7 @@ import { Pricing } from "./pages/Pricing"
 import { Billing } from "./pages/Billing"
 import { Settings } from "./pages/Settings"
 import { NotFound } from "./pages/NotFound"
+import { OrgDashboard } from "./pages/OrgDashboard"
 import { StaffRoute } from "./components/StaffRoute"
 import { StaffHome } from "./pages/StaffHome"
 import { StaffUsers } from "./pages/StaffUsers"
@@ -134,6 +135,7 @@ export function App() {
           }
         />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/org" element={<OrgDashboard />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>

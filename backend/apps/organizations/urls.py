@@ -45,6 +45,12 @@ urlpatterns = [
         ),
         name="organization-member-detail",
     ),
+    # Overview (P18.1c2)
+    path(
+        "<uuid:pk>/overview/",
+        OrganizationViewSet.as_view({"get": "overview"}),
+        name="organization-overview",
+    ),
     # Invitations
     path(
         "<uuid:pk>/invitations/",
