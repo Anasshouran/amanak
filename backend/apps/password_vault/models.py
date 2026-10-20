@@ -9,6 +9,10 @@ class PasswordVaultProfile(models.Model):
     master password, the derived key, or any plaintext credential.
     """
 
+    # Private: the vault is personal and must never be shared, even inside an
+    # organization context (P18.1c1, ADR-0017).
+    SHARING_MODE = "private"
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,

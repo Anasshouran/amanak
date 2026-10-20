@@ -6,21 +6,29 @@ from .serializers import DeviceSerializer
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
-    """Devices endpoints - user-level data isolation, scoped to the active
-    context (P18.1b)."""
+    """Devices endpoints.
+
+    Scoped to the active context. In organization context devices are
+    org-shared (``Device.SHARING_MODE == "org"``): every member of the
+    organization sees them (P18.1c1, ADR-0017).
+    """
 
     permission_classes = [IsAuthenticated]
     serializer_class = DeviceSerializer
 
     def get_queryset(self):
-        """Always filter by current user and the active context."""
-        from common.context import filter_by_context
+        """Filter by the current context and the resource's sharing mode."""
+        from common.context import filter_by_context_sharing
 
-        qs = Device.objects.filter(user=self.request.user)
-        return filter_by_context(qs, getattr(self.request, "context", None))
+        return filter_by_context_sharing(
+            Device.objects.all(),
+            getattr(self.request, "context", None),
+            Device.SHARING_MODE,
+            self.request.user,
+        )
 
     def perform_create(self, serializer):
-        """Set user and context on create."""
+        """Set the owning user and the active organization context."""
         ctx = getattr(self.request, "context", None)
         context_id = ctx.id if ctx and ctx.type == "organization" else None
         serializer.save(user=self.request.user, context_id=context_id)

@@ -5,6 +5,9 @@ from accounts.models import User
 class ScanResult(models.Model):
     """Immutable record of one scan. Never stores the raw input."""
 
+    # Org-shared: security findings benefit the whole team (P18.1c1, ADR-0017).
+    SHARING_MODE = "org"
+
     KIND_URL = "url"
     KIND_MESSAGE = "message"
     KIND_CHOICES = [(KIND_URL, "url"), (KIND_MESSAGE, "message")]

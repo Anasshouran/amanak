@@ -5,6 +5,10 @@ from accounts.models import User
 class Device(models.Model):
     """Model for devices reported by the user."""
 
+    # Org-shared: every member of the organization sees the org's devices
+    # (P18.1c1, ADR-0017).
+    SHARING_MODE = "org"
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="devices")
     device_name = models.CharField(max_length=200)
     device_type = models.CharField(max_length=100, blank=True)

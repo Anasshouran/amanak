@@ -61,10 +61,11 @@ class PasswordVaultProfileSerializer(serializers.ModelSerializer):
             "kdf_algorithm",
             "verification_ciphertext",
             "verification_iv",
+            "context_id",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "kdf_iterations", "kdf_algorithm", "created_at", "updated_at"]
+        read_only_fields = ["id", "kdf_iterations", "kdf_algorithm", "context_id", "created_at", "updated_at"]
 
     def validate_kdf_salt(self, value):
         if len(value) != 32:

@@ -50,7 +50,21 @@ class PasswordVaultViewSet(viewsets.ViewSet):
         return [cls()] if cls else []
 
     def _profile_or_none(self):
-        return getattr(self.request.user, "password_vault_profile", None)
+        """Return the caller's vault profile, enforcing private sharing.
+
+        ``PasswordVaultProfile.SHARING_MODE == "private"`` (ADR-0017): the
+        vault is personal and never shared, even inside an organization
+        context. The helper is applied explicitly so the guarantee is not just
+        an implicit artifact of the ``user`` reverse accessor.
+        """
+        from common.context import filter_by_context_sharing
+
+        return filter_by_context_sharing(
+            PasswordVaultProfile.objects.all(),
+            getattr(self.request, "context", None),
+            PasswordVaultProfile.SHARING_MODE,
+            self.request.user,
+        ).first()
 
     # ---- profile ----
 

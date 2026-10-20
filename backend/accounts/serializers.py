@@ -122,10 +122,47 @@ class AccountSerializer(serializers.ModelSerializer):
     Serializer for a user's own account metadata.
 
     Explicitly excludes any secret-bearing fields. Only service_name,
-    username and notes are accepted.
+    username and notes are accepted. ``context_id`` is read-only (set by the
+    view from the active context); ``sharing`` is writable and lets the
+    creator publish an org account to the whole organization (P18.1c1).
     """
 
     class Meta:
         model = Account
-        fields = ["id", "service_name", "username", "notes", "created_at", "updated_at"]
-        read_only_fields = ["id", "created_at", "updated_at", "user"]
+        fields = [
+            "id",
+            "service_name",
+            "username",
+            "notes",
+            "context_id",
+            "sharing",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "context_id", "created_at", "updated_at", "user"]
+
+    def validate_sharing(self, value):
+        if value not in ("private", "org"):
+            raise serializers.ValidationError("sharing must be 'private' or 'org'.")
+        return value
+
+    def validate(self, attrs):
+        # An account can only be shared with the organization if it is being
+        # created/updated inside an organization context. The view attaches
+        # the resolved context to the request.
+        request = self.context.get("request")
+        context = getattr(request, "context", None) if request is not None else None
+        sharing = attrs.get("sharing", getattr(self.instance, "sharing", "private"))
+        if sharing == "org":
+            in_org_context = context is not None and context.type == "organization"
+            # On update the row already has a context; allow sharing changes
+            # there too.
+            has_context = bool(
+                (self.instance is not None and self.instance.context_id)
+                or in_org_context
+            )
+            if not has_context:
+                raise serializers.ValidationError(
+                    {"sharing": "sharing='org' requires an organization context."}
+                )
+        return attrs

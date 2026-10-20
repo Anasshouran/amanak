@@ -7,5 +7,5 @@ class DeviceSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Device
-        fields = ["id", "device_name", "device_type", "platform", "last_reported", "notes"]
-        read_only_fields = ["id", "last_reported", "user"]
+        fields = ["id", "device_name", "device_type", "platform", "context_id", "last_reported", "notes"]
+        read_only_fields = ["id", "context_id", "last_reported", "user"]

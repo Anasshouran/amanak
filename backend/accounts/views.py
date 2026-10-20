@@ -385,21 +385,26 @@ def me_export_download(request, token):
 
 
 class AccountViewSet(viewsets.ModelViewSet):
-    """User's own accounts, scoped to the active context (P18.1b).
+    """User's own accounts, scoped to the active context (P18.1b/P18.1c1).
 
-    Personal context → rows with ``context_id IS NULL``; organization context
-    → rows belonging to that organization. A caller can never see the other
-    context's rows in one request.
+    Personal context → rows with ``context_id IS NULL``. Organization context
+    → the caller's own rows plus any row they explicitly shared with the org
+    (``sharing="org"``); see ``Account.SHARING_MODE == "configurable"`` and
+    ADR-0017.
     """
 
     serializer_class = AccountSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        from common.context import filter_by_context
+        from common.context import filter_by_context_sharing
 
-        qs = Account.objects.filter(user=self.request.user)
-        return filter_by_context(qs, getattr(self.request, "context", None))
+        return filter_by_context_sharing(
+            Account.objects.all(),
+            getattr(self.request, "context", None),
+            Account.SHARING_MODE,
+            self.request.user,
+        )
 
     def perform_create(self, serializer):
         ctx = getattr(self.request, "context", None)

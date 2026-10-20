@@ -3,6 +3,10 @@ from accounts.models import User
 
 
 class TwoFactorProfile(models.Model):
+    # Private: 2FA secrets are personal and must never be shared, even inside
+    # an organization context (P18.1c1, ADR-0017).
+    SHARING_MODE = "private"
+
     user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,

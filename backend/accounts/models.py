@@ -40,6 +40,10 @@ class Account(models.Model):
     such as the service name, the username used there, and free-form notes.
     """
 
+    # Sharing is per-row for Accounts: the creator chooses whether an org
+    # account is visible to the whole organization (P18.1c1, ADR-0017).
+    SHARING_MODE = "configurable"
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="accounts")
     service_name = models.CharField(max_length=200)
     username = models.CharField(max_length=200, blank=True)
@@ -50,6 +54,12 @@ class Account(models.Model):
         blank=True,
         db_index=True,
         help_text="NULL = personal context; UUID = organization context",
+    )
+    sharing = models.CharField(
+        max_length=16,
+        choices=[("private", "Private"), ("org", "Organization")],
+        default="private",
+        help_text="Private: only creator sees. Org: all org members see.",
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

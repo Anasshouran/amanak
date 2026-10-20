@@ -13,7 +13,8 @@ class IncidentSerializer(serializers.ModelSerializer):
             "description",
             "incident_type",
             "severity",
+            "context_id",
             "reported_at",
             "resolved",
         ]
-        read_only_fields = ["id", "reported_at", "user"]
+        read_only_fields = ["id", "context_id", "reported_at", "user"]

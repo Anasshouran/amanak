@@ -12,10 +12,11 @@ class MonitoredEmailSerializer(serializers.ModelSerializer):
             "label",
             "is_active",
             "consent_given_at",
+            "context_id",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "consent_given_at", "created_at", "updated_at"]
+        read_only_fields = ["id", "consent_given_at", "context_id", "created_at", "updated_at"]
 
 
 class AddMonitoredEmailSerializer(serializers.Serializer):

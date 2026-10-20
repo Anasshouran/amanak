@@ -5,6 +5,9 @@ from accounts.models import User
 class Incident(models.Model):
     """Model for user-reported incidents."""
 
+    # Org-shared: incidents are team-wide (P18.1c1, ADR-0017).
+    SHARING_MODE = "org"
+
     SEVERITY_LOW = "low"
     SEVERITY_MEDIUM = "medium"
     SEVERITY_HIGH = "high"

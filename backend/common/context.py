@@ -81,7 +81,48 @@ def filter_by_context(qs, context: Optional[Context]):
 
     - ``None`` or personal → ``context_id IS NULL``
     - organization → ``context_id = context.id``
+
+    Kept for backwards compatibility (P18.1b). New code should prefer
+    :func:`filter_by_context_sharing`, which also respects each resource's
+    sharing mode.
     """
     if context is None or context.type == "personal":
         return qs.filter(context_id__isnull=True)
     return qs.filter(context_id=context.id)
+
+
+def filter_by_context_sharing(
+    qs, context: Optional[Context], sharing_mode: str, user
+):
+    """Scope a queryset to the active context, honouring ``sharing_mode`` (P18.1c1).
+
+    - personal context → ``filter(user=user, context_id IS NULL)``
+    - org context + ``"private"`` → ``filter(user=user, context_id=context.id)``
+      (owner-only even inside the organization)
+    - org context + ``"org"`` → ``filter(context_id=context.id)`` (all members)
+    - org context + ``"configurable"`` → owner's rows plus rows this owner
+      explicitly shared with the org (``sharing="org"``).
+
+    ``"private"`` and ``"org"`` are the fixed modes from ADR-0017; the
+    ``"configurable"`` mode is only used by resources with a per-row
+    ``sharing`` field (currently ``Account``).
+    """
+    from django.db.models import Q
+
+    if context is None or context.type == "personal":
+        return qs.filter(user=user, context_id__isnull=True)
+
+    if sharing_mode == "private":
+        return qs.filter(user=user, context_id=context.id)
+
+    if sharing_mode == "org":
+        return qs.filter(context_id=context.id)
+
+    if sharing_mode == "configurable":
+        return qs.filter(
+            Q(user=user, context_id=context.id)
+            | Q(context_id=context.id, sharing="org")
+        )
+
+    raise ValueError(f"unknown sharing_mode: {sharing_mode}")
+

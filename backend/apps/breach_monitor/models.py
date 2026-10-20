@@ -15,6 +15,10 @@ from accounts.models import User
 class MonitoredEmail(models.Model):
     """A user's explicitly consented, owner-scoped email address."""
 
+    # Private: an email address is personal PII, never org-shared even inside
+    # an organization (P18.1c1, ADR-0017).
+    SHARING_MODE = "private"
+
     user = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="monitored_emails"
     )

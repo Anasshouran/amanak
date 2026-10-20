@@ -63,7 +63,14 @@ class BreachViewSet(viewsets.ViewSet):
     def list(self, request):
         if not settings.BREACH_MONITOR_ENABLED:
             return Response([])
-        qs = MonitoredEmail.objects.filter(user=request.user).order_by("-created_at")
+        from common.context import filter_by_context_sharing
+
+        qs = filter_by_context_sharing(
+            MonitoredEmail.objects.all(),
+            getattr(request, "context", None),
+            MonitoredEmail.SHARING_MODE,
+            request.user,
+        ).order_by("-created_at")
         return Response(MonitoredEmailSerializer(qs, many=True).data)
 
     # POST /api/v1/breach/monitored-emails/

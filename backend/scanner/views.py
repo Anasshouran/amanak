@@ -58,6 +58,8 @@ class ScanViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        ctx = getattr(request, "context", None)
+        context_id = ctx.id if ctx and ctx.type == "organization" else None
         result = ScanResult.objects.create(
             user=request.user,
             kind=kind,
@@ -66,6 +68,7 @@ class ScanViewSet(viewsets.ViewSet):
             matches=payload["matches"],
             ruleset_version=payload["ruleset_version"],
             preview=redacted_preview(sanitized),
+            context_id=context_id,
         )
         payload["id"] = result.id
         consume(request.user, "scans", amount=1)
@@ -81,5 +84,12 @@ class ScanViewSet(viewsets.ViewSet):
 
     @action(methods=["get"], detail=False, url_path="history")
     def history(self, request):
-        qs = ScanResult.objects.filter(user=request.user).order_by("-created_at")
+        from common.context import filter_by_context_sharing
+
+        qs = filter_by_context_sharing(
+            ScanResult.objects.all(),
+            getattr(request, "context", None),
+            ScanResult.SHARING_MODE,
+            request.user,
+        ).order_by("-created_at")
         return Response(ScanResultSerializer(qs, many=True).data)

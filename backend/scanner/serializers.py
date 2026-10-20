@@ -25,5 +25,5 @@ class ScanResponseSerializer(serializers.Serializer):
 class ScanResultSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScanResult
-        fields = ["id", "kind", "verdict", "score", "matches", "ruleset_version", "preview", "created_at"]
+        fields = ["id", "kind", "verdict", "score", "matches", "ruleset_version", "preview", "context_id", "created_at"]
         read_only_fields = fields

@@ -56,7 +56,21 @@ class TwoFactorViewSet(viewsets.ViewSet):
         return [cls()] if cls else []
 
     def _profile_or_none(self):
-        return getattr(self.request.user, "two_factor_profile", None)
+        """Return the caller's 2FA profile, enforcing private sharing.
+
+        ``TwoFactorProfile.SHARING_MODE == "private"`` (ADR-0017): even inside
+        an organization context the profile is scoped to the caller. The
+        helper is applied explicitly so the guarantee is not just an implicit
+        artifact of the ``user`` reverse accessor.
+        """
+        from common.context import filter_by_context_sharing
+
+        return filter_by_context_sharing(
+            TwoFactorProfile.objects.all(),
+            getattr(self.request, "context", None),
+            TwoFactorProfile.SHARING_MODE,
+            self.request.user,
+        ).first()
 
     # ---- profile ----
 
