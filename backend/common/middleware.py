@@ -47,6 +47,38 @@ def _resolve_authenticated_user(request):
     return user
 
 
+class ContextMiddleware:
+    """Resolve ``X-Context-Id`` and attach the active context to the request (P18.1b).
+
+    Runs after ``AuthenticationMiddleware``. Because DRF authenticates bearer
+    tokens *inside* the view, we also resolve the token here (like
+    ``BlockedUserMiddleware``) so an organization context can be validated
+    against the real caller.
+
+    - Missing header → ``request.context = Context("personal", None)``
+    - Valid org header (live membership) → organization context
+    - Invalid UUID / not a member → ``PermissionDenied`` → 403
+    """
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        from django.core.exceptions import PermissionDenied
+
+        from common.context import resolve_context
+
+        # Make the real user available before resolving the context.
+        _resolve_authenticated_user(request)
+        try:
+            request.context = resolve_context(request)
+        except PermissionDenied:
+            # Let DRF/Django render this as a 403 on API paths.
+            raise
+
+        return self.get_response(request)
+
+
 class BlockedUserMiddleware:
     """Reject requests from moderation-blocked accounts with 403.
 

@@ -25,6 +25,13 @@ class ScanResult(models.Model):
     matches = models.JSONField(default=list)
     ruleset_version = models.CharField(max_length=32)
     preview = models.CharField(max_length=210, blank=True)
+    # NULL = personal context; UUID = organization context (P18.1b).
+    context_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = personal context; UUID = organization context",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

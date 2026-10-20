@@ -23,6 +23,13 @@ class Incident(models.Model):
     severity = models.CharField(
         max_length=16, choices=SEVERITY_CHOICES, default=SEVERITY_LOW
     )
+    # NULL = personal context; UUID = organization context (P18.1b).
+    context_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = personal context; UUID = organization context",
+    )
     reported_at = models.DateTimeField(auto_now_add=True)
     resolved = models.BooleanField(default=False)
 

@@ -11,6 +11,13 @@ class TwoFactorProfile(models.Model):
     kdf_salt = models.BinaryField(max_length=32)
     kdf_iterations = models.PositiveIntegerField(default=310_000)
     kdf_algorithm = models.CharField(max_length=32, default="PBKDF2-SHA256")
+    # NULL = personal context; UUID = organization context (P18.1b).
+    context_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = personal context; UUID = organization context",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

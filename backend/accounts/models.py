@@ -44,6 +44,13 @@ class Account(models.Model):
     service_name = models.CharField(max_length=200)
     username = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
+    # NULL = personal context; UUID = organization context (P18.1b).
+    context_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = personal context; UUID = organization context",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

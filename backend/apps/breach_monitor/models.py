@@ -22,6 +22,13 @@ class MonitoredEmail(models.Model):
     label = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
     consent_given_at = models.DateTimeField()
+    # NULL = personal context; UUID = organization context (P18.1b).
+    context_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = personal context; UUID = organization context",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

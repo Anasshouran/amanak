@@ -338,3 +338,45 @@ password (PBKDF2, `extractable=true`) to wrap fresh codes. This is correct for
 the current design (K is deterministic from password + salt) but means the user
 must be able to type the master password while unlocked. A future improvement
 could wrap codes against the in-memory K instead.
+
+## P18.1b — Resource sharing semantics deferred to P18.1c
+
+Current behavior: even in org context, rows stay filtered by
+`user=request.user`. Two members of the same org cannot see each
+other's resources.
+
+This is correct per P18.1b spec, but P18.1c must decide:
+
+- Which resource types are org-shared (e.g., Devices, Incidents)?
+- Which stay user-scoped within org (e.g., Password Vault, 2FA)?
+
+Recommendation: add a `sharing` field per resource type:
+- `private`: only creator sees (default for Vault, 2FA)
+- `org`: all org members see (default for Devices, Incidents)
+- `configurable`: owner chooses per row (Account)
+
+This decision MUST precede P18.3 (Members/Invites UI) because the UI
+must show what members can see.
+
+## P18.1b — context_id not exposed in serializers
+
+`Account`/`Device` serializers do not echo `context_id`, so API clients
+cannot tell which context a returned row belongs to. This was not
+required by the P18.1b spec, but P18.1c will need it for:
+
+- the context switcher UI (showing "this resource is in org X"), and
+- the org dashboard (grouping/counting by context).
+
+Not a blocker now; expose it when P18.1c adds the context UI.
+
+## P18.1b — add context-switching data-integrity test in P18.1c
+
+Test coverage currently has 10 context tests + 7 isolation tests, but no
+test that repeatedly switches `X-Context-Id` on a single session and
+asserts each list is exactly the right set. Add in P18.1c:
+
+    test_context_switching_preserves_data
+      - User creates 2 personal + 2 org accounts
+      - Switches X-Context-Id multiple times
+      - Each list returns correct set
+      - No leakage across switches

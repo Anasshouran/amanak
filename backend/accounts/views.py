@@ -385,16 +385,26 @@ def me_export_download(request, token):
 
 
 class AccountViewSet(viewsets.ModelViewSet):
-    """User's own accounts. Strictly scoped to request.user."""
+    """User's own accounts, scoped to the active context (P18.1b).
+
+    Personal context → rows with ``context_id IS NULL``; organization context
+    → rows belonging to that organization. A caller can never see the other
+    context's rows in one request.
+    """
 
     serializer_class = AccountSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return Account.objects.filter(user=self.request.user)
+        from common.context import filter_by_context
+
+        qs = Account.objects.filter(user=self.request.user)
+        return filter_by_context(qs, getattr(self.request, "context", None))
 
     def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+        ctx = getattr(self.request, "context", None)
+        context_id = ctx.id if ctx and ctx.type == "organization" else None
+        serializer.save(user=self.request.user, context_id=context_id)
 
 
 def _device_label(ua: str) -> str:

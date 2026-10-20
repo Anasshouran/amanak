@@ -9,6 +9,13 @@ class Device(models.Model):
     device_name = models.CharField(max_length=200)
     device_type = models.CharField(max_length=100, blank=True)
     platform = models.CharField(max_length=50, blank=True)  # iOS, Android, Web
+    # NULL = personal context; UUID = organization context (P18.1b).
+    context_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = personal context; UUID = organization context",
+    )
     last_reported = models.DateTimeField(auto_now=True)
     notes = models.TextField(blank=True)
 

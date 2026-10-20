@@ -153,6 +153,9 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    # Resolve the active tenant context (X-Context-Id) right after auth so
+    # every downstream middleware and view sees request.context (P18.1b).
+    "common.middleware.ContextMiddleware",
     # Must run after AuthenticationMiddleware. Resolves bearer tokens so
     # blocked users are rejected on token-first API calls (DRF authenticates
     # inside the view, after middleware) and so staff views see request.user.

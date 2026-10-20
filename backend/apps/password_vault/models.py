@@ -23,6 +23,13 @@ class PasswordVaultProfile(models.Model):
     # reject a wrong master password.
     verification_ciphertext = models.BinaryField()
     verification_iv = models.BinaryField(max_length=12)
+    # NULL = personal context; UUID = organization context (P18.1b).
+    context_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="NULL = personal context; UUID = organization context",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
