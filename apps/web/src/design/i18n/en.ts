@@ -949,6 +949,7 @@ export const en: Record<string, string> = {
   "security.alerts.reason.new_device": "New device",
   "security.alerts.reason.multiple_failed_attempts": "Multiple failed attempts",
   "security.alerts.wasnt_me": "This wasn't me",
+  "security.alerts.wasnt_me_confirm": "Confirm",
   "security.alerts.mark_read": "Mark read",
   "security.alerts.empty": "No alerts",
   "security.dashboard.alert_title": "Suspicious activity detected",

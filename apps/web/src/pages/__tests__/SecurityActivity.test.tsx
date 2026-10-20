@@ -44,6 +44,8 @@ describe("SecurityActivity", () => {
     )
     const btn = await screen.findByRole("button", { name: /Revoke all other sessions/i })
     fireEvent.click(btn)
+    const confirm = await screen.findByRole("button", { name: /Confirm/i })
+    fireEvent.click(confirm)
     // revokeAllSessions is invoked (may trigger navigation; ignore)
     await new Promise((r) => setTimeout(r, 50))
     expect(apiMock.revokeAllSessions).toHaveBeenCalled()

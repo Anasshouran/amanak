@@ -329,3 +329,29 @@ test("captures the P17.8a awareness redesign", async ({ page }) => {
   await page.waitForTimeout(800)
   await page.screenshot({ path: resolve(OUT_DIR, "awareness-badges-dark-en.png"), fullPage: true })
 })
+
+test("captures the P19.1b security activity polish", async ({ page }) => {
+  test.setTimeout(180_000)
+  await mkdir(OUT_DIR, { recursive: true })
+
+  await page.goto("/")
+  await setThemeLocale(page, "light", "en")
+  await registerUser(page, testUser())
+  await setThemeLocale(page, "light", "ar")
+
+  // sessions
+  await gotoApp(page, "/security")
+  await page.waitForTimeout(600)
+  await page.screenshot({ path: resolve(OUT_DIR, "security-sessions-light-ar.png"), fullPage: true })
+
+  // alerts (switch tab)
+  await page.getByRole("tab", { name: /التنبيهات|Alerts/i }).first().click().catch(() => {})
+  await page.waitForTimeout(400)
+  await page.screenshot({ path: resolve(OUT_DIR, "security-alerts-light-ar.png"), fullPage: true })
+
+  // dark en
+  await setThemeLocale(page, "dark", "en")
+  await page.reload({ waitUntil: "domcontentloaded" })
+  await page.waitForTimeout(800)
+  await page.screenshot({ path: resolve(OUT_DIR, "security-activity-dark-en.png"), fullPage: true })
+})

@@ -19,6 +19,9 @@ test("security activity: revoke all logs out", async ({ page }) => {
   const revokeBtn = page.getByRole("button", { name: /Revoke all/i })
   if (await revokeBtn.isVisible()) {
     await revokeBtn.click()
+    const confirmBtn = page.getByRole("button", { name: /Confirm/i })
+    await confirmBtn.waitFor({ state: "visible", timeout: 5000 })
+    await confirmBtn.click()
     await waitForApiIdle(page)
     await expect(page).toHaveURL(/\/login$/)
   }

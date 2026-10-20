@@ -949,6 +949,7 @@ export const ar: Record<string, string> = {
   "security.alerts.reason.new_device": "جهاز جديد",
   "security.alerts.reason.multiple_failed_attempts": "محاولات فاشلة متعددة",
   "security.alerts.wasnt_me": "لم أكن أنا",
+  "security.alerts.wasnt_me_confirm": "تأكيد",
   "security.alerts.mark_read": "تحديد كمقروء",
   "security.alerts.empty": "لا توجد تنبيهات",
   "security.dashboard.alert_title": "نشاط مشبوه مكتشف",
