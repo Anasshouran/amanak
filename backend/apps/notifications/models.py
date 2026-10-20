@@ -55,3 +55,29 @@ class NotificationPreferences(models.Model):
     def __str__(self):
         return f"notification-preferences[user={self.user_id}]"
 
+
+
+class DevicePushToken(models.Model):
+    """Expo push token for a user's device (P20.1)."""
+
+    PLATFORM_CHOICES = [("ios", "iOS"), ("android", "Android"), ("web", "Web")]
+
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="push_tokens"
+    )
+    token = models.CharField(max_length=255)
+    platform = models.CharField(max_length=16, choices=PLATFORM_CHOICES)
+    device_id = models.CharField(max_length=64, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("user", "token")]
+        indexes = [
+            models.Index(fields=["user", "is_active"]),
+            models.Index(fields=["token"]),
+        ]
+
+    def __str__(self):
+        return f"push-token[{self.id}] user={self.user_id} {self.platform}"

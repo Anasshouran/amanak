@@ -178,6 +178,46 @@ paths:
         "410":
           description: Token already used or expired
 
+  /me/push-tokens/:
+    get:
+      summary: List the caller's active push tokens
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PushToken"
+    post:
+      summary: Register a push token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushTokenInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushToken"
+
+  /me/push-tokens/{id}/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    delete:
+      summary: Deactivate a push token
+      responses:
+        "204":
+          description: Deactivated
+
   /me/sessions/:
     get:
       summary: List the caller's active sessions
@@ -1103,6 +1143,23 @@ components:
             timestamp: { type: string, format: date-time }
             ip: { type: string, nullable: true }
             device: { type: string }
+
+    PushToken:
+      type: object
+      properties:
+        id: { type: integer }
+        token: { type: string }
+        platform: { type: string, enum: [ios, android, web] }
+        device_id: { type: string }
+        is_active: { type: boolean }
+
+    PushTokenInput:
+      type: object
+      required: [token, platform]
+      properties:
+        token: { type: string }
+        platform: { type: string, enum: [ios, android, web] }
+        device_id: { type: string }
 
     AuthTokens:
       type: object

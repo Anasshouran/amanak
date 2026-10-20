@@ -12,3 +12,14 @@ class NotifPrefsUserRateThrottle(SimpleRateThrottle):
         else:
             ident = self.get_ident(request)
         return self.cache_format % {"scope": self.scope, "ident": ident}
+
+
+class PushTokensUserRateThrottle(SimpleRateThrottle):
+    scope = "push-tokens-user"
+
+    def get_cache_key(self, request, view):
+        if request.user and getattr(request.user, "is_authenticated", False):
+            ident = f"user:{request.user.pk}"
+        else:
+            ident = self.get_ident(request)
+        return self.cache_format % {"scope": self.scope, "ident": ident}

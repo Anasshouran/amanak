@@ -110,6 +110,8 @@ ME_EXPORT_RATE = _resolve_throttle_rate(
     DEBUG, os.environ.get("ME_EXPORT_THROTTLE_RATE"), "5/hour"
 )
 
+PUSH_ENABLED = os.environ.get("PUSH_ENABLED", "false").lower() == "true"
+
 ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "*").split(",") if os.environ.get("DJANGO_ALLOWED_HOSTS") else ["*"]
 
 
@@ -463,6 +465,7 @@ REST_FRAMEWORK = {
         "dashboard-history-user": "60/min",
         "me_update_user": ME_UPDATE_RATE,
         "notif_prefs_user": NOTIF_PREFS_RATE,
+        "push-tokens-user": "30/min",
         "me_export_user": ME_EXPORT_RATE,
         "compromise-read-user": "60/min",
         "compromise-write-user": "10/min",

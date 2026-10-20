@@ -270,6 +270,19 @@ export class ApiClient {
     return this.request<Record<string, unknown>>("GET", `/me/export/${token}/`)
   }
 
+  // ---- push notifications (P20.1) ----
+  registerPushToken(input: { token: string; platform: string; device_id?: string }) {
+    return this.request<{ id: number; token: string }>("POST", "/me/push-tokens/", input)
+  }
+
+  unregisterPushToken(id: number) {
+    return this.request<null>("DELETE", `/me/push-tokens/${id}/`)
+  }
+
+  listPushTokens() {
+    return this.request<any[]>("GET", "/me/push-tokens/")
+  }
+
   // ---- account compromise detection (P19.1) ----
   getSessions() {
     return this.request<any[]>("GET", "/me/sessions/")

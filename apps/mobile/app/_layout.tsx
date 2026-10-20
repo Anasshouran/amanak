@@ -3,12 +3,28 @@ import { StatusBar } from "expo-status-bar"
 import { SafeAreaProvider } from "react-native-safe-area-context"
 import { LocaleProvider } from "../src/design/LocaleProvider"
 import { ThemeProvider, useTheme } from "../src/design/ThemeProvider"
-import { AuthProvider } from "../src/state/AuthContext"
+import { AuthProvider, useAuth } from "../src/state/AuthContext"
+import { registerForPush, setupNotificationTapHandler } from "../src/lib/push"
+import { useRouter } from "expo-router"
+import { useEffect } from "react"
 
 /** Status bar tint follows the active theme rather than a hardcoded colour. */
 function ThemedStatusBar() {
   const { theme } = useTheme()
   return <StatusBar style={theme === "dark" ? "light" : "dark"} />
+}
+
+
+function PushRegistrar() {
+  const { user } = useAuth()
+  const router = useRouter()
+  useEffect(() => {
+    if (user) {
+      void registerForPush()
+    }
+    setupNotificationTapHandler((path: string) => router.push(path as any))
+  }, [user, router])
+  return null
 }
 
 export default function RootLayout() {
@@ -18,6 +34,7 @@ export default function RootLayout() {
         <LocaleProvider>
           <AuthProvider>
             <ThemedStatusBar />
+            <PushRegistrar />
             <Stack>
               {/* `/` is only an auth-aware redirect — no header over it. */}
               <Stack.Screen name="index" options={{ headerShown: false }} />

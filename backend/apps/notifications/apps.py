@@ -6,3 +6,9 @@ class NotificationsConfig(AppConfig):
     name = "apps.notifications"
     label = "notifications"
     verbose_name = "Notifications"
+
+    def ready(self):
+        try:
+            import apps.notifications.signals_push  # noqa: F401
+        except Exception:
+            pass

@@ -9,13 +9,13 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
-from rest_framework import serializers
+from rest_framework import serializers, status
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from .models import InAppNotification, NotificationPreferences
-from .throttles import NotifPrefsUserRateThrottle
+from .models import DevicePushToken, InAppNotification, NotificationPreferences
+from .throttles import NotifPrefsUserRateThrottle, PushTokensUserRateThrottle
 
 RECENT_LIMIT = 50
 
@@ -127,3 +127,55 @@ def notification_preferences(request):
             setattr(preferences, field, serializer.validated_data[field])
         preferences.save(update_fields=updated + ["updated_at"])
     return Response(_preferences_payload(preferences))
+
+
+# ---------------------------------------------------------------------------
+# Device push tokens (P20.1)
+# ---------------------------------------------------------------------------
+
+
+class PushTokenSerializer(serializers.Serializer):
+    token = serializers.CharField(max_length=255)
+    platform = serializers.ChoiceField(choices=["ios", "android", "web"])
+    device_id = serializers.CharField(required=False, allow_blank=True, max_length=64)
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([PushTokensUserRateThrottle])
+def push_tokens(request):
+    if request.method == "GET":
+        qs = DevicePushToken.objects.filter(user=request.user, is_active=True)
+        return Response(
+            [{"id": t.id, "token": t.token, "platform": t.platform, "device_id": t.device_id, "is_active": t.is_active} for t in qs]
+        )
+    serializer = PushTokenSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    token_val = serializer.validated_data["token"]
+    platform = serializer.validated_data["platform"]
+    device_id = serializer.validated_data.get("device_id", "")
+    obj, created = DevicePushToken.objects.get_or_create(
+        user=request.user,
+        token=token_val,
+        defaults={"platform": platform, "device_id": device_id, "is_active": True},
+    )
+    if not created:
+        obj.platform = platform
+        obj.device_id = device_id or obj.device_id
+        obj.is_active = True
+        obj.save(update_fields=["platform", "device_id", "is_active", "last_used_at"])
+    return Response({"id": obj.id, "token": obj.token}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([PushTokensUserRateThrottle])
+def push_token_detail(request, token_id):
+    obj = DevicePushToken.objects.filter(pk=token_id, user=request.user).first()
+    if obj is None:
+        from rest_framework.exceptions import NotFound
+
+        raise NotFound("not_found")
+    obj.is_active = False
+    obj.save(update_fields=["is_active", "last_used_at"])
+    return Response(status=status.HTTP_204_NO_CONTENT)
