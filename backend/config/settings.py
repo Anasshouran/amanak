@@ -144,6 +144,7 @@ INSTALLED_APPS = [
     "apps.awareness",
     "apps.billing",
     "apps.staff",
+    "apps.organizations",
 ]
 
 MIDDLEWARE = [
@@ -470,6 +471,9 @@ REST_FRAMEWORK = {
         "me_export_user": ME_EXPORT_RATE,
         "compromise-read-user": "60/min",
         "compromise-write-user": "10/min",
+        "org-read-user": "120/min",
+        "org-write-user": "30/min",
+        "org-invite-user": "10/hour",
     },
 }
 
