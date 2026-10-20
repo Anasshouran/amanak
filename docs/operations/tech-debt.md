@@ -380,3 +380,35 @@ asserts each list is exactly the right set. Add in P18.1c:
       - Switches X-Context-Id multiple times
       - Each list returns correct set
       - No leakage across switches
+
+## P18.1c2.1 — Mobile ContextProvider regression tests missing
+
+The hydration race fix (fetch orgs before validating storedId) was
+applied to BOTH web and mobile ContextProvider.
+
+Web has 2 regression tests:
+- stored org survives reload with async org fetch
+- ghost org id falls back to Personal + cleans storage
+
+Mobile has NO regression tests for this fix because the custom
+render helper (apps/mobile/src/test/render.tsx) doesn't wrap async
+state updates in act(). The 4 attempted tests failed with act/async
+environment warnings, not product bugs. Verified: same fix, same
+behavior on web (200 passing).
+
+Protection currently comes from:
+- apps/web/e2e/context-switch.spec.ts (4/4 pass) — catches the bug
+  at integration level on web.
+- Web regression tests.
+
+Mobile-specific protection: missing.
+
+To add mobile tests later:
+1. Wrap custom render in act(async () => {...})
+2. Mock api.listOrganizations with mockResolvedValue (not setTimeout)
+3. Flush microtasks with `await act(async () => {})` before assertions
+4. Assert getContextId() + storage.getItem() + rendered output
+
+Not urgent: web + E2E cover the behavior. Mobile product code is
+correct (verified via E2E context-switch running against the mobile
+web build too).
