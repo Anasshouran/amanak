@@ -178,6 +178,74 @@ paths:
         "410":
           description: Token already used or expired
 
+  /me/sessions/:
+    get:
+      summary: List the caller's active sessions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionInfo"
+
+  /me/sessions/revoke-all/:
+    post:
+      summary: Revoke all of the caller's sessions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked: { type: integer }
+
+  /me/activity/:
+    get:
+      summary: Login history for the caller
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LoginEventInfo"
+
+  /me/alerts/:
+    get:
+      summary: Unread session alerts for the caller
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SessionAlertInfo"
+
+  /me/alerts/{id}/read/:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    post:
+      summary: Mark a session alert as read
+      responses:
+        "200":
+          description: OK
+
   /dashboard/:
     get:
       summary: Dashboard overview counts and score
@@ -1003,6 +1071,38 @@ components:
         token: { type: string }
         download_url: { type: string }
         expires_at: { type: string, format: date-time }
+
+    SessionInfo:
+      type: object
+      properties:
+        jti: { type: string }
+        created_at: { type: string, format: date-time }
+        last_used: { type: string, format: date-time }
+        device: { type: string }
+        current: { type: boolean }
+
+    LoginEventInfo:
+      type: object
+      properties:
+        timestamp: { type: string, format: date-time }
+        ip: { type: string, nullable: true }
+        device: { type: string }
+        success: { type: boolean }
+        suspicious: { type: boolean }
+        reasons: { type: array, items: { type: string } }
+
+    SessionAlertInfo:
+      type: object
+      properties:
+        id: { type: integer }
+        reasons: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+        event:
+          type: object
+          properties:
+            timestamp: { type: string, format: date-time }
+            ip: { type: string, nullable: true }
+            device: { type: string }
 
     AuthTokens:
       type: object

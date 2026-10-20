@@ -464,6 +464,8 @@ REST_FRAMEWORK = {
         "me_update_user": ME_UPDATE_RATE,
         "notif_prefs_user": NOTIF_PREFS_RATE,
         "me_export_user": ME_EXPORT_RATE,
+        "compromise-read-user": "60/min",
+        "compromise-write-user": "10/min",
     },
 }
 

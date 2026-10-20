@@ -346,6 +346,7 @@ export function Nav({
       </div>
 
       <div className="amk-sidebar__bottom">
+        <NavItem to="/security" labelKey="nav.security" icon={IconShield} />
         <NavItem to={SETTINGS_LINK.to} labelKey={SETTINGS_LINK.key} icon={SETTINGS_LINK.icon} />
         {user && (
           <UserArea name={name} email={user.email} onSignOut={onSignOut} />

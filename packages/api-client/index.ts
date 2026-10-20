@@ -270,6 +270,27 @@ export class ApiClient {
     return this.request<Record<string, unknown>>("GET", `/me/export/${token}/`)
   }
 
+  // ---- account compromise detection (P19.1) ----
+  getSessions() {
+    return this.request<any[]>("GET", "/me/sessions/")
+  }
+
+  getActivity(limit: number = 50) {
+    return this.request<any[]>("GET", `/me/activity/?limit=${limit}`)
+  }
+
+  revokeAllSessions() {
+    return this.request<{ revoked: number }>("POST", "/me/sessions/revoke-all/")
+  }
+
+  getAlerts() {
+    return this.request<any[]>("GET", "/me/alerts/")
+  }
+
+  markAlertRead(id: number) {
+    return this.request<{ status: string }>("POST", `/me/alerts/${id}/read/`)
+  }
+
   // ---- dashboard ----
   dashboard() {
     return this.request<DashboardOverview>("GET", "/dashboard/")

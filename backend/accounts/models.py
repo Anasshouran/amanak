@@ -54,3 +54,49 @@ class Account(models.Model):
 
     def __str__(self):
         return f"{self.service_name} ({self.user.email})"
+
+
+class LoginEvent(models.Model):
+    """Record of a login attempt (successful or not) for compromise detection."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="login_events"
+    )
+    timestamp = models.DateTimeField(auto_now_add=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=500, blank=True)
+    device_fingerprint = models.CharField(max_length=64, blank=True)
+    country = models.CharField(max_length=2, blank=True)
+    success = models.BooleanField(default=True)
+    suspicious = models.BooleanField(default=False)
+    suspicion_reasons = models.JSONField(default=list, blank=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        indexes = [
+            models.Index(fields=["user", "-timestamp"]),
+            models.Index(fields=["user", "suspicious"]),
+        ]
+
+    def __str__(self):
+        return f"login-event[{self.id}] user={self.user_id} success={self.success}"
+
+
+class SessionAlert(models.Model):
+    """Unread alert raised when a login looks suspicious."""
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="session_alerts"
+    )
+    event = models.ForeignKey(
+        LoginEvent, on_delete=models.CASCADE, related_name="alerts"
+    )
+    reasons = models.JSONField(default=list, blank=True)
+    seen_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"session-alert[{self.id}] user={self.user_id}"

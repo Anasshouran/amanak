@@ -25,3 +25,11 @@ class MeUpdateUserRateThrottle(_UserScopedThrottle):
 
 class MeExportUserRateThrottle(_UserScopedThrottle):
     scope = "me_export_user"
+
+
+class CompromiseReadUserRateThrottle(_UserScopedThrottle):
+    scope = "compromise-read-user"
+
+
+class CompromiseWriteUserRateThrottle(_UserScopedThrottle):
+    scope = "compromise-write-user"

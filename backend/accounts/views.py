@@ -26,9 +26,15 @@ from rest_framework_simplejwt.token_blacklist.models import (
 )
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from .throttles import MeExportUserRateThrottle, MeUpdateUserRateThrottle
+from .throttles import (
+    CompromiseReadUserRateThrottle,
+    CompromiseWriteUserRateThrottle,
+    MeExportUserRateThrottle,
+    MeUpdateUserRateThrottle,
+)
 
 from .models import Account
+from .models import LoginEvent, SessionAlert
 from .serializers import (
     AccountSerializer,
     UpdateMeSerializer,
@@ -144,9 +150,25 @@ class UserViewSet(viewsets.ViewSet):
             # malformed-request validation error (400). Field-level errors
             # (missing/malformed email) still propagate as 400.
             if "non_field_errors" in exc.detail:
+                # Record a failed login event for compromise detection.
+                try:
+                    from .compromise import check_login
+
+                    email = request.data.get("email")
+                    user = User.objects.filter(email=email).first()
+                    if user is not None:
+                        check_login(request, user, False)
+                except Exception:
+                    pass
                 raise AuthenticationFailed("Invalid credentials")
             raise
         user = serializer.validated_user
+        try:
+            from .compromise import check_login
+
+            check_login(request, user, True)
+        except Exception:
+            pass
         tokens = _tokens_for(user)
         response = Response({"user": UserSerializer(user).data, "tokens": tokens})
         _set_refresh_cookie(response, tokens["refresh"])
@@ -373,3 +395,136 @@ class AccountViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
+
+
+def _device_label(ua: str) -> str:
+    """Best-effort short device label from a User-Agent string."""
+    ua = (ua or "").strip()
+    if not ua:
+        return "Unknown device"
+    # Take the first parenthesised chunk or the leading token.
+    import re
+
+    m = re.search(r"\(([^)]+)\)", ua)
+    if m:
+        parts = [p.strip() for p in m.group(1).split(";") if p.strip()]
+        if parts:
+            return parts[0][:60]
+    return ua.split()[0][:60] or "Unknown device"
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([CompromiseReadUserRateThrottle])
+def me_sessions(request):
+    """List the caller's active (non-blacklisted) refresh-token sessions."""
+    current_jti = None
+    token = _read_refresh_token(request)
+    if token:
+        try:
+            current_jti = RefreshToken(token)["jti"]
+        except Exception:
+            current_jti = None
+
+    blacklisted = set(
+        BlacklistedToken.objects.filter(token__user=request.user).values_list(
+            "token__jti", flat=True
+        )
+    )
+    outstanding = list(OutstandingToken.objects.filter(user=request.user).order_by("-created_at"))
+    # If we could not resolve the current refresh token (e.g. cookie not sent),
+    # treat the most recently issued outstanding token as the current session.
+    if current_jti is None and outstanding:
+        current_jti = outstanding[0].jti
+    out = []
+    for ot in outstanding:
+        if ot.jti in blacklisted:
+            continue
+        last_event = LoginEvent.objects.filter(user=request.user, success=True).order_by(
+            "-timestamp"
+        ).first()
+        out.append(
+            {
+                "jti": ot.jti,
+                "created_at": ot.created_at.isoformat(),
+                "last_used": ot.created_at.isoformat(),
+                "device": _device_label(last_event.user_agent if last_event else ""),
+                "current": ot.jti == current_jti,
+            }
+        )
+    return Response(out)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([CompromiseReadUserRateThrottle])
+def me_activity(request):
+    """Login history for the caller (last N events)."""
+    try:
+        limit = int(request.query_params.get("limit", 50))
+    except (TypeError, ValueError):
+        limit = 50
+    limit = max(1, min(limit, 100))
+    out = []
+    for e in LoginEvent.objects.filter(user=request.user).order_by("-timestamp")[:limit]:
+        out.append(
+            {
+                "timestamp": e.timestamp.isoformat(),
+                "ip": e.ip,
+                "device": _device_label(e.user_agent),
+                "success": e.success,
+                "suspicious": e.suspicious,
+                "reasons": e.suspicion_reasons,
+            }
+        )
+    return Response(out)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([CompromiseWriteUserRateThrottle])
+def revoke_all_sessions(request):
+    """Blacklist every outstanding refresh token for the caller."""
+    outstanding = list(OutstandingToken.objects.filter(user=request.user))
+    revoked = 0
+    for ot in outstanding:
+        _, created = BlacklistedToken.objects.get_or_create(token=ot)
+        revoked += 1
+    return Response({"revoked": revoked})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([CompromiseReadUserRateThrottle])
+def me_alerts(request):
+    """Unread session alerts for the caller."""
+    out = []
+    for a in SessionAlert.objects.filter(user=request.user, seen_at__isnull=True).order_by(
+        "-created_at"
+    ):
+        out.append(
+            {
+                "id": a.id,
+                "reasons": a.reasons,
+                "created_at": a.created_at.isoformat(),
+                "event": {
+                    "timestamp": a.event.timestamp.isoformat(),
+                    "ip": a.event.ip,
+                    "device": _device_label(a.event.user_agent),
+                },
+            }
+        )
+    return Response(out)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([CompromiseWriteUserRateThrottle])
+def mark_alert_read(request, alert_id):
+    alert = SessionAlert.objects.filter(pk=alert_id, user=request.user).first()
+    if alert is None:
+        raise NotFound("not_found")
+    if alert.seen_at is None:
+        alert.seen_at = timezone.now()
+        alert.save(update_fields=["seen_at"])
+    return Response({"status": "ok"})

@@ -31,6 +31,8 @@ services:
       # is only overridable in debug mode (see config/settings.py), so both are
       # set here to mirror the CI E2E job (.github/workflows/ci.yml).
       DJANGO_DEBUG: "true"
+      # Local dev runs over HTTP, so cookies must not be Secure.
+      APP_ENV: "local"
       AUTH_THROTTLE_RATE: "1000/min"
       SCAN_USER_THROTTLE_RATE: "1000/min"
       SCAN_IP_THROTTLE_RATE: "3000/min"
