@@ -9,7 +9,7 @@ import {
 } from "react"
 import { api } from "../lib/api"
 import { setContextId } from "@amanak/api-client"
-import { loadStore, readStoreSync, writeStore } from "./storage"
+import { readStoreSync, writeStore } from "./storage"
 import { useAuth } from "../state/AuthContext"
 import type { Organization } from "@amanak/shared-types"
 
@@ -42,28 +42,23 @@ export function ContextProvider({ children }: { children: ReactNode }) {
     setContextId(contextId)
   }, [contextId])
 
-  useEffect(() => {
-    void loadStore(STORAGE_KEY).then((value) => {
-      if (value) setContextIdState(value)
-    })
-  }, [])
-
   const load = useCallback(async () => {
     if (!user) {
       setOrganizations([])
       return
     }
     setLoading(true)
+    const storedId = readStoreSync(STORAGE_KEY)
     try {
       const orgs = await api.listOrganizations()
+      const validId =
+        storedId && orgs.some((org) => org.id === storedId) ? storedId : null
       setOrganizations(orgs)
-      setContextIdState((current) => {
-        if (current && !orgs.some((org) => org.id === current)) {
-          void writeStore(STORAGE_KEY, "")
-          return null
-        }
-        return current
-      })
+      setContextIdState(validId)
+      setContextId(validId)
+      if (validId !== storedId) {
+        void writeStore(STORAGE_KEY, validId ?? "")
+      }
     } catch {
       setOrganizations([])
     } finally {

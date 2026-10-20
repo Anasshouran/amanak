@@ -10,6 +10,8 @@ import {
   useEnglish,
 } from "./fixtures"
 
+test.describe.configure({ mode: "serial" })
+
 /**
  * P18.1c2 — context switcher e2e.
  *

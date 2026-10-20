@@ -83,13 +83,18 @@ export async function refreshSession(page: Page): Promise<void> {
  * approach `grantStaffRole` uses. Returns the new organization's id.
  */
 export function createOrgForUser(email: string, name: string, slug: string): string {
-  return djangoShell([
+  const output = djangoShell([
     "from apps.organizations.models import Organization, Membership",
     `u = get_user_model().objects.get(email='${email}')`,
     `org = Organization.objects.create(name='${name}', slug='${slug}', created_by=u)`,
     "Membership.objects.create(organization=org, user=u, role='owner')",
-    "print(org.id)",
-  ]).split("\n").pop()!.trim()
+    "print(f'ORG_ID={org.id}')",
+  ])
+  const match = output.match(/ORG_ID=([0-9a-f-]{36})/i)
+  if (!match) {
+    throw new Error(`Could not extract org ID from output: ${output.slice(-500)}`)
+  }
+  return match[1]
 }
 
 /**

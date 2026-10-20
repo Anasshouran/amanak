@@ -47,32 +47,36 @@ export function ContextProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(false)
 
   // Publish the active context to the API client so every request carries it.
+  // (Initial value already published by lib/api.ts at module load.)
   useEffect(() => {
     setContextId(contextId)
   }, [contextId])
 
   // Load the caller's organizations, then validate any stored context against
-  // them — a stale id (left org / deleted) falls back to personal.
+  // the FRESHLY-FETCHED list (not the closure's stale `organizations`). A
+  // stale id (left org / deleted) falls back to personal.
   const load = useCallback(async () => {
     if (!user) {
       setOrganizations([])
       return
     }
     setLoading(true)
+    const storedId = readStored()
     try {
       const orgs = await api.listOrganizations()
+      const validId =
+        storedId && orgs.some((org) => org.id === storedId) ? storedId : null
       setOrganizations(orgs)
-      setContextIdState((current) => {
-        if (current && !orgs.some((org) => org.id === current)) {
-          try {
-            window.localStorage.removeItem(STORAGE_KEY)
-          } catch {
-            /* storage unavailable */
-          }
-          return null
+      setContextIdState(validId)
+      setContextId(validId)
+      if (validId !== storedId) {
+        try {
+          if (validId) window.localStorage.setItem(STORAGE_KEY, validId)
+          else window.localStorage.removeItem(STORAGE_KEY)
+        } catch {
+          /* storage unavailable */
         }
-        return current
-      })
+      }
     } catch {
       setOrganizations([])
     } finally {

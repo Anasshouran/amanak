@@ -92,4 +92,33 @@ describe("ContextProvider", () => {
     await waitFor(() => expect(screen.getByTestId("id")).toHaveTextContent("personal"))
     expect(window.localStorage.getItem("amanak.context")).toBeNull()
   })
+
+  it("stored org survives reload with async org fetch", async () => {
+    // Simulate slow org fetch — resolves after a tick.
+    mocks.listOrganizations.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve([{ id: "org-1", name: "Acme", slug: "acme" }]), 100)),
+    )
+    window.localStorage.setItem("amanak.context", "org-1")
+
+    renderWithProvider()
+
+    // While fetching, valid stored id must be preserved (not null).
+    expect(screen.getByTestId("id")).toHaveTextContent("org-1")
+
+    await waitFor(() => expect(screen.getByTestId("name")).toHaveTextContent("Acme"))
+    expect(screen.getByTestId("id")).toHaveTextContent("org-1")
+    expect(mocks.setContextId).toHaveBeenCalledWith("org-1")
+    expect(window.localStorage.getItem("amanak.context")).toBe("org-1")
+  })
+
+  it("ghost org id falls back to Personal and cleans storage", async () => {
+    mocks.listOrganizations.mockResolvedValue([])
+    window.localStorage.setItem("amanak.context", "ghost")
+
+    renderWithProvider()
+
+    await waitFor(() => expect(screen.getByTestId("id")).toHaveTextContent("personal"))
+    expect(window.localStorage.getItem("amanak.context")).toBeNull()
+    expect(mocks.setContextId).toHaveBeenCalledWith(null)
+  })
 })
