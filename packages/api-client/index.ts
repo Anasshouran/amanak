@@ -73,6 +73,8 @@ import type {
   UserExportResponse,
   Organization,
   OrganizationOverview,
+  OrgActivityRow,
+  OrgMemberRow,
 } from "@amanak/shared-types"
 
 export type { ApiError }
@@ -820,6 +822,10 @@ export class ApiClient {
     return this.request<OrganizationOverview>("GET", `/organizations/${id}/overview/`)
   }
 
+  listOrganizationMembers(id: string) {
+    return this.request<OrgMemberRow[]>("GET", `/organizations/${id}/members/`)
+  }
+
   listNotifications() {
     return this.request<NotificationList>("GET", "/notifications/")
   }
@@ -833,6 +839,13 @@ export class ApiClient {
       "POST",
       "/notifications/mark-all-read/",
       {},
+    )
+  }
+
+  listOrganizationActivity(id: string, limit = 10) {
+    return this.request<OrgActivityRow[]>(
+      "GET",
+      `/organizations/${id}/activity/?limit=${limit}`,
     )
   }
 }

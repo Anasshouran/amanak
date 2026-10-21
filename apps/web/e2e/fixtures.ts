@@ -114,6 +114,46 @@ export function createAccountForUser(
   ])
 }
 
+/**
+ * Set the role of a user in an organization (P18.2 e2e).
+ */
+export function setOrgRole(email: string, orgId: string, role: string): void {
+  djangoShell([
+    "from apps.organizations.models import Organization, Membership",
+    `u = get_user_model().objects.get(email='${email}')`,
+    `org = Organization.objects.get(id='${orgId}')`,
+    `Membership.objects.filter(organization=org, user=u).update(role='${role}')`,
+  ])
+}
+
+/** Add a user to an org with a given role (P18.2 e2e). */
+export function addOrgMember(email: string, orgId: string, role: string): void {
+  djangoShell([
+    "from apps.organizations.models import Organization, Membership",
+    `u = get_user_model().objects.get(email='${email}')`,
+    `org = Organization.objects.get(id='${orgId}')`,
+    `Membership.objects.get_or_create(organization=org, user=u, defaults={'role': '${role}'})`,
+  ])
+}
+
+/** Create an org-shared Device (P18.2 e2e). */
+export function createOrgDevice(email: string, orgId: string, name: string): void {
+  djangoShell([
+    "from devices.models import Device",
+    `u = get_user_model().objects.get(email='${email}')`,
+    `Device.objects.create(user=u, device_name='${name}', platform='macOS', device_type='laptop', context_id='${orgId}')`,
+  ])
+}
+
+/** Create an org-shared Incident (P18.2 e2e). */
+export function createOrgIncident(email: string, orgId: string, title: string): void {
+  djangoShell([
+    "from incidents.models import Incident",
+    `u = get_user_model().objects.get(email='${email}')`,
+    `Incident.objects.create(user=u, title='${title}', severity='high', context_id='${orgId}')`,
+  ])
+}
+
 /** Run a snippet of Python inside the backend container's Django shell. */
 function djangoShell(lines: string[]): string {
   const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"

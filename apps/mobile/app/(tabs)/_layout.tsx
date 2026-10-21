@@ -5,6 +5,7 @@ import { Redirect, Tabs } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MoreList } from "../../src/components/MoreList"
 import { useLocale, useT } from "../../src/design/LocaleProvider"
+import { useContext_ } from "../../src/design/ContextProvider"
 import { useReducedMotion } from "../../src/design/motion"
 import { useTokens } from "../../src/design/tokens"
 import { useAuth } from "../../src/state/AuthContext"
@@ -114,10 +115,15 @@ function MoreDrawer({ visible, onClose }: { visible: boolean; onClose: () => voi
 
 function TabsNavigator() {
   const { user, loading } = useAuth()
+  const { contextId } = useContext_()
   const tokens = useTokens()
   const { t } = useLocale()
   const insets = useSafeAreaInsets()
   const [moreOpen, setMoreOpen] = useState(false)
+
+  // The org dashboard is a first-class tab only while an organization context
+  // is active (P18.2); otherwise it stays hidden behind the More drawer.
+  const inOrgContext = Boolean(contextId)
 
   if (loading) {
     return (
@@ -201,6 +207,17 @@ function TabsNavigator() {
               event.preventDefault()
               setMoreOpen(true)
             },
+          }}
+        />
+
+        <Tabs.Screen
+          name="org"
+          options={{
+            title: t("org.dashboard.title"),
+            href: inOrgContext ? undefined : null,
+            tabBarIcon: ({ color, size }) => (
+              <TabIcon name="business-outline" color={color} size={size} />
+            ),
           }}
         />
 

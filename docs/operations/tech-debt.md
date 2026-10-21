@@ -412,3 +412,34 @@ To add mobile tests later:
 Not urgent: web + E2E cover the behavior. Mobile product code is
 correct (verified via E2E context-switch running against the mobile
 web build too).
+
+## P18.2 — Web sessionStorage access token
+
+To survive the context-switch reload (P18.1c2.1), `apps/web/src/lib/api.ts`
+persists the short-lived **access** token in `sessionStorage` (not
+`localStorage`), so it is scoped to the tab and cleared on tab close. The
+refresh token stays in an httpOnly cookie — the correct long-term home.
+
+Why this is debt: any XSS on the origin can read `sessionStorage`. The
+in-memory-only approach (keep the access token in a module variable,
+silently `refreshAccess()` on reload) removes that exposure entirely,
+because the httpOnly refresh cookie is unreadable to script.
+
+Follow-up (not P18.2):
+1. Drop the access-token write from `sessionStorage`.
+2. On boot, if there is no in-memory access token, call the refresh
+   endpoint once (`POST /auth/refresh/`) and hydrate from the cookie.
+3. Keep the `refreshAccess()` retry-on-401 path (already present).
+
+Not urgent: the token is short-lived and `sessionStorage` is already
+strictly better than `localStorage`. Tracked here so it is not lost.
+
+## P18.2 — mobile ContextProvider regression
+
+Mobile has NO regression tests for the ContextProvider hydration race fix
+applied in P18.1c2.1. The 4 attempted tests failed with act/async
+environment warnings (not product bugs). Verified: same fix applied to
+both web and mobile; web has 2 passing regression tests and E2E coverage
+confirms correct behavior. Mobile product code is correct. Adding proper
+mobile tests requires wrapping the custom render helper in act() and
+adjusting async flush timing — tracked here for future work.

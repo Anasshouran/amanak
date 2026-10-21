@@ -51,6 +51,12 @@ urlpatterns = [
         OrganizationViewSet.as_view({"get": "overview"}),
         name="organization-overview",
     ),
+    # Activity (P18.2)
+    path(
+        "<uuid:pk>/activity/",
+        OrganizationViewSet.as_view({"get": "activity"}),
+        name="organization-activity",
+    ),
     # Invitations
     path(
         "<uuid:pk>/invitations/",

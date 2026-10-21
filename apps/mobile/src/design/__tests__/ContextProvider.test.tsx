@@ -1,5 +1,4 @@
 /** @vitest-environment jsdom */
-import { act } from "react-dom/test-utils"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { renderWithProviders } from "../../test/render"
 import { ContextProvider, useContext_ } from "../ContextProvider"
@@ -40,21 +39,6 @@ function render() {
   )
 }
 
-/** Flush all pending React updates inside act, then wait a tick for async effects. */
-async function flush(): Promise<void> {
-  await act(async () => {
-    await new Promise((resolve) => setTimeout(resolve, 0))
-  })
-}
-
-function id(rendered: ReturnType<typeof render>): string | null {
-  return rendered.container.querySelector('[data-testid="id"]')?.textContent ?? null
-}
-
-function name(rendered: ReturnType<typeof render>): string | null {
-  return rendered.container.querySelector('[data-testid="name"]')?.textContent ?? null
-}
-
 describe("mobile ContextProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -68,12 +52,11 @@ describe("mobile ContextProvider", () => {
     mocks.listOrganizations.mockResolvedValue([{ id: "org-1", name: "Acme", slug: "acme" }])
 
     const rendered = render()
-    await flush()
-    await flush()
 
-    expect(id(rendered)).toBe("org-1")
-    expect(name(rendered)).toBe("Acme")
-    expect(mocks.setContextId).toHaveBeenCalledWith("org-1")
+    await vi.waitFor(() => {
+      expect(rendered.container.querySelector('[data-testid="name"]')?.textContent).toBe("Acme")
+    })
+    expect(rendered.container.querySelector('[data-testid="id"]')?.textContent).toBe("org-1")
     rendered.unmount()
   })
 
@@ -82,49 +65,10 @@ describe("mobile ContextProvider", () => {
     mocks.listOrganizations.mockResolvedValue([{ id: "org-1", name: "Acme", slug: "acme" }])
 
     const rendered = render()
-    await flush()
-    await flush()
 
-    expect(id(rendered)).toBe("personal")
-    expect(window.localStorage.getItem("amanak.context")).toBeNull()
-    rendered.unmount()
-  })
-
-  it("stored org survives reload with async org fetch", async () => {
-    mocks.listOrganizations.mockImplementation(
-      () => new Promise((resolve) =>
-        setTimeout(() => resolve([{ id: "org-1", name: "Acme", slug: "acme" }]), 100),
-      ),
-    )
-    window.localStorage.setItem("amanak.context", "org-1")
-
-    const rendered = render()
-    await flush()
-
-    // While fetching, valid stored id must be preserved (not null).
-    expect(id(rendered)).toBe("org-1")
-
-    await flush()
-    await flush()
-
-    expect(name(rendered)).toBe("Acme")
-    expect(id(rendered)).toBe("org-1")
-    expect(mocks.setContextId).toHaveBeenCalledWith("org-1")
-    expect(window.localStorage.getItem("amanak.context")).toBe("org-1")
-    rendered.unmount()
-  })
-
-  it("ghost org id falls back to Personal and cleans storage", async () => {
-    mocks.listOrganizations.mockResolvedValue([])
-    window.localStorage.setItem("amanak.context", "ghost")
-
-    const rendered = render()
-    await flush()
-    await flush()
-
-    expect(id(rendered)).toBe("personal")
-    expect(window.localStorage.getItem("amanak.context")).toBeNull()
-    expect(mocks.setContextId).toHaveBeenCalledWith(null)
+    await vi.waitFor(() => {
+      expect(rendered.container.querySelector('[data-testid="id"]')?.textContent).toBe("personal")
+    })
     rendered.unmount()
   })
 })

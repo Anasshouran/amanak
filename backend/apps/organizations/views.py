@@ -42,6 +42,7 @@ from .services import (
     soft_delete_organization,
 )
 from .throttles import (
+    OrgActivityUserRateThrottle,
     OrgInviteUserRateThrottle,
     OrgOverviewUserRateThrottle,
     OrgReadUserRateThrottle,
@@ -70,6 +71,7 @@ class OrganizationViewSet(viewsets.ViewSet):
         "revoke_invitation": OrgWriteUserRateThrottle,
         "accept_invitation": OrgWriteUserRateThrottle,
         "overview": OrgOverviewUserRateThrottle,
+        "activity": OrgActivityUserRateThrottle,
     }
 
     def get_throttles(self):
@@ -203,14 +205,27 @@ class OrganizationViewSet(viewsets.ViewSet):
     # ---- members ------------------------------------------------------------
 
     def members(self, request, pk=None):
-        """GET /organizations/{id}/members/ — member only."""
-        org, _ = self._org_for_member(request, pk)
+        """GET /organizations/{id}/members/ — owner/admin/auditor only."""
+        org, membership = self._org_for_member(request, pk)
         if org is None:
             return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        if membership.role not in ("owner", "admin", "auditor"):
+            return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        from accounts.models import LoginEvent
         qs = Membership.objects.select_related("user").filter(
             organization=org
         ).order_by("joined_at")
-        return Response(MembershipSerializer(qs, many=True).data)
+        data = MembershipSerializer(qs, many=True).data
+        # extend with last_active_at
+        user_ids = [d.get("user_id") for d in data]
+        last_active = {}
+        for uid in user_ids:
+            ev = LoginEvent.objects.filter(user_id=uid, success=True).order_by("-timestamp").first()
+            if ev:
+                last_active[uid] = ev.timestamp.isoformat().replace("+00:00", "Z")
+        for d in data:
+            d["last_active_at"] = last_active.get(d.get("user_id"))
+        return Response(data)
 
     def invite(self, request, pk=None):
         """POST /organizations/{id}/members/invite/ {email, role} — owner/admin."""
@@ -378,8 +393,90 @@ class OrganizationViewSet(viewsets.ViewSet):
                 "open_incident_count": open_incident_count,
                 "security_score": security_score,
                 "recent_activity": recent_activity,
+                "recent_devices": [
+                    {
+                        "id": str(d.id),
+                        "name": d.device_name or str(d.id),
+                        "os": d.platform or "",
+                        "type": d.device_type or "",
+                        "last_seen": d.last_reported.isoformat().replace("+00:00", "Z") if d.last_reported else None,
+                    }
+                    for d in Device.objects.filter(context_id=org.id).order_by("-last_reported")[:5]
+                ],
+                "recent_incidents": [
+                    {
+                        "id": str(i.id),
+                        "title": i.title or "",
+                        "severity": i.severity or "medium",
+                        "status": "resolved" if i.resolved else "open",
+                        "created_at": i.reported_at.isoformat().replace("+00:00", "Z") if i.reported_at else None,
+                    }
+                    for i in Incident.objects.filter(context_id=org.id).order_by("resolved", "-reported_at")[:5]
+                ],
             }
         )
+
+    # ---- activity (P18.2) ---------------------------------------------------
+
+    def activity(self, request, pk=None):
+        """GET /organizations/{id}/activity/?limit=10 — role-filtered."""
+        org, membership = self._org_for_member(request, pk)
+        if org is None:
+            return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        if membership.role == "employee":
+            return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            limit = int(request.query_params.get("limit", 10))
+        except (TypeError, ValueError):
+            limit = 10
+        limit = max(1, min(limit, 100))
+
+        from devices.models import Device
+        from incidents.models import Incident
+
+        items = []
+
+        if membership.role in ("owner", "admin", "analyst", "auditor"):
+            # incidents
+            for inc in Incident.objects.filter(context_id=org.id).order_by("-reported_at")[:10]:
+                items.append({
+                    "type": "incident_created",
+                    "title": inc.title or str(inc.id),
+                    "severity": inc.severity,
+                    "actor_email": None,
+                    "created_at": inc.reported_at.isoformat().replace("+00:00", "Z") if inc.reported_at else None,
+                    "_sort": inc.reported_at,
+                })
+            # devices
+            for dev in Device.objects.filter(context_id=org.id).order_by("-last_reported")[:10]:
+                items.append({
+                    "type": "device_added",
+                    "title": dev.device_name or str(dev.id),
+                    "severity": None,
+                    "actor_email": None,
+                    "created_at": dev.last_reported.isoformat().replace("+00:00", "Z") if dev.last_reported else None,
+                    "_sort": dev.last_reported,
+                })
+
+        if membership.role in ("owner", "admin", "auditor"):
+            # members
+            for mem in Membership.objects.filter(organization=org).select_related("user").order_by("-joined_at")[:10]:
+                items.append({
+                    "type": "member_joined",
+                    "title": getattr(mem.user, "email", "") or "",
+                    "severity": None,
+                    "actor_email": getattr(mem.user, "email", "") or None,
+                    "created_at": mem.joined_at.isoformat().replace("+00:00", "Z") if mem.joined_at else None,
+                    "_sort": mem.joined_at,
+                })
+
+        items.sort(key=lambda x: x.get("_sort") or x.get("created_at") or "", reverse=True)
+        result = []
+        for it in items[:limit]:
+            it.pop("_sort", None)
+            result.append(it)
+        return Response(result)
 
     # ---- invitations --------------------------------------------------------
 

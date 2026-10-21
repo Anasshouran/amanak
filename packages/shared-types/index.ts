@@ -121,6 +121,16 @@ export type OrganizationOverview = {
   open_incident_count: number
   security_score: number
   recent_activity: number
+  recent_devices: OrgDeviceSummary[]
+  recent_incidents: OrgIncidentSummary[]
+}
+
+export type Organization = {
+  id: string
+  name: string
+  slug: string
+  role?: string
+  created_at?: string
 }
 
 export type ApiError = {
@@ -692,4 +702,37 @@ export type UserExportResponse = {
   token: string
   download_url: string
   expires_at: string
+}
+
+export interface OrgDeviceSummary {
+  id: string
+  name: string
+  os: string
+  type: string
+  last_seen: string
+}
+
+export interface OrgIncidentSummary {
+  id: string
+  title: string
+  severity: "low" | "medium" | "high" | "critical"
+  status: string
+  created_at: string
+}
+
+export interface OrgMemberRow {
+  user_id: number
+  email: string
+  display_name?: string
+  role: "owner" | "admin" | "analyst" | "employee" | "auditor"
+  joined_at: string
+  last_active_at?: string | null
+}
+
+export interface OrgActivityRow {
+  type: "incident_created" | "device_added" | "member_joined"
+  title: string
+  severity?: string | null
+  actor_email?: string | null
+  created_at: string | null
 }

@@ -48,3 +48,4 @@ docker-compose.local-prod.cors.yml
 .pnpm-lock.yaml
 yarn.lock
 *.bundle
+P18.2-prompt.md
