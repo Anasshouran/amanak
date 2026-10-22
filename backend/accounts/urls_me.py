@@ -8,6 +8,9 @@ from accounts.views import (
     me_alerts,
     me_export,
     me_export_download,
+    me_invitations_accept,
+    me_invitations_decline,
+    me_invitations_list,
     me_sessions,
     revoke_all_sessions,
 )
@@ -24,4 +27,7 @@ urlpatterns = [
     path("push-tokens/<int:token_id>/", notif_views.push_token_detail, name="me-push-token-detail"),
     path("export/", me_export, name="me-export"),
     path("export/<str:token>/", me_export_download, name="me-export-download"),
+    path("invitations/", me_invitations_list, name="me-invitations-list"),
+    path("invitations/<int:invitation_id>/accept/", me_invitations_accept, name="me-invitations-accept"),
+    path("invitations/<int:invitation_id>/decline/", me_invitations_decline, name="me-invitations-decline"),
 ]

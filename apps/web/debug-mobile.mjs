@@ -1,0 +1,10 @@
+import { chromium } from 'playwright';
+const browser = await chromium.launch({ headless: true, args: ['--no-sandbox','--disable-dev-shm-usage'] });
+const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+page.on('console', m => console.log('C:', m.text()));
+await page.goto('http://127.0.0.1:8081/login', { waitUntil: 'domcontentloaded', timeout: 60000 });
+await page.waitForTimeout(5000);
+console.log('TITLE:', await page.title());
+const texts = await page.$$eval('*', els => els.filter(e => (e.textContent||'').includes('Sign in')).slice(0,8).map(e => ({t:e.tagName,txt:e.textContent?.slice(0,60),role:e.getAttribute('role')})));
+console.log(JSON.stringify(texts,null,2));
+await browser.close();

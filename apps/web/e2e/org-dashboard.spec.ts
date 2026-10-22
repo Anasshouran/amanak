@@ -42,7 +42,7 @@ test("owner sees the full dashboard", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Recent Devices" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Recent Incidents" })).toBeVisible()
   await expect(page.getByRole("heading", { name: "Recent Activity" })).toBeVisible()
-  await expect(page.getByRole("heading", { name: "Members" })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Members" }).first()).toBeVisible()
 })
 
 test("analyst sees devices + incidents but no members table", async ({ page }) => {

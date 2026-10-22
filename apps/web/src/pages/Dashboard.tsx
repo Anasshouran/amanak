@@ -8,6 +8,7 @@ import { Greeting } from "../components/dashboard/Greeting"
 import { QuickActions } from "../components/dashboard/QuickActions"
 import { ScoreCard } from "../components/dashboard/ScoreCard"
 import { TrendCard } from "../components/dashboard/TrendCard"
+import { InvitationsBanner } from "../components/dashboard/InvitationsBanner"
 
 export function Dashboard() {
   const overview = useAsync<DashboardOverview>(() => api.dashboard())
@@ -22,6 +23,8 @@ export function Dashboard() {
 
   return (
     <div className="amk-page dash-page">
+      <InvitationsBanner />
+
       <div className="dash-top">
         <Greeting />
         <ScoreCard

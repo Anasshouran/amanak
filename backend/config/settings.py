@@ -484,6 +484,8 @@ REST_FRAMEWORK = {
         "org-write-user": "30/min",
         "org-invite-user": "10/hour",
         "org-overview-user": "60/min",
+        "org-activity-user": "60/min",
+        "me-invitations-user": "30/min",
     },
 }
 

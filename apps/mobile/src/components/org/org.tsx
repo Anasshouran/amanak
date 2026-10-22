@@ -9,6 +9,7 @@ import { useContext_ } from "../../design/ContextProvider"
 import { useLocale, useT } from "../../design/LocaleProvider"
 import { useTokens } from "../../design/tokens"
 import { api } from "../../lib/api"
+import { OrgMembersCard } from "./OrgMembersCard"
 
 /**
  * Mobile organization dashboard (P18.2).
@@ -127,20 +128,16 @@ export function OrgDashboardScreen() {
       )}
 
       {canSeeMembers && (
-        <Card title={t("org.dashboard.members")}>
-          {members.length === 0 ? (
-            <Empty />
-          ) : (
-            members.map((m) => (
-              <Row
-                key={m.user_id}
-                title={m.display_name || m.email}
-                meta={t(`org.members.role.${m.role}`)}
-                time={m.last_active_at ?? null}
-              />
-            ))
-          )}
-        </Card>
+        <OrgMembersCard
+          orgId={contextId}
+          role={role}
+          members={members}
+          onChanged={() => {
+            if (!contextId) return
+            api.listOrganizationMembers(contextId).then(setMembers).catch(() => setMembers([]))
+            api.getOrganizationOverview(contextId).then(setOverview).catch(() => undefined)
+          }}
+        />
       )}
 
       {canSeeActivity && (

@@ -42,6 +42,7 @@ from .services import (
     soft_delete_organization,
 )
 from .throttles import (
+    MeInvitationsUserRateThrottle,
     OrgActivityUserRateThrottle,
     OrgInviteUserRateThrottle,
     OrgOverviewUserRateThrottle,
@@ -252,6 +253,21 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {"code": exc.code, "message": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        try:
+            from django.conf import settings
+            from django.core.mail import send_mail
+
+            public_base = getattr(settings, "PUBLIC_BASE_URL", "http://localhost:8080")
+            accept_url = f"{public_base}/invitations/accept?token={invitation.token}"
+            subject = f"You've been invited to {org.name} on AMANAK"
+            body = (
+                f"You've been invited to join {org.name} on AMANAK as {invitation.role}.\n\n"
+                f"Accept the invitation: {accept_url}\n\n"
+                "If you weren't expecting this invitation, you can ignore this email."
+            )
+            send_mail(subject, body, getattr(settings, "DEFAULT_FROM_EMAIL", None), [invitation.email], fail_silently=True)
+        except Exception:
+            pass
         return Response(
             InvitationSerializer(invitation).data, status=status.HTTP_201_CREATED
         )

@@ -75,6 +75,7 @@ import type {
   OrganizationOverview,
   OrgActivityRow,
   OrgMemberRow,
+  MyInvitation,
 } from "@amanak/shared-types"
 
 export type { ApiError }
@@ -846,6 +847,46 @@ export class ApiClient {
     return this.request<OrgActivityRow[]>(
       "GET",
       `/organizations/${id}/activity/?limit=${limit}`,
+    )
+  }
+
+  // ---- generic verbs (P18.3) ---------------------------------------------
+  // Thin wrappers over `request` for endpoints that are addressed by path
+  // rather than by a fixed, named helper.
+
+  get<T = unknown>(path: string) {
+    return this.request<T>("GET", path)
+  }
+
+  post<T = unknown>(path: string, body?: unknown) {
+    return this.request<T>("POST", path, body)
+  }
+
+  patch<T = unknown>(path: string, body?: unknown) {
+    return this.request<T>("PATCH", path, body)
+  }
+
+  delete<T = unknown>(path: string) {
+    return this.request<T>("DELETE", path)
+  }
+
+  // ---- invitations (P18.3) ------------------------------------------------
+
+  listMyInvitations() {
+    return this.request<MyInvitation[]>("GET", "/me/invitations/")
+  }
+
+  acceptInvitationById(id: number | string) {
+    return this.request<{ organization: unknown; role: string }>(
+      "POST",
+      `/me/invitations/${id}/accept/`,
+    )
+  }
+
+  declineInvitationById(id: number | string) {
+    return this.request<{ status: string }>(
+      "POST",
+      `/me/invitations/${id}/decline/`,
     )
   }
 }

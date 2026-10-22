@@ -543,3 +543,115 @@ def mark_alert_read(request, alert_id):
         alert.seen_at = timezone.now()
         alert.save(update_fields=["seen_at"])
     return Response({"status": "ok"})
+
+
+# ---- Invitations (P18.3) ----------------------------------------------------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def me_invitations_list(request):
+    from apps.organizations.models import Invitation
+    from django.utils import timezone
+
+    invitations = (
+        Invitation.objects.filter(
+            email__iexact=(request.user.email or "").strip(),
+            status="pending",
+        )
+        .select_related("organization", "invited_by")
+        .order_by("-created_at")
+    )
+    result = []
+    for inv in invitations:
+        if inv.expires_at and inv.expires_at < timezone.now():
+            continue
+        result.append(
+            {
+                "id": inv.id,
+                "organization": {
+                    "id": str(inv.organization_id),
+                    "name": inv.organization.name,
+                    "slug": inv.organization.slug,
+                },
+                "role": inv.role,
+                "invited_by_email": getattr(inv.invited_by, "email", ""),
+                "created_at": inv.created_at.isoformat().replace("+00:00", "Z") if inv.created_at else None,
+                "expires_at": inv.expires_at.isoformat().replace("+00:00", "Z") if inv.expires_at else None,
+            }
+        )
+    return Response(result)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def me_invitations_accept(request, invitation_id):
+    from apps.organizations.models import Invitation
+    from apps.organizations.services import accept_invitation, AlreadyMember, EmailMismatch, InvitationExpired, InvitationUsed, InvalidInvitation
+    from django.utils import timezone
+
+    try:
+        invitation = Invitation.objects.select_related("organization").get(pk=invitation_id)
+    except Invitation.DoesNotExist:
+        return Response({"code": "not_found", "message": "Invitation not found."}, status=404)
+
+    if invitation.email.strip().lower() != (request.user.email or "").strip().lower():
+        return Response({"code": "forbidden", "message": "Forbidden."}, status=404)
+
+    if invitation.status == "accepted":
+        return Response({"code": "invitation_used", "message": "This invitation has already been used."}, status=410)
+    if invitation.status in ("revoked", "expired"):
+        return Response({"code": "invalid_invitation", "message": "This invitation is no longer valid."}, status=410)
+    if invitation.expires_at and invitation.expires_at < timezone.now():
+        invitation.status = "expired"
+        invitation.save(update_fields=["status"])
+        return Response({"code": "invitation_expired", "message": "This invitation has expired."}, status=410)
+
+    try:
+        org, membership = accept_invitation(request.user, invitation.token, confirm=False)
+    except EmailMismatch as exc:
+        return Response({"code": exc.code, "message": str(exc)}, status=400)
+    except InvitationUsed as exc:
+        return Response({"code": exc.code, "message": str(exc)}, status=410)
+    except InvitationExpired as exc:
+        return Response({"code": exc.code, "message": str(exc)}, status=410)
+    except (InvalidInvitation, AlreadyMember) as exc:
+        return Response({"code": exc.code, "message": str(exc)}, status=400)
+    org.caller_role = membership.role
+    from apps.organizations.serializers import OrganizationSerializer
+    return Response(
+        {"organization": OrganizationSerializer(org, context={"request": request}).data, "role": membership.role},
+        status=200,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@throttle_classes([UserRateThrottle])
+def me_invitations_decline(request, invitation_id):
+    from apps.organizations.models import Invitation
+    from django.conf import settings
+    from django.core.mail import send_mail
+
+    try:
+        invitation = Invitation.objects.select_related("organization", "invited_by").get(pk=invitation_id)
+    except Invitation.DoesNotExist:
+        return Response({"code": "not_found", "message": "Invitation not found."}, status=404)
+
+    if invitation.email.strip().lower() != (request.user.email or "").strip().lower():
+        return Response({"code": "forbidden", "message": "Forbidden."}, status=404)
+
+    if invitation.status == "pending":
+        invitation.status = "revoked"
+        invitation.save(update_fields=["status"])
+        try:
+            inviter = invitation.invited_by
+            if inviter and inviter.email:
+                subject = f"Invitation declined for {invitation.organization.name}"
+                body = f"{invitation.email} declined the invitation to join {invitation.organization.name}."
+                send_mail(subject, body, getattr(settings, "DEFAULT_FROM_EMAIL", None), [inviter.email], fail_silently=True)
+        except Exception:
+            pass
+
+    return Response({"status": "declined"}, status=200)

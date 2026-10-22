@@ -27,6 +27,10 @@ type ContextState = {
   organizations: Organization[]
   loading: boolean
   switchContext: (orgId: string | null) => void
+  /** Re-fetch the caller's organizations (e.g. after accepting an invitation). */
+  refresh: () => Promise<void>
+  /** Select an organization in memory without a reload (P18.3 join flow). */
+  activate: (orgId: string) => void
 }
 
 const ContextContext = createContext<ContextState | undefined>(undefined)
@@ -110,14 +114,29 @@ export function ContextProvider({ children }: { children: ReactNode }) {
     window.location.reload()
   }, [])
 
+  /**
+   * Select an org right after joining it. `switchContext` reloads the page,
+   * which would throw away the post-accept navigation, so the invite flow
+   * calls `refresh()` and then this instead.
+   */
+  const activate = useCallback((orgId: string) => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, orgId)
+    } catch {
+      /* storage unavailable */
+    }
+    setContextIdState(orgId)
+    setContextId(orgId)
+  }, [])
+
   const contextName = useMemo(() => {
     if (!contextId) return "Personal"
     return organizations.find((org) => org.id === contextId)?.name ?? "Personal"
   }, [contextId, organizations])
 
   const value = useMemo(
-    () => ({ contextId, contextName, organizations, loading, switchContext }),
-    [contextId, contextName, organizations, loading, switchContext],
+    () => ({ contextId, contextName, organizations, loading, switchContext, refresh: load, activate }),
+    [contextId, contextName, organizations, loading, switchContext, load, activate],
   )
 
   return <ContextContext.Provider value={value}>{children}</ContextContext.Provider>

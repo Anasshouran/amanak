@@ -173,3 +173,80 @@ function djangoShell(lines: string[]): string {
 
 export const test = base
 export { expect }
+
+// ---- P18.3 invitations -----------------------------------------------------
+
+/** Create a user directly in the DB with a known password (P18.3 e2e). */
+export function createUserWithPassword(
+  email: string,
+  username: string,
+  password: string,
+): void {
+  djangoShell([
+    "from django.contrib.auth import get_user_model",
+    `u, _ = get_user_model().objects.get_or_create(email='${email}', defaults={'username': '${username}'})`,
+    `u.set_password('${password}')`,
+    "u.save()",
+  ])
+}
+
+/**
+ * Create an organization owned by `email`, creating the owner account if it
+ * does not exist yet. Handy when the owner never signs in (P18.3 e2e).
+ */
+export function createOrgForEmail(email: string, name: string, slug: string): string {
+  const username = `org_${slug.replace(/[^a-z0-9_]/gi, "_")}`
+  const output = djangoShell([
+    "from apps.organizations.models import Organization, Membership",
+    `u, _ = get_user_model().objects.get_or_create(email='${email}', defaults={'username': '${username}'})`,
+    `org = Organization.objects.create(name='${name}', slug='${slug}', created_by=u)`,
+    "Membership.objects.create(organization=org, user=u, role='owner')",
+    "print(f'ORG_ID={org.id}')",
+  ])
+  const match = output.match(/ORG_ID=([0-9a-f-]{36})/i)
+  if (!match) {
+    throw new Error(`Could not extract org ID from output: ${output.slice(-500)}`)
+  }
+  return match[1]
+}
+
+/**
+ * Create a pending invitation for `email` and return its token. `inviterEmail`
+ * must already exist; it does not have to be an org member (the model only
+ * records who sent the invite).
+ */
+export function createInvitation(
+  inviterEmail: string,
+  email: string,
+  orgId: string,
+  role = "employee",
+  expiresInDays = 7,
+): string {
+  const output = djangoShell([
+    "import secrets",
+    "from datetime import timedelta",
+    "from django.utils import timezone",
+    "from django.contrib.auth import get_user_model",
+    "from apps.organizations.models import Organization, Invitation",
+    `inviter = get_user_model().objects.get(email='${inviterEmail}')`,
+    `org = Organization.objects.get(id='${orgId}')`,
+    `inv = Invitation.objects.create(organization=org, email='${email}', role='${role}', invited_by=inviter, token=secrets.token_urlsafe(32), expires_at=timezone.now() + timedelta(days=${expiresInDays}))`,
+    "print(f'TOKEN={inv.token}')",
+  ])
+  const match = output.match(/TOKEN=([A-Za-z0-9_\-]+)/)
+  if (!match) {
+    throw new Error(`Could not extract invitation token from output: ${output.slice(-500)}`)
+  }
+  return match[1]
+}
+
+/** Whether `email` currently belongs to `orgId` (P18.3 e2e). */
+export function isOrgMember(email: string, orgId: string): boolean {
+  const output = djangoShell([
+    "from apps.organizations.models import Membership",
+    "from django.contrib.auth import get_user_model",
+    `u = get_user_model().objects.filter(email='${email}').first()`,
+    `print('MEMBER=' + ('true' if u and Membership.objects.filter(organization_id='${orgId}', user=u).exists() else 'false'))`,
+  ])
+  return output.includes("MEMBER=true")
+}

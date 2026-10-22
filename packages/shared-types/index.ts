@@ -736,3 +736,12 @@ export interface OrgActivityRow {
   actor_email?: string | null
   created_at: string | null
 }
+
+export interface MyInvitation {
+  id: number;
+  organization: { id: string; name: string; slug: string };
+  role: string;
+  invited_by_email: string;
+  created_at: string;
+  expires_at: string;
+}

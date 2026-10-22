@@ -1,4 +1,5 @@
 import { Navigate } from "react-router-dom"
+import { useState } from "react"
 import type {
   OrganizationOverview,
   OrgActivityRow,
@@ -15,6 +16,8 @@ import { OrgDevicesTable } from "../components/org/OrgDevicesTable"
 import { OrgIncidentsTable } from "../components/org/OrgIncidentsTable"
 import { OrgMembersTable } from "../components/org/OrgMembersTable"
 import { OrgActivityFeed } from "../components/org/OrgActivityFeed"
+import { InviteModal } from "../components/org/InviteModal"
+import { PendingInvitations } from "../components/org/PendingInvitations"
 
 /**
  * Organization dashboard v2 (P18.2) — aggregates + data tables.
@@ -35,6 +38,8 @@ import { OrgActivityFeed } from "../components/org/OrgActivityFeed"
 export function OrgDashboard() {
   const t = useT()
   const { contextId, organizations } = useContext_()
+  const [inviteOpen, setInviteOpen] = useState(false)
+  const [membersNonce, setMembersNonce] = useState(0)
 
   const overview = useAsync<OrganizationOverview>(
     () =>
@@ -58,6 +63,10 @@ export function OrgDashboard() {
   const canSeeActivity = role === "owner" || role === "admin" || role === "analyst" || role === "auditor"
   // Employees see KPIs only; everyone else also gets the device/incident tables.
   const canSeeTables = canSeeActivity
+  // Only owner/admin may invite or remove members. Auditors get read-only.
+  const canManageMembers = role === "owner" || role === "admin"
+  const isOwner = role === "owner"
+  const orgName = data?.organization.name ?? t("org.dashboard.title")
 
   return (
     <div className="amk-page">
@@ -89,9 +98,36 @@ export function OrgDashboard() {
 
             {canSeeTables && <OrgDevicesTable devices={data.recent_devices ?? []} />}
             {canSeeTables && <OrgIncidentsTable incidents={data.recent_incidents ?? []} />}
-            {canSeeMembers && <OrgMembersPanel orgId={contextId} />}
+            {canSeeMembers && (
+              <OrgMembersPanel
+                orgId={contextId}
+                canManage={canManageMembers}
+                isOwner={isOwner}
+                nonce={membersNonce}
+                onChanged={() => setMembersNonce((n) => n + 1)}
+                onInvite={() => setInviteOpen(true)}
+              />
+            )}
+            {canSeeMembers && canManageMembers && (
+              <PendingInvitations
+              orgId={contextId}
+              canManage={canManageMembers}
+              nonce={membersNonce}
+            />
+            )}
             {canSeeActivity && <OrgActivityPanel orgId={contextId} />}
           </>
+        )}
+
+        {inviteOpen && canManageMembers && (
+          <InviteModal
+            open={inviteOpen}
+            onClose={() => setInviteOpen(false)}
+            orgId={contextId}
+            orgName={orgName}
+            isOwner={isOwner}
+            onSent={() => setMembersNonce((n) => n + 1)}
+          />
         )}
       </div>
     </div>
@@ -99,18 +135,41 @@ export function OrgDashboard() {
 }
 
 /** Members table, fetched lazily for owner/admin/auditor only. */
-function OrgMembersPanel({ orgId }: { orgId: string }) {
+function OrgMembersPanel({
+  orgId,
+  canManage,
+  isOwner,
+  nonce,
+  onChanged,
+  onInvite,
+}: {
+  orgId: string
+  canManage: boolean
+  isOwner: boolean
+  nonce: number
+  onChanged: () => void
+  onInvite: () => void
+}) {
   const t = useT()
   const members = useAsync<OrgMemberRow[]>(
     () => api.listOrganizationMembers(orgId),
-    [orgId],
+    [orgId, nonce],
   )
 
   if (members.loading) return <Skeleton height={60} />
   if (members.error && !members.loading) {
     return <ErrorState message={t("common.error")} onRetry={members.reload} />
   }
-  return <OrgMembersTable members={members.data ?? []} />
+  return (
+    <OrgMembersTable
+      members={members.data ?? []}
+      canManage={canManage}
+      isOwner={isOwner}
+      orgId={orgId}
+      onChanged={onChanged}
+      onInvite={canManage ? onInvite : undefined}
+    />
+  )
 }
 
 /** Role-filtered activity feed, fetched lazily for non-employees. */

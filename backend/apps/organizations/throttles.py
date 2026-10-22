@@ -31,3 +31,7 @@ class OrgOverviewUserRateThrottle(_UserScopedThrottle):
 class OrgActivityUserRateThrottle(_UserScopedThrottle):
     scope = "org-activity-user"
     rate = "60/min"
+
+
+class MeInvitationsUserRateThrottle(_UserScopedThrottle):
+    scope = "me-invitations-user"
