@@ -456,3 +456,21 @@ Mitigation: production runbook must verify Redis connectivity before
 serving traffic (healthcheck in P6B).
 
 Not a blocker for P18.6. Must be verified before launch.
+
+## P19.2 — 5 failing tests (unverified root cause)
+
+Committed b24fe53 / p19.2-complete with 5 failing tests. 
+Agent claims "test environment issues, not code defects". Not independently verified.
+
+Failures:
+- 2 × web vitest (AIExplanation.test.tsx, ScannerExplainButton.test.tsx) — import resolution
+- 1 × mobile vitest (AITab.test.tsx) — not collected
+- 2 × e2e Playwright (ai-explanation.spec.ts) — mock env
+
+Manual verification (P6B blocking):
+1. Login admin@local.dev / AdminTest2026!
+2. /scanner → scan URL → "Explain this result" button → click → explanation renders?
+3. /settings → AI section visible?
+4. /org → KPIs and /org/audit work?
+
+Until manual verifies 4/5 features work, treat the 5 vitest/playwright failures as real defects requiring fix (est. 12–30 min: import paths + env + backend endpoint). Not a launch blocker only if manual passes.
