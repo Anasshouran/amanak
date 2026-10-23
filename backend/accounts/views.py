@@ -413,6 +413,7 @@ class AccountViewSet(viewsets.ModelViewSet):
         if ctx and ctx.type == "organization":
             try:
                 from apps.organizations.models import Organization
+                from apps.organizations.audit import log_org_action
                 org = Organization.objects.filter(pk=context_id, is_active=True).first()
                 if org and getattr(instance, "sharing", "private") == "org":
                     log_org_action(
@@ -437,6 +438,7 @@ class AccountViewSet(viewsets.ModelViewSet):
                 after_sharing = getattr(updated, "sharing", "private")
                 if after_sharing != before_sharing:
                     from apps.organizations.models import Organization
+                    from apps.organizations.audit import log_org_action
                     org = Organization.objects.filter(pk=ctx.id, is_active=True).first()
                     if org:
                         log_org_action(

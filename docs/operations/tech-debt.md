@@ -443,3 +443,16 @@ both web and mobile; web has 2 passing regression tests and E2E coverage
 confirms correct behavior. Mobile product code is correct. Adding proper
 mobile tests requires wrapping the custom render helper in act() and
 adjusting async flush timing — tracked here for future work.
+
+## P18.6 — Throttle counters depend on shared Redis
+
+Rate limits (org-invite-user, org-audit-user, recovery-redeem-user,
+me-export-user) are stored in Redis. Single-node dev works correctly.
+Multi-worker production requires shared Redis (already configured via
+REDIS_URL). If Redis is unavailable, DRF falls back to LocMemCache
+per worker — silently allowing N× the limit.
+
+Mitigation: production runbook must verify Redis connectivity before
+serving traffic (healthcheck in P6B).
+
+Not a blocker for P18.6. Must be verified before launch.
