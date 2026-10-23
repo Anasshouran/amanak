@@ -6,14 +6,27 @@ class Plan(models.Model):
     id = models.SlugField(primary_key=True, max_length=32)
     name_en = models.CharField(max_length=64)
     name_ar = models.CharField(max_length=64)
-    price_monthly = models.DecimalField(max_digits=8, decimal_places=2, default=0)
-    price_yearly = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    price_monthly = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    price_yearly = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     currency = models.CharField(max_length=8, default="USD")
     limits = models.JSONField(default=dict)
     is_active = models.BooleanField(default=True)
     sort_order = models.PositiveSmallIntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    audience = models.CharField(
+        max_length=16,
+        choices=[
+            ("personal", "Personal"),
+            ("family", "Family"),
+            ("business", "Business"),
+            ("enterprise", "Enterprise"),
+        ],
+        default="personal",
+    )
+    seats_included = models.PositiveSmallIntegerField(null=True, blank=True)
+    price_note = models.CharField(max_length=200, blank=True)
+    is_available = models.BooleanField(default=True)
 
     class Meta:
         ordering = ["sort_order", "id"]

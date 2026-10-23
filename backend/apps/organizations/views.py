@@ -51,6 +51,7 @@ from .throttles import (
     OrgWriteUserRateThrottle,
 )
 from .audit import log_org_action
+from common.gating import can_use_org_feature, max_org_members
 
 _ERROR_NOT_FOUND = {"code": "not_found", "message": "No such organization."}
 _ERROR_FORBIDDEN = {"code": "forbidden", "message": "You lack permission for this action."}
@@ -138,6 +139,38 @@ class OrganizationViewSet(viewsets.ViewSet):
         )
         org.caller_role = "owner"
         log_org_action(organization=org, action="org.created", actor=request.user, request=request)
+        try:
+            from apps.billing.models import Subscription, Plan
+            from django.utils import timezone
+            from datetime import timedelta
+
+            if not Subscription.objects.filter(user=request.user).exists():
+                business = Plan.objects.filter(id="business").first()
+                if business:
+                    Subscription.objects.create(
+                        user=request.user,
+                        plan=business,
+                        status="active",
+                        period="monthly",
+                        current_period_start=timezone.now(),
+                        current_period_end=timezone.now() + timedelta(days=365),
+                        provider="manual",
+                    )
+            else:
+                sub = Subscription.objects.filter(user=request.user).first()
+                if sub and sub.plan_id in (None, "free"):
+                    business = Plan.objects.filter(id="business").first()
+                    if business:
+                        sub.plan = business
+                        sub.status = "active"
+                        sub.period = "monthly"
+                        if not sub.current_period_start:
+                            sub.current_period_start = timezone.now()
+                        sub.current_period_end = timezone.now() + timedelta(days=365)
+                        sub.provider = "manual"
+                        sub.save()
+        except Exception:
+            pass
         return Response(
             OrganizationSerializer(org, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -249,6 +282,15 @@ class OrganizationViewSet(viewsets.ViewSet):
             return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         if not has_permission(membership, "manage_members"):
             return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        if not can_use_org_feature(request.user, org, "members"):
+            return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        current_count = Membership.objects.filter(organization=org).count()
+        limit = max_org_members(request.user, org)
+        if limit and current_count >= limit:
+            return Response(
+                {"code": "limit_exceeded", "feature": "members", "limit": limit, "used": current_count},
+                status=status.HTTP_402_PAYMENT_REQUIRED,
+            )
         serializer = InvitationCreateSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(
@@ -640,6 +682,8 @@ class OrganizationViewSet(viewsets.ViewSet):
         if org is None:
             return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         if membership.role not in ("owner", "admin", "auditor"):
+            return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        if not can_use_org_feature(request.user, org, "audit_log"):
             return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
         from .models import OrgAuditLog
         from django.contrib.auth import get_user_model

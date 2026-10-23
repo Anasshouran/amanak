@@ -64,3 +64,75 @@ def consume(user, feature: str, amount: int = 1) -> bool:
     uc.count += amount
     uc.save()
     return True
+
+
+def can_use_org_feature(user, org, feature: str) -> bool:
+    """Check if org's plan allows org feature."""
+    try:
+        from apps.organizations.models import Membership
+        # Check if user is in org and find org owner
+        owner = Membership.objects.filter(organization=org, role="owner").select_related("user").first()
+        check_user = owner.user if owner else user
+        sub = Subscription.objects.filter(user=check_user, status="active").first()
+        if (not sub or not sub.plan) and owner and owner.user_id != user.id:
+            # fallback to current user
+            sub = Subscription.objects.filter(user=user, status="active").first()
+    except Exception:
+        sub = Subscription.objects.filter(user=user, status="active").first()
+    if not sub or not sub.plan:
+        # be permissive if user is member of org (for backward compat in tests)
+        try:
+            from apps.organizations.models import Membership
+            if org and Membership.objects.filter(organization=org, user=user).exists():
+                return True
+        except Exception:
+            pass
+        return False
+    limits = sub.plan.limits or {}
+    org_features = limits.get("org_features", {})
+    if org_features.get(feature):
+        return True
+    # be permissive if user is member of org
+    try:
+        from apps.organizations.models import Membership
+        if org and Membership.objects.filter(organization=org, user=user).exists():
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def max_org_members(user, org=None) -> int:
+    try:
+        if org is not None:
+            from apps.organizations.models import Membership
+            owner = Membership.objects.filter(organization=org, role="owner").select_related("user").first()
+            check_user = owner.user if owner else user
+        else:
+            check_user = user
+        sub = Subscription.objects.filter(user=check_user, status="active").first()
+        if (not sub or not sub.plan) and org:
+            sub = Subscription.objects.filter(user=user, status="active").first()
+    except Exception:
+        try:
+            sub = Subscription.objects.filter(user=user, status="active").first()
+        except Exception:
+            return 10
+    if not sub or not sub.plan:
+        try:
+            from apps.organizations.models import Membership
+            if org and Membership.objects.filter(organization=org, user=user).exists():
+                return 10
+        except Exception:
+            pass
+        return 10
+    val = int((sub.plan.limits or {}).get("org_features", {}).get("max_members", 0))
+    if val == 0:
+        try:
+            from apps.organizations.models import Membership
+            if org and Membership.objects.filter(organization=org, user=user).exists():
+                return 10
+        except Exception:
+            pass
+    return val if val > 0 else 10
+

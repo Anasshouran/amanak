@@ -7,6 +7,7 @@ from common.context import filter_by_context_sharing
 
 from .models import Incident
 from .serializers import IncidentSerializer
+from common.gating import can_use_org_feature
 
 
 class IncidentViewSet(viewsets.ModelViewSet):
@@ -54,6 +55,17 @@ class IncidentViewSet(viewsets.ModelViewSet):
         """Set the owning user and the active organization context."""
         ctx = getattr(self.request, "context", None)
         context_id = ctx.id if ctx and ctx.type == "organization" else None
+        if ctx and ctx.type == "organization":
+            try:
+                from apps.organizations.models import Organization
+                org = Organization.objects.filter(pk=context_id, is_active=True).first()
+                if org and not can_use_org_feature(self.request.user, org, "incidents"):
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied("Organization feature not available")
+            except PermissionDenied:
+                raise
+            except Exception:
+                pass
         instance = serializer.save(user=self.request.user, context_id=context_id)
         if ctx and ctx.type == "organization":
             try:

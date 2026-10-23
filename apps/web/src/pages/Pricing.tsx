@@ -76,7 +76,8 @@ export function Pricing() {
         </div>
       ) : (
         <div className="amk-grid amk-grid--three">
-          {(plans.data ?? []).map((plan) => {
+          {((plans.data ?? []) as any[]).sort((a,b)=>(a.sort_order??0)-(b.sort_order??0)||String(a.id).localeCompare(String(b.id))).map((plan: any) => {
+            if (plan.id === "business" || plan.id === "enterprise") return null
             const isCurrent = plan.id === currentId
             return (
               <Card
@@ -127,6 +128,39 @@ export function Pricing() {
               </Card>
             )
           })}
+          {(plans.data ?? []).find((p: any) => p.id === "business") && (
+            <Card padded elevated>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>{t("pricing.business.title") || "Business"}</h3>
+                <Badge variant="info">{t("pricing.business.badge") || "For teams"}</Badge>
+              </div>
+              <div className="amk-price">{t("pricing.business.price_coming_soon") || "Coming soon"}</div>
+              <ul className="amk-feature-list">
+                <li>{t("pricing.business.features.members") || "Up to 10 members"}</li>
+                <li>{t("pricing.business.features.org") || "Org-wide devices + incidents"}</li>
+                <li>{t("pricing.business.features.audit") || "Audit log"}</li>
+                <li>{t("pricing.business.features.sharing") || "Shareable accounts"}</li>
+                <li>{t("pricing.business.features.ai") || "AI assistant (2000/month)"}</li>
+              </ul>
+              <Button fullWidth variant="secondary" disabled>{t("pricing.business.button") || "Create org"}</Button>
+            </Card>
+          )}
+          {(plans.data ?? []).find((p: any) => p.id === "enterprise") && (
+            <Card padded elevated style={{ borderStyle: "dashed" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0 }}>{t("pricing.enterprise.title") || "Enterprise"}</h3>
+                <Badge variant="info">{t("pricing.enterprise.badge") || "For organizations"}</Badge>
+              </div>
+              <div className="amk-price">{t("pricing.enterprise.price_contact") || "Contact sales"}</div>
+              <ul className="amk-feature-list">
+                <li>{t("pricing.enterprise.features.unlimited") || "Unlimited everything"}</li>
+                <li>{t("pricing.enterprise.features.sso") || "SSO/SCIM (coming)"}</li>
+                <li>{t("pricing.enterprise.features.support") || "Dedicated support"}</li>
+                <li>{t("pricing.enterprise.features.contract") || "Custom contracts"}</li>
+              </ul>
+              <a href="mailto:sales@amanak.app"><Button fullWidth variant="secondary">{t("pricing.enterprise.button") || "Contact sales"}</Button></a>
+            </Card>
+          )}
         </div>
       )}
 

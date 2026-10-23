@@ -7,11 +7,21 @@ import { formatDate } from "../lib/format"
 import { formatLimit, usageEntry, USAGE_ROWS, usagePercent } from "../lib/plan"
 import { errorMessage, useAsync } from "../lib/useAsync"
 
+function getActiveOrgId(): string | null {
+  try {
+    return localStorage.getItem("amanak.context") || localStorage.getItem("amanak_org_id") || null
+  } catch {
+    return null
+  }
+}
+
 export function Billing() {
   const t = useT()
   const { locale } = useTheme()
   const sub = useAsync(() => api.getSubscription())
   const usage = useAsync(() => api.getBillingUsage())
+  const orgId = getActiveOrgId()
+  const orgUsage = useAsync(() => (orgId ? api.getOrgUsage(orgId) : Promise.resolve(null)))
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
 
@@ -67,6 +77,48 @@ export function Billing() {
       </div>
 
       {msg && <div className="amk-alert amk-alert--error">{msg}</div>}
+
+      {orgUsage.data && (orgUsage.data as any).plan === "business" ? (
+        <>
+          <div className="amk-alert amk-alert--info">{t("billing.org.beta_banner")}</div>
+          <Card padded elevated title={`${t("billing.org.title")} · Business`}>
+            <ul className="amk-usage-list">
+              <li>
+                <span className="amk-row amk-row--between">
+                  <span>{t("billing.org.members")}</span>
+                  <span className="amk-muted">{(orgUsage.data as any).members?.used} / {(orgUsage.data as any).members?.limit}</span>
+                </span>
+                {(orgUsage.data as any).members?.limit > 0 && (
+                  <span className="amk-meter" aria-hidden="true">
+                    <span className="amk-meter__fill" style={{ width: `${Math.min(100, ((orgUsage.data as any).members?.used / (orgUsage.data as any).members?.limit) * 100)}%` }} />
+                  </span>
+                )}
+              </li>
+              <li>
+                <span className="amk-row amk-row--between">
+                  <span>{t("billing.org.devices")}</span>
+                  <span className="amk-muted">{t("billing.org.unlimited")}</span>
+                </span>
+              </li>
+              <li>
+                <span className="amk-row amk-row--between">
+                  <span>{t("billing.org.incidents")}</span>
+                  <span className="amk-muted">{t("billing.org.unlimited")}</span>
+                </span>
+              </li>
+              <li>
+                <span className="amk-row amk-row--between">
+                  <span>{t("billing.org.ai_requests")}</span>
+                  <span className="amk-muted">{(orgUsage.data as any).ai_requests?.used} / {(orgUsage.data as any).ai_requests?.limit}</span>
+                </span>
+              </li>
+            </ul>
+            <div className="amk-row">
+              <Button variant="secondary" onClick={() => window.location.assign("/plans")}>{t("billing.org.upgrade_enterprise")}</Button>
+            </div>
+          </Card>
+        </>
+      ) : null}
 
       <div className="amk-grid amk-grid--two">
         <Card padded elevated title={t("billing.plan")}>

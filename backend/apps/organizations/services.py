@@ -70,6 +70,41 @@ def create_organization(user, name, slug):
         Membership.objects.create(
             organization=org, user=user, role="owner", invited_by=None
         )
+    try:
+        from apps.billing.models import Subscription, Plan
+        from django.utils import timezone
+        from datetime import timedelta
+
+        if not Subscription.objects.filter(user=user).exists():
+            business = Plan.objects.filter(id="business").first()
+            if business:
+                Subscription.objects.create(
+                    user=user,
+                    plan=business,
+                    status="active",
+                    period="monthly",
+                    current_period_start=timezone.now(),
+                    current_period_end=timezone.now() + timedelta(days=365),
+                    provider="manual",
+                )
+            else:
+                from apps.billing.signals import ensure_subscription
+                ensure_subscription(user)
+        else:
+            sub = Subscription.objects.filter(user=user).first()
+            if sub and sub.plan_id in (None, "free"):
+                business = Plan.objects.filter(id="business").first()
+                if business:
+                    sub.plan = business
+                    sub.status = "active"
+                    sub.period = "monthly"
+                    if not sub.current_period_start:
+                        sub.current_period_start = timezone.now()
+                    sub.current_period_end = timezone.now() + timedelta(days=365)
+                    sub.provider = "manual"
+                    sub.save()
+    except Exception:
+        pass
     return org
 
 

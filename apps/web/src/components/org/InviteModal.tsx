@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useT } from "../../design/i18n"
 import { api } from "../../lib/api"
 
@@ -27,10 +27,32 @@ export function InviteModal({
   const [err, setErr] = useState("")
   const [ok, setOk] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [limitReached, setLimitReached] = useState(false)
+  const [limitMsg, setLimitMsg] = useState("")
+
+  useEffect(() => {
+    if (!open || !orgId) return
+    api
+      .getOrgUsage(orgId)
+      .then((u: any) => {
+        if (u?.members && u.members.limit > 0 && u.members.used >= u.members.limit) {
+          setLimitReached(true)
+          setLimitMsg(t("org.invite.limit_reached"))
+        } else {
+          setLimitReached(false)
+          setLimitMsg("")
+        }
+      })
+      .catch(() => {
+        setLimitReached(false)
+      })
+  }, [open, orgId, t])
+
   if (!open) return null
 
   async function submit() {
     setEmailError("")
+    if (limitReached) return
     if (!EMAIL_RE.test(email)) {
       setEmailError(t("org.invite.invalid_email"))
       return
@@ -114,6 +136,14 @@ export function InviteModal({
                 </option>
               ))}
             </select>
+            {limitReached && (
+              <div role="alert" style={{ color: "var(--c-warning)", marginTop: 8 }}>
+                {limitMsg}
+                <div>
+                  <a href="/plans" onClick={(e) => { e.preventDefault(); window.location.assign("/plans"); }}>{t("org.invite.limit_reached_upgrade") || "Upgrade to Enterprise"}</a>
+                </div>
+              </div>
+            )}
             {err && (
               <div role="alert" style={{ color: "var(--c-danger)" }}>
                 {err}
@@ -121,7 +151,7 @@ export function InviteModal({
             )}
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 12 }}>
               <button onClick={onClose}>{t("common.cancel") || "Cancel"}</button>
-              <button onClick={submit} disabled={busy}>
+              <button onClick={submit} disabled={busy || limitReached}>
                 {t("org.invite.submit") || "Send invite"}
               </button>
             </div>

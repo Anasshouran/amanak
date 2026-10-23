@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import Device
 from .serializers import DeviceSerializer
+from common.gating import can_use_org_feature
 
 
 class DeviceViewSet(viewsets.ModelViewSet):
@@ -53,6 +54,17 @@ class DeviceViewSet(viewsets.ModelViewSet):
         """Set the owning user and the active organization context."""
         ctx = getattr(self.request, "context", None)
         context_id = ctx.id if ctx and ctx.type == "organization" else None
+        if ctx and ctx.type == "organization":
+            try:
+                from apps.organizations.models import Organization
+                org = Organization.objects.filter(pk=context_id, is_active=True).first()
+                if org and not can_use_org_feature(self.request.user, org, "devices"):
+                    from rest_framework.exceptions import PermissionDenied
+                    raise PermissionDenied("Organization feature not available")
+            except PermissionDenied:
+                raise
+            except Exception:
+                pass
         instance = serializer.save(user=self.request.user, context_id=context_id)
         if ctx and ctx.type == "organization":
             try:

@@ -13,6 +13,7 @@ import type {
   ApiError,
   AuthResponse,
   AuthTokens,
+  OrgUsage,
   BreachConsentPayload,
   BreachHit,
   BillingPeriod,
@@ -639,6 +640,10 @@ export class ApiClient {
   // ---- subscription tiers (P12) ----
   getPlans() {
     return this.request<Plan[]>("GET", "/billing/plans/")
+  }
+
+  getOrgUsage(orgId: string) {
+    return this.request<OrgUsage>("GET", `/billing/org-usage/?org_id=${encodeURIComponent(orgId)}`)
   }
 
   getSubscription() {

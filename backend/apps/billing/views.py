@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-from .models import Plan
+from .models import Plan, Subscription
 from .serializers import PlanSerializer, SubscriptionSerializer
 from .throttles import BillingReadUserRateThrottle, BillingWriteUserRateThrottle
 from common.gating import current_usage, get_limit
@@ -27,6 +27,70 @@ class BillingViewSet(viewsets.GenericViewSet):
     def plans(self, request):
         qs = Plan.objects.filter(is_active=True).order_by("sort_order")
         return Response(PlanSerializer(qs, many=True).data)
+
+    @action(detail=False, methods=["get"], url_path="org-usage", throttle_classes=[])
+    def org_usage(self, request):
+        from .throttles import BillingOrgUsageUserRateThrottle
+        throttle = BillingOrgUsageUserRateThrottle()
+        if not throttle.allow_request(request, self):
+            throttle.log_to_history(request, self)
+            return Response({"detail": "Request was throttled."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
+        from apps.organizations.models import Membership, Organization
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+
+        org_id = request.query_params.get("org_id")
+        if not org_id:
+            return Response({"code": "invalid_input"}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            org = Organization.objects.get(pk=org_id, is_active=True)
+        except Exception:
+            return Response({"code": "not_found"}, status=status.HTTP_404_NOT_FOUND)
+        membership = Membership.objects.filter(organization=org, user=request.user).first()
+        if not membership:
+            return Response({"code": "not_found"}, status=status.HTTP_404_NOT_FOUND)
+        if membership.role != "owner":
+            return Response({"code": "forbidden"}, status=status.HTTP_403_FORBIDDEN)
+
+        sub = Subscription.objects.filter(user=request.user, status="active").first()
+        plan_id = sub.plan_id if sub and sub.plan_id else ""
+        limits = sub.plan.limits if sub and sub.plan else {}
+        org_features = limits.get("org_features", {})
+
+        member_count = Membership.objects.filter(organization=org).count()
+        device_count = 0
+        incident_count = 0
+        ai_used = 0
+        try:
+            from devices.models import Device
+            device_count = Device.objects.filter(context_id=org.id).count()
+        except Exception:
+            pass
+        try:
+            from incidents.models import Incident
+            incident_count = Incident.objects.filter(context_id=org.id).count()
+        except Exception:
+            pass
+        try:
+            ai_used = current_usage(request.user, "ai_requests")
+        except Exception:
+            pass
+
+        max_members = int(org_features.get("max_members", limits.get("seats_included", 10) if False else 10))
+        if sub and sub.plan_id == "business":
+            max_members = 10
+        elif sub and sub.plan_id == "enterprise":
+            max_members = -1
+
+        return Response(
+            {
+                "plan": plan_id,
+                "members": {"used": member_count, "limit": max_members if max_members != 10 or plan_id != "business" else (10 if plan_id == "business" else max_members)},
+                "devices": {"used": device_count, "limit": -1},
+                "incidents": {"used": incident_count, "limit": -1},
+                "ai_requests": {"used": ai_used, "limit": int(limits.get("ai_requests_per_month", -1))},
+            }
+        )
 
     @action(detail=False, methods=["get"], url_path="subscription")
     def subscription(self, request):

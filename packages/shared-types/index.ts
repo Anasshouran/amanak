@@ -1,5 +1,13 @@
 /** Shared TypeScript contracts for AMANAK mobile, web, and API client. */
 
+export interface OrgUsage {
+  plan: string
+  members: { used: number; limit: number }
+  devices: { used: number; limit: number }
+  incidents: { used: number; limit: number }
+  ai_requests: { used: number; limit: number }
+}
+
 export type User = {
   id: number
   email: string
@@ -465,7 +473,7 @@ export type AwarenessCategory = {
 }
 
 // Subscription Tiers (P12)
-export type PlanId = "free" | "pro" | "family" | string
+export type PlanId = "free" | "pro" | "family" | "business" | "enterprise" | string
 
 export type PlanLimits = {
   scans_per_month: number
@@ -484,11 +492,15 @@ export type Plan = {
   id: PlanId
   name_en: string
   name_ar: string
-  price_monthly: string
-  price_yearly: string
+  price_monthly: string | number | null
+  price_yearly: string | number | null
   currency: string
   limits: PlanLimits
   is_active: boolean
+  audience?: "personal" | "family" | "business" | "enterprise"
+  seats_included?: number | null
+  price_note?: string
+  is_available?: boolean
 }
 
 export type SubscriptionStatus =

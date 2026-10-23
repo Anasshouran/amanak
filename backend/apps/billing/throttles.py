@@ -16,3 +16,7 @@ class BillingReadUserRateThrottle(_UserScopedThrottle):
 
 class BillingWriteUserRateThrottle(_UserScopedThrottle):
     scope = "billing_write_user"
+
+
+class BillingOrgUsageUserRateThrottle(_UserScopedThrottle):
+    scope = "billing_org_usage_user"

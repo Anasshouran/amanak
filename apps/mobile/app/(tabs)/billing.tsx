@@ -1,6 +1,6 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native"
-import type { BillingUsage, Subscription } from "@amanak/shared-types"
+import type { BillingUsage, Subscription, OrgUsage } from "@amanak/shared-types"
 import { api } from "../../src/lib/api"
 
 type UsageRow = { key: keyof BillingUsage; label: string }
@@ -18,6 +18,7 @@ const USAGE_ROWS: UsageRow[] = [
 export default function Billing() {
   const [sub, setSub] = useState<Subscription | null>(null)
   const [usage, setUsage] = useState<BillingUsage | null>(null)
+  const [orgUsage, setOrgUsage] = useState<OrgUsage | null>(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState(false)
 
@@ -27,10 +28,23 @@ export default function Billing() {
       const [s, u] = await Promise.all([api.getSubscription(), api.getBillingUsage()])
       setSub(s)
       setUsage(u)
+      try {
+        const ctx = (global as any).localStorage?.getItem?.("amanak.context") || null
+        if (ctx) {
+          const ou = await api.getOrgUsage(ctx)
+          setOrgUsage(ou)
+        }
+      } catch {
+        // ignore
+      }
     } finally {
       setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    void load()
+  }, [load])
 
   async function toggleCancel() {
     if (!sub) return
@@ -49,6 +63,17 @@ export default function Billing() {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <Text style={styles.heading}>Subscription</Text>
       <Button title={loading ? "Loading…" : "Refresh"} onPress={() => void load()} disabled={loading} />
+
+      {orgUsage && orgUsage.plan === "business" && (
+        <View style={styles.card}>
+          <Text style={styles.title}>Organization billing · Business</Text>
+          <Text style={styles.warn}>Business plan is free during beta. Pricing will be announced.</Text>
+          <Text style={styles.body}>Members: {orgUsage.members.used} / {orgUsage.members.limit}</Text>
+          <Text style={styles.body}>Devices: Unlimited</Text>
+          <Text style={styles.body}>Incidents: Unlimited</Text>
+          <Text style={styles.body}>AI requests: {orgUsage.ai_requests.used} / {orgUsage.ai_requests.limit}</Text>
+        </View>
+      )}
 
       {sub && (
         <View style={styles.card}>

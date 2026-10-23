@@ -5,7 +5,10 @@ import { api } from "../../src/lib/api"
 
 function price(plan: Plan, period: "monthly" | "yearly"): string {
   const value = period === "yearly" ? plan.price_yearly : plan.price_monthly
-  return `$${Number(value).toFixed(2)}/${period === "yearly" ? "yr" : "mo"}`
+  if (value === null || value === undefined) return "Contact sales"
+  const num = Number(value)
+  if (num === 0) return "Coming soon"
+  return `$${num.toFixed(2)}/${period === "yearly" ? "yr" : "mo"}`
 }
 
 function limitLabel(value: number): string {
@@ -54,23 +57,55 @@ export default function Pricing() {
 
       <Button title={loading ? "Loading…" : "Refresh"} onPress={() => void load()} disabled={loading} />
 
-      {plans.map((plan) => (
-        <View key={plan.id} style={styles.card}>
-          <Text style={styles.title}>
-            {plan.name_en}
-            {current === plan.id ? " — current" : ""}
-          </Text>
-          <Text style={styles.price}>{price(plan, period)}</Text>
-          <Text style={styles.body}>Scans: {limitLabel(plan.limits.scans_per_month)}</Text>
-          <Text style={styles.body}>Monitored emails: {limitLabel(plan.limits.monitored_emails)}</Text>
-          <Text style={styles.body}>AI: {plan.limits.ai_enabled ? "Included" : "Not included"}</Text>
-          <Button
-            title={current === plan.id ? "Current plan" : busy === plan.id ? "…" : "Choose plan"}
-            onPress={() => void choose(plan.id)}
-            disabled={current === plan.id || busy === plan.id}
-          />
-        </View>
-      ))}
+      {plans
+        .slice()
+        .sort((a: any, b: any) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || String(a.id).localeCompare(String(b.id)))
+        .map((plan: any) => {
+          if (plan.id === "business") {
+            return (
+              <View key={plan.id} style={styles.card}>
+                <Text style={styles.title}>Business — For teams</Text>
+                <Text style={styles.price}>Coming soon</Text>
+                <Text style={styles.body}>Members: Up to 10</Text>
+                <Text style={styles.body}>Org-wide devices + incidents</Text>
+                <Text style={styles.body}>Audit log</Text>
+                <Text style={styles.body}>Shareable accounts</Text>
+                <Text style={styles.body}>AI assistant (2000/month)</Text>
+                <Button title="Create org" disabled />
+              </View>
+            )
+          }
+          if (plan.id === "enterprise") {
+            return (
+              <View key={plan.id} style={styles.card}>
+                <Text style={styles.title}>Enterprise — For organizations</Text>
+                <Text style={styles.price}>Contact sales</Text>
+                <Text style={styles.body}>Unlimited everything</Text>
+                <Text style={styles.body}>SSO/SCIM (coming)</Text>
+                <Text style={styles.body}>Dedicated support</Text>
+                <Text style={styles.body}>Custom contracts</Text>
+                <Button title="Contact sales" disabled />
+              </View>
+            )
+          }
+          return (
+            <View key={plan.id} style={styles.card}>
+              <Text style={styles.title}>
+                {plan.name_en}
+                {current === plan.id ? " — current" : ""}
+              </Text>
+              <Text style={styles.price}>{price(plan, period)}</Text>
+              <Text style={styles.body}>Scans: {limitLabel(plan.limits.scans_per_month)}</Text>
+              <Text style={styles.body}>Monitored emails: {limitLabel(plan.limits.monitored_emails)}</Text>
+              <Text style={styles.body}>AI: {plan.limits.ai_enabled ? "Included" : "Not included"}</Text>
+              <Button
+                title={current === plan.id ? "Current plan" : busy === plan.id ? "…" : "Choose plan"}
+                onPress={() => void choose(plan.id)}
+                disabled={current === plan.id || busy === plan.id}
+              />
+            </View>
+          )
+        })}
     </ScrollView>
   )
 }
