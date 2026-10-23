@@ -68,7 +68,8 @@ class AIViewSet(viewsets.ViewSet):
                 {"code": "not_found", "message": "scan not found"},
                 status=status.HTTP_404_NOT_FOUND,
             )
-        resp = self._respond(lambda: services.explain_scan(request.user, scan))
+        locale = serializer.validated_data.get("locale", "ar")
+        resp = self._respond(lambda: services.explain_scan(request.user, scan, locale=locale))
         if resp.status_code == status.HTTP_200_OK:
             consume(request.user, "ai_requests", amount=1)
         return resp
@@ -112,3 +113,14 @@ class AIViewSet(viewsets.ViewSet):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
         return Response(AIResponseSerializer(payload).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def ai_status_view(request):
+    from django.conf import settings
+    return Response({
+        "enabled": bool(getattr(settings, "AI_ENABLED", False)),
+        "provider": getattr(settings, "AI_PROVIDER", "") if getattr(settings, "AI_ENABLED", False) else None,
+        "model": getattr(settings, "OLLAMA_MODEL", None) if getattr(settings, "AI_ENABLED", False) else None,
+    })

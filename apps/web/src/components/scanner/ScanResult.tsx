@@ -13,6 +13,7 @@ export type ScanResultView = {
   rulesetVersion: string
   input: string
   scannedAt: string
+  scanId?: number
 }
 
 export type ScanResultProps = {
@@ -20,6 +21,11 @@ export type ScanResultProps = {
   onScanAnother?: () => void
   onCopyReport?: () => void
   onReportFalsePositive?: () => void
+  onExplain?: (scanId: number) => void
+  aiEnabled?: boolean
+  explanation?: string | null
+  explainBusy?: boolean
+  explainError?: string | null
 }
 
 function StatusIcon({ verdict }: { verdict: ScanVerdict }) {
@@ -45,7 +51,7 @@ function StatusIcon({ verdict }: { verdict: ScanVerdict }) {
   }
 }
 
-export function ScanResult({ result, onScanAnother, onCopyReport, onReportFalsePositive }: ScanResultProps) {
+export function ScanResult({ result, onScanAnother, onCopyReport, onReportFalsePositive, onExplain, aiEnabled = false, explanation = null, explainBusy = false, explainError = null }: ScanResultProps) {
   const t = useT()
   const verdict = result.verdict
   const statusKey = verdict === "dangerous" ? "dangerous" : verdict
@@ -132,7 +138,29 @@ export function ScanResult({ result, onScanAnother, onCopyReport, onReportFalseP
             {t("scanner.action.reportFalsePositive")}
           </Button>
         )}
+        {onExplain && result.scanId != null && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={!aiEnabled || explainBusy}
+            title={!aiEnabled ? t("scanner.explain.disabled") : undefined}
+            onClick={() => onExplain(result.scanId as number)}
+          >
+            {explainBusy ? t("scanner.explain.loading") : t("scanner.explain.button")}
+          </Button>
+        )}
       </div>
+
+      {explanation && (
+        <Card padded elevated className="scan-explanation-card">
+          <h3>{t("scanner.explain.title") || "AI Explanation"}</h3>
+          <p>{explanation}</p>
+          <p className="amk-muted">{t("scanner.explain.powered_by")}</p>
+        </Card>
+      )}
+      {explainError && (
+        <p className="amk-muted" role="alert">{explainError}</p>
+      )}
     </section>
   )
 }

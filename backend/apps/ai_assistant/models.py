@@ -25,6 +25,7 @@ class AIConversation(models.Model):
     provider = models.CharField(max_length=32)
     model = models.CharField(max_length=64)
     tokens_used = models.PositiveIntegerField(default=0)
+    injection_flagged = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

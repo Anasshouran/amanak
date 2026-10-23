@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom"
 import { Card, ErrorState, Skeleton, useToast } from "../design/components"
 import { IconChevron } from "../design/icons"
 import { useT } from "../design/i18n"
+import { useTheme } from "../design/ThemeProvider"
 import { api } from "../lib/api"
 import { errorMessage, useAsync } from "../lib/useAsync"
 import {
@@ -22,6 +23,7 @@ function fromResponse(result: ScanResponse, input: string): ScanResultView {
     rulesetVersion: result.ruleset_version,
     input,
     scannedAt: result.scanned_at,
+    scanId: result.id,
   }
 }
 
@@ -39,6 +41,7 @@ function fromHistory(item: ScanResultRecord): ScanResultView {
 export function Scanner() {
   const t = useT()
   const { push } = useToast()
+  const { locale } = useTheme()
   const [params, setParams] = useSearchParams()
   const kind: ScanKind = params.get("tab") === "message" ? "message" : "url"
 
@@ -47,6 +50,11 @@ export function Scanner() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [historyExpanded, setHistoryExpanded] = useState(false)
+  const [explanation, setExplanation] = useState<string | null>(null)
+  const [explainBusy, setExplainBusy] = useState(false)
+  const [explainError, setExplainError] = useState<string | null>(null)
+
+  const aiEnabled = import.meta.env.VITE_AI_ENABLED === "true"
 
   const history = useAsync<ScanResultRecord[]>(() => api.scanHistory())
   const allHistory = history.data ?? []
@@ -99,6 +107,20 @@ export function Scanner() {
     push(t("scanner.falsePositive.reported"), "success")
   }
 
+  async function onExplain(scanId: number) {
+    setExplainBusy(true)
+    setExplainError(null)
+    setExplanation(null)
+    try {
+      const res = await api.aiExplainScan(String(scanId), locale === "ar" ? "ar" : "en")
+      setExplanation(res.text)
+    } catch (err) {
+      setExplainError(errorMessage(err, t("scanner.explain.error")))
+    } finally {
+      setExplainBusy(false)
+    }
+  }
+
   return (
     <div className="amk-page scan-page">
       <div className="amk-page-head">
@@ -148,6 +170,11 @@ export function Scanner() {
               onScanAnother={onScanAnother}
               onCopyReport={() => void onCopyReport()}
               onReportFalsePositive={onReportFalsePositive}
+              onExplain={onExplain}
+              aiEnabled={aiEnabled}
+              explanation={explanation}
+              explainBusy={explainBusy}
+              explainError={explainError}
             />
           )}
         </div>

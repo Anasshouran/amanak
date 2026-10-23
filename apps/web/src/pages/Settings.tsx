@@ -8,6 +8,7 @@ export function Settings() {
   const t = useT()
   const { theme, locale, setTheme, setLocale } = useTheme()
   const { user, logout } = useAuth()
+  const aiEnabled = import.meta.env.VITE_AI_ENABLED === "true"
 
   return (
     <div className="amk-page">
@@ -57,6 +58,21 @@ export function Settings() {
           </div>
         </Card>
       </div>
+
+      <Card padded elevated title={t("settings.ai.title") || "AI"}>
+        <div className="amk-row" style={{ justifyContent: "space-between" }}>
+          <span className="amk-muted">
+            {aiEnabled ? t("settings.ai.enabled") || "AI is enabled" : t("settings.ai.disabled") || "AI is disabled by administrator"}
+          </span>
+        </div>
+        {aiEnabled && (
+          <>
+            <p className="amk-muted">{t("settings.ai.provider") || "Provider"}: {import.meta.env.VITE_AI_PROVIDER || "ollama"}</p>
+            <p className="amk-muted">{t("settings.ai.model") || "Model"}: {import.meta.env.VITE_AI_MODEL || "llama3.1:8b"}</p>
+          </>
+        )}
+        <p className="amk-muted">{t("settings.ai.privacy_note") || "AI runs locally; no data leaves your device."}</p>
+      </Card>
 
       <Card padded elevated title={t("settings.account")}>
         <div className="amk-row" style={{ justifyContent: "space-between" }}>

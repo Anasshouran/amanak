@@ -420,6 +420,10 @@ AI_MODEL = os.environ.get("AI_MODEL", "")
 AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", "15"))
 AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "1024"))
 AI_DAILY_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", "100"))
+# Local Ollama (P19.2) — free, private, no external transmission.
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")
+OLLAMA_TIMEOUT = int(os.environ.get("OLLAMA_TIMEOUT", "30"))
 
 # Breach monitor (P7). Disabled by default: no email leaves the system unless
 # BREACH_MONITOR_ENABLED is explicitly turned on AND a user has opted an address

@@ -17,6 +17,7 @@ import os
 from .anthropic_provider import AnthropicProvider
 from .fake_provider import FakeProvider
 from .null_provider import NullProvider
+from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
 from .provider import (
     DEFAULT_MAX_TOKENS,
@@ -25,6 +26,7 @@ from .provider import (
 )
 
 _PROVIDERS = {
+    "ollama": OllamaProvider,
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
 }
@@ -65,6 +67,12 @@ def select_provider():
         )
 
     name = str(_cfg("AI_PROVIDER", "") or "").strip().lower()
+    if name == "ollama":
+        base_url = str(_cfg("OLLAMA_BASE_URL", "http://localhost:11434") or "").strip() or None
+        model = str(_cfg("OLLAMA_MODEL", "") or "").strip() or None
+        timeout = _cfg("OLLAMA_TIMEOUT", 30)
+        return OllamaProvider(base_url=base_url, model=model, timeout=timeout)
+
     factory = _PROVIDERS.get(name)
     if factory is None:
         # Enabled but nothing valid configured: fail closed, never fall back

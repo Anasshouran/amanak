@@ -15,6 +15,7 @@ class MatchSerializer(serializers.Serializer):
 
 
 class ScanResponseSerializer(serializers.Serializer):
+    id = serializers.IntegerField(required=False)
     verdict = serializers.CharField()
     score = serializers.IntegerField()
     matches = MatchSerializer(many=True)

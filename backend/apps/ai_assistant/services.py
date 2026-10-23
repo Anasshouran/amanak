@@ -13,6 +13,8 @@ from __future__ import annotations
 import hashlib
 import logging
 
+from django.core.cache import cache
+
 from ai import load_knowledge_base
 from ai.gateway.provider import (
     AIDisabledError,
@@ -20,7 +22,9 @@ from ai.gateway.provider import (
     AITimeoutError,
 )
 from ai.gateway.router import select_provider
+from ai.gateway.safety import contains_injection, wrap_user_input
 from ai.prompts.loader import render
+from redact import cap, redact
 
 from .models import AIConversation
 
@@ -62,18 +66,20 @@ def _knowledge_for_topic(topic, limit=4):
     return "\n".join(f"- {e['title']}: {e['body']}" for e in selected) or "- (no curated notes available)"
 
 
-def build_explain_scan_prompt(scan) -> str:
+def build_explain_scan_prompt(scan, locale="ar") -> str:
     """Build an explanation prompt from scan metadata only (no raw input)."""
-    findings = "\n".join(
+    matches_list = "\n".join(
         f"- {m.get('rule_id')} ({m.get('severity')}): {m.get('description')}"
         for m in (scan.matches or [])
     ) or "- no findings"
+    user_input_redacted = wrap_user_input(cap(redact(getattr(scan, "preview", "") or ""), 500))
     return render(
         "security_explanation",
         verdict=scan.verdict,
         score=scan.score,
-        ruleset_version=scan.ruleset_version,
-        findings=findings,
+        matches_list=matches_list,
+        user_input_redacted=user_input_redacted,
+        locale=locale,
     )
 
 
@@ -85,7 +91,11 @@ def build_guidance_prompt(topic: str) -> str:
     )
 
 
-def _generate(user, kind, prompt):
+def _generate(user, kind, prompt, injection_flagged=False, cache_key=None):
+    if cache_key:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return cached
     provider = None
     try:
         provider = select_provider()
@@ -101,6 +111,7 @@ def _generate(user, kind, prompt):
         )
         raise ProviderFailure() from exc
 
+    flagged = injection_flagged or contains_injection(getattr(prompt, "", "") or "")
     AIConversation.objects.create(
         user=user,
         kind=kind,
@@ -109,17 +120,30 @@ def _generate(user, kind, prompt):
         provider=response.provider,
         model=response.model,
         tokens_used=response.tokens_used,
+        injection_flagged=flagged,
     )
-    return {
+    result = {
         "text": response.text,
         "provider": response.provider,
         "model": response.model,
         "tokens_used": response.tokens_used,
     }
+    if cache_key:
+        cache.set(cache_key, result, 60 * 60 * 24)
+    return result
 
 
-def explain_scan(user, scan):
-    return _generate(user, AIConversation.KIND_EXPLAIN_SCAN, build_explain_scan_prompt(scan))
+def explain_scan(user, scan, locale="ar"):
+    prompt = build_explain_scan_prompt(scan, locale=locale)
+    flagged = contains_injection(getattr(scan, "preview", "") or "")
+    cache_key = f"ai:explain:{user.id}:{scan.id}:{locale}"
+    return _generate(
+        user,
+        AIConversation.KIND_EXPLAIN_SCAN,
+        prompt,
+        injection_flagged=flagged,
+        cache_key=cache_key,
+    )
 
 
 def guidance(user, topic):

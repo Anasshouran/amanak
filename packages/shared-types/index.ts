@@ -164,6 +164,7 @@ export type ScanRequest = {
 }
 
 export type ScanResponse = {
+  id?: number
   verdict: ScanVerdict
   score: number
   matches: ScanMatch[]
