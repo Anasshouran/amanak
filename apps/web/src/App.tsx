@@ -22,6 +22,7 @@ import { Billing } from "./pages/Billing"
 import { Settings } from "./pages/Settings"
 import { NotFound } from "./pages/NotFound"
 import { OrgDashboard } from "./pages/OrgDashboard"
+import { OrgAudit } from "./pages/OrgAudit"
 import { InvitationsAccept } from "./pages/InvitationsAccept"
 import { Invitations } from "./pages/Invitations"
 import { StaffRoute } from "./components/StaffRoute"
@@ -138,6 +139,7 @@ export function App() {
         />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/org" element={<OrgDashboard />} />
+        <Route path="/org/audit" element={<OrgAudit />} />
         <Route path="/invitations" element={<Invitations />} />
         <Route path="/invitations/accept" element={<InvitationsAccept />} />
       </Route>

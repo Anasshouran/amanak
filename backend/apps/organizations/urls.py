@@ -68,4 +68,10 @@ urlpatterns = [
         OrganizationViewSet.as_view({"delete": "revoke_invitation"}),
         name="organization-invitation-detail",
     ),
+    # Audit (P18.4)
+    path(
+        "<uuid:pk>/audit/",
+        OrganizationViewSet.as_view({"get": "audit"}),
+        name="organization-audit",
+    ),
 ]

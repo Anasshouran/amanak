@@ -74,6 +74,8 @@ import type {
   Organization,
   OrganizationOverview,
   OrgActivityRow,
+  OrgAuditEntry,
+  OrgAuditResponse,
   OrgMemberRow,
   MyInvitation,
 } from "@amanak/shared-types"
@@ -847,6 +849,22 @@ export class ApiClient {
     return this.request<OrgActivityRow[]>(
       "GET",
       `/organizations/${id}/activity/?limit=${limit}`,
+    )
+  }
+
+  listOrgAudit(
+    orgId: string,
+    params?: { action?: string; actor?: string; limit?: number; offset?: number },
+  ) {
+    const q = new URLSearchParams()
+    if (params?.action) q.set("action", params.action)
+    if (params?.actor) q.set("actor", params.actor)
+    if (params?.limit != null) q.set("limit", String(params.limit))
+    if (params?.offset != null) q.set("offset", String(params.offset))
+    const qs = q.toString() ? `?${q.toString()}` : ""
+    return this.request<OrgAuditResponse>(
+      "GET",
+      `/organizations/${orgId}/audit/${qs}`,
     )
   }
 

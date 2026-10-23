@@ -44,11 +44,13 @@ from .services import (
 from .throttles import (
     MeInvitationsUserRateThrottle,
     OrgActivityUserRateThrottle,
+    OrgAuditUserRateThrottle,
     OrgInviteUserRateThrottle,
     OrgOverviewUserRateThrottle,
     OrgReadUserRateThrottle,
     OrgWriteUserRateThrottle,
 )
+from .audit import log_org_action
 
 _ERROR_NOT_FOUND = {"code": "not_found", "message": "No such organization."}
 _ERROR_FORBIDDEN = {"code": "forbidden", "message": "You lack permission for this action."}
@@ -73,6 +75,7 @@ class OrganizationViewSet(viewsets.ViewSet):
         "accept_invitation": OrgWriteUserRateThrottle,
         "overview": OrgOverviewUserRateThrottle,
         "activity": OrgActivityUserRateThrottle,
+        "audit": OrgAuditUserRateThrottle,
     }
 
     def get_throttles(self):
@@ -134,6 +137,7 @@ class OrganizationViewSet(viewsets.ViewSet):
             serializer.validated_data["slug"],
         )
         org.caller_role = "owner"
+        log_org_action(organization=org, action="org.created", actor=request.user, request=request)
         return Response(
             OrganizationSerializer(org, context={"request": request}).data,
             status=status.HTTP_201_CREATED,
@@ -156,6 +160,7 @@ class OrganizationViewSet(viewsets.ViewSet):
             return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         if not has_permission(membership, "manage_org"):
             return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        before = {"name": org.name, "slug": org.slug}
         serializer = OrganizationUpdateSerializer(
             org, data=request.data, partial=True
         )
@@ -168,6 +173,14 @@ class OrganizationViewSet(viewsets.ViewSet):
             if field in serializer.validated_data:
                 setattr(org, field, serializer.validated_data[field])
         org.save()
+        after = {"name": org.name, "slug": org.slug}
+        log_org_action(
+            organization=org,
+            action="org.updated",
+            actor=request.user,
+            metadata={"before": before, "after": after},
+            request=request,
+        )
         org.caller_role = membership.role
         return Response(
             OrganizationSerializer(org, context={"request": request}).data
@@ -198,6 +211,7 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {"code": exc.code, "message": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        log_org_action(organization=org, action="org.deleted", actor=request.user, request=request)
         return Response(
             {"id": org.id, "is_active": org.is_active},
             status=status.HTTP_200_OK,
@@ -253,6 +267,16 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {"code": exc.code, "message": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        log_org_action(
+            organization=org,
+            action="member.invited",
+            actor=request.user,
+            target_type="member",
+            target_id=str(getattr(invitation, "id", "")),
+            target_email=serializer.validated_data["email"],
+            metadata={"role": serializer.validated_data["role"]},
+            request=request,
+        )
         try:
             from django.conf import settings
             from django.core.mail import send_mail
@@ -285,6 +309,10 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {**_ERROR_BAD_INPUT, "details": serializer.errors},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        from .models import Membership as _Membership
+        target_m = _Membership.objects.filter(organization=org, user_id=user_id).select_related("user").first()
+        before_role = getattr(target_m, "role", "")
+        target_email = getattr(getattr(target_m, "user", None), "email", "")
         try:
             updated = change_role(org, user_id, serializer.validated_data["role"])
         except LastOwner as exc:
@@ -297,6 +325,16 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {"code": exc.code, "message": str(exc)},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        log_org_action(
+            organization=org,
+            action="member.role_changed",
+            actor=request.user,
+            target_type="member",
+            target_id=str(user_id),
+            target_email=target_email,
+            metadata={"before": {"role": before_role}, "after": {"role": serializer.validated_data["role"]}},
+            request=request,
+        )
         return Response(MembershipSerializer(updated).data)
 
     def remove_member(self, request, pk=None, user_id=None):
@@ -306,6 +344,9 @@ class OrganizationViewSet(viewsets.ViewSet):
             return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
         if not has_permission(membership, "manage_members"):
             return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        from .models import Membership as _Membership
+        target_m = _Membership.objects.filter(organization=org, user_id=user_id).select_related("user").first()
+        target_email = getattr(getattr(target_m, "user", None), "email", "")
         try:
             remove_member(org, user_id)
         except LastOwner as exc:
@@ -318,6 +359,15 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {"code": exc.code, "message": str(exc)},
                 status=status.HTTP_404_NOT_FOUND,
             )
+        log_org_action(
+            organization=org,
+            action="member.removed",
+            actor=request.user,
+            target_type="member",
+            target_id=str(user_id),
+            target_email=target_email,
+            request=request,
+        )
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     # ---- overview (P18.1c2) -------------------------------------------------
@@ -532,10 +582,11 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {**_ERROR_BAD_INPUT, "details": serializer.errors},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        token = serializer.validated_data["token"]
         try:
             org, membership = accept_invitation(
                 request.user,
-                serializer.validated_data["token"],
+                token,
                 serializer.validated_data.get("confirm", False),
             )
         except EmailMismatch as exc:
@@ -558,6 +609,20 @@ class OrganizationViewSet(viewsets.ViewSet):
                 {"code": exc.code, "message": str(exc)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        try:
+            from .models import Invitation
+            inv = Invitation.objects.filter(token=token).first()
+            log_org_action(
+                organization=org,
+                action="member.joined",
+                actor=request.user,
+                target_type="member",
+                target_email=(inv.email if inv else (request.user.email or "")),
+                metadata={"role": getattr(membership, "role", "")},
+                request=request,
+            )
+        except Exception:
+            pass
         org.caller_role = membership.role
         return Response(
             {
@@ -568,3 +633,50 @@ class OrganizationViewSet(viewsets.ViewSet):
             },
             status=status.HTTP_200_OK,
         )
+
+    def audit(self, request, pk=None):
+        """GET /organizations/{id}/audit/ — owner/admin/auditor."""
+        org, membership = self._org_for_member(request, pk)
+        if org is None:
+            return Response(_ERROR_NOT_FOUND, status=status.HTTP_404_NOT_FOUND)
+        if membership.role not in ("owner", "admin", "auditor"):
+            return Response(_ERROR_FORBIDDEN, status=status.HTTP_403_FORBIDDEN)
+        from .models import OrgAuditLog
+        from django.contrib.auth import get_user_model
+
+        qs = OrgAuditLog.objects.filter(organization=org).select_related("actor").order_by("-created_at")
+        action = request.query_params.get("action")
+        if action:
+            qs = qs.filter(action=action)
+        actor_q = request.query_params.get("actor")
+        if actor_q:
+            User = get_user_model()
+            try:
+                uid = int(actor_q)
+                qs = qs.filter(actor_id=uid)
+            except (TypeError, ValueError):
+                qs = qs.filter(actor__email__icontains=actor_q)
+        try:
+            limit = int(request.query_params.get("limit") or 50)
+            offset = int(request.query_params.get("offset") or 0)
+        except (TypeError, ValueError):
+            limit, offset = 50, 0
+        limit = min(max(limit, 1), 200)
+        offset = max(offset, 0)
+        total = qs.count()
+        items = []
+        for log in qs[offset : offset + limit]:
+            items.append(
+                {
+                    "id": log.id,
+                    "action": log.action,
+                    "actor": {"id": log.actor_id, "email": log.actor.email} if log.actor_id and log.actor else None,
+                    "target_type": log.target_type,
+                    "target_id": log.target_id,
+                    "target_email": log.target_email,
+                    "metadata": log.metadata or {},
+                    "ip": log.ip,
+                    "created_at": log.created_at.isoformat().replace("+00:00", "Z"),
+                }
+            )
+        return Response({"count": total, "results": items})

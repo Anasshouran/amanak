@@ -409,7 +409,47 @@ class AccountViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         ctx = getattr(self.request, "context", None)
         context_id = ctx.id if ctx and ctx.type == "organization" else None
-        serializer.save(user=self.request.user, context_id=context_id)
+        instance = serializer.save(user=self.request.user, context_id=context_id)
+        if ctx and ctx.type == "organization":
+            try:
+                from apps.organizations.models import Organization
+                org = Organization.objects.filter(pk=context_id, is_active=True).first()
+                if org and getattr(instance, "sharing", "private") == "org":
+                    log_org_action(
+                        organization=org,
+                        action="sharing.changed",
+                        actor=self.request.user,
+                        target_type="account",
+                        target_id=str(getattr(instance, "id", "")),
+                        metadata={"after": {"sharing": "org"}},
+                        request=self.request,
+                    )
+            except Exception:
+                pass
+
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        before_sharing = getattr(instance, "sharing", "private")
+        ctx = getattr(self.request, "context", None)
+        updated = serializer.save()
+        if ctx and ctx.type == "organization":
+            try:
+                after_sharing = getattr(updated, "sharing", "private")
+                if after_sharing != before_sharing:
+                    from apps.organizations.models import Organization
+                    org = Organization.objects.filter(pk=ctx.id, is_active=True).first()
+                    if org:
+                        log_org_action(
+                            organization=org,
+                            action="sharing.changed",
+                            actor=self.request.user,
+                            target_type="account",
+                            target_id=str(getattr(updated, "id", "")),
+                            metadata={"before": {"sharing": before_sharing}, "after": {"sharing": after_sharing}},
+                            request=self.request,
+                        )
+            except Exception:
+                pass
 
 
 def _device_label(ua: str) -> str:
@@ -618,6 +658,18 @@ def me_invitations_accept(request, invitation_id):
         return Response({"code": exc.code, "message": str(exc)}, status=410)
     except (InvalidInvitation, AlreadyMember) as exc:
         return Response({"code": exc.code, "message": str(exc)}, status=400)
+    try:
+        log_org_action(
+            organization=org,
+            action="member.joined",
+            actor=request.user,
+            target_type="member",
+            target_email=invitation.email,
+            metadata={"role": getattr(membership, "role", "")},
+            request=request,
+        )
+    except Exception:
+        pass
     org.caller_role = membership.role
     from apps.organizations.serializers import OrganizationSerializer
     return Response(
@@ -645,6 +697,17 @@ def me_invitations_decline(request, invitation_id):
     if invitation.status == "pending":
         invitation.status = "revoked"
         invitation.save(update_fields=["status"])
+        try:
+            log_org_action(
+                organization=invitation.organization,
+                action="member.declined",
+                actor=request.user,
+                target_type="member",
+                target_email=invitation.email,
+                request=request,
+            )
+        except Exception:
+            pass
         try:
             inviter = invitation.invited_by
             if inviter and inviter.email:

@@ -125,14 +125,6 @@ export type OrganizationOverview = {
   recent_incidents: OrgIncidentSummary[]
 }
 
-export type Organization = {
-  id: string
-  name: string
-  slug: string
-  role?: string
-  created_at?: string
-}
-
 export type ApiError = {
   code: string
   message: string
@@ -744,4 +736,20 @@ export interface MyInvitation {
   invited_by_email: string;
   created_at: string;
   expires_at: string;
+}
+
+export interface OrgAuditEntry {
+  id: number;
+  action: string;
+  actor: { id: number; email: string } | null;
+  target_type: string;
+  target_id: string;
+  target_email: string;
+  metadata: Record<string, unknown>;
+  ip: string | null;
+  created_at: string;
+}
+export interface OrgAuditResponse {
+  count: number;
+  results: OrgAuditEntry[];
 }

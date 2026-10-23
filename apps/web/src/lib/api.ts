@@ -1,4 +1,4 @@
-import { ApiClient } from "@amanak/api-client"
+import { ApiClient, setContextId as _setContextId } from "@amanak/api-client"
 import { clearImpersonation, impersonationHeader } from "./impersonation"
 
 // Re-exported so callers import the context helpers from the app's api module
@@ -10,7 +10,7 @@ export { getContextId, setContextId } from "@amanak/api-client"
 if (typeof window !== "undefined") {
   try {
     const stored = window.localStorage.getItem("amanak.context")
-    setContextId(stored || null)
+    _setContextId(stored || null)
   } catch {
     /* ignore — non-browser or storage unavailable */
   }

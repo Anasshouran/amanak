@@ -237,6 +237,7 @@ export function Nav({
   onSignOut,
   showUpgrade = true,
   inOrgContext = false,
+  orgRole = null,
 }: {
   staff?: boolean
   roles?: string[]
@@ -246,6 +247,7 @@ export function Nav({
   showUpgrade?: boolean
   /** Render the "Organization" entry when an org context is active (P18.1c2). */
   inOrgContext?: boolean
+  orgRole?: string | null
 }) {
   const t = useT()
   const navigate = useNavigate()
@@ -334,6 +336,9 @@ export function Nav({
         <div className="amk-navgroup">
           {inOrgContext && (
             <NavItem to="/org" labelKey="nav.organization" icon={IconUsers} />
+          )}
+          {inOrgContext && (orgRole === "owner" || orgRole === "admin" || orgRole === "auditor") && (
+            <NavItem to="/org/audit" labelKey="nav.audit_log" icon={IconAudit} />
           )}
           {PERSONAL_LINKS.map(({ to, key, icon, end }) => (
             <NavItem key={to} to={to} labelKey={key} icon={icon} end={end} />

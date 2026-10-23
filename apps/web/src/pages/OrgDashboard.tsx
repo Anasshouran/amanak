@@ -83,8 +83,8 @@ export function OrgDashboard() {
         </div>
 
         {overview.loading && <Skeleton height={80} />}
-        {overview.error && !overview.loading && (
-          <ErrorState message={t("common.error")} onRetry={overview.reload} />
+        {Boolean(overview.error) && !overview.loading && (
+          <ErrorState title={t("common.error")} onRetry={overview.reload} />
         )}
 
         {data && !overview.loading && (
@@ -158,7 +158,7 @@ function OrgMembersPanel({
 
   if (members.loading) return <Skeleton height={60} />
   if (members.error && !members.loading) {
-    return <ErrorState message={t("common.error")} onRetry={members.reload} />
+    return <ErrorState title={t("common.error")} onRetry={members.reload} />
   }
   return (
     <OrgMembersTable
@@ -182,7 +182,7 @@ function OrgActivityPanel({ orgId }: { orgId: string }) {
 
   if (activity.loading) return <Skeleton height={60} />
   if (activity.error && !activity.loading) {
-    return <ErrorState message={t("common.error")} onRetry={activity.reload} />
+    return <ErrorState title={t("common.error")} onRetry={activity.reload} />
   }
   return <OrgActivityFeed activity={activity.data ?? []} />
 }

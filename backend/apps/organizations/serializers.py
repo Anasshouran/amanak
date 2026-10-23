@@ -151,3 +151,25 @@ class InvitationAcceptSerializer(serializers.Serializer):
 
 class MemberRoleSerializer(serializers.Serializer):
     role = serializers.ChoiceField(choices=[c[0] for c in Membership.ROLES])
+
+
+class OrgAuditActorSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    email = serializers.EmailField()
+
+
+class OrgAuditEntrySerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    action = serializers.CharField()
+    actor = serializers.SerializerMethodField()
+    target_type = serializers.CharField()
+    target_id = serializers.CharField()
+    target_email = serializers.EmailField()
+    metadata = serializers.JSONField()
+    ip = serializers.IPAddressField(allow_null=True)
+    created_at = serializers.DateTimeField()
+
+    def get_actor(self, obj):
+        if not obj.actor_id:
+            return None
+        return {"id": obj.actor_id, "email": getattr(obj.actor, "email", "")}

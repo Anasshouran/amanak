@@ -32,7 +32,8 @@ const BADGE_ROUTES = [
 
 export function Layout() {
   const { user, logout } = useAuth()
-  const { contextId, contextName } = useContext_()
+  const ctx = useContext_()
+  const { contextId, contextName } = ctx
   const location = useLocation()
   const staff = isStaff(user)
   const roles = getRoles(user)
@@ -40,6 +41,7 @@ export function Layout() {
   const isPro = useIsProPlan()
   const navUser = user ? { email: user.email, username: user.username } : undefined
   const inOrgContext = contextId !== null
+  const orgRole = inOrgContext ? (ctx.organizations.find((o:any)=>o.id===contextId)?.role) : null
   const showBadge = BADGE_ROUTES.some(
     (route) => location.pathname === route || location.pathname.startsWith(`${route}/`),
   )
@@ -63,6 +65,7 @@ export function Layout() {
           onSignOut={() => void logout()}
           showUpgrade={!isPro}
           inOrgContext={inOrgContext}
+          orgRole={orgRole}
         />
         <main className="amk-main">
           {showBadge && <ContextBadge />}

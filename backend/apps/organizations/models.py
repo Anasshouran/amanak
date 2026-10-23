@@ -125,3 +125,48 @@ class Invitation(models.Model):
     @property
     def is_pending(self):
         return self.status == "pending"
+
+
+class OrgAuditLog(models.Model):
+    ACTIONS = [
+        ("org.created", "Organization created"),
+        ("org.updated", "Organization updated"),
+        ("org.deleted", "Organization deleted"),
+        ("member.invited", "Member invited"),
+        ("member.joined", "Member joined"),
+        ("member.role_changed", "Member role changed"),
+        ("member.removed", "Member removed"),
+        ("member.declined", "Invitation declined"),
+        ("device.added", "Device added to org"),
+        ("device.removed", "Device removed from org"),
+        ("incident.created", "Incident created"),
+        ("incident.resolved", "Incident resolved"),
+        ("sharing.changed", "Resource sharing changed"),
+    ]
+
+    organization = models.ForeignKey(
+        Organization, on_delete=models.CASCADE, related_name="audit_logs"
+    )
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="+",
+    )
+    action = models.CharField(max_length=32, choices=ACTIONS)
+    target_type = models.CharField(max_length=32, blank=True)
+    target_id = models.CharField(max_length=64, blank=True)
+    target_email = models.EmailField(blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    ip = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.CharField(max_length=256, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["organization", "-created_at"]),
+            models.Index(fields=["organization", "action"]),
+            models.Index(fields=["actor", "-created_at"]),
+        ]

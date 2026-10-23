@@ -378,6 +378,10 @@ const en: Record<string, string> = {
   "org.invitations.empty": "You have no pending invitations.",
   "org.invitations.accept.accepted": "You are now a member.",
 
+  "org.audit.title": "Audit Log",
+  "org.audit.empty": "No audit entries yet.",
+  "org.audit.action.member.role_changed": "Role changed",
+
 }
 
 const ar: Record<string, string> = {
@@ -749,6 +753,10 @@ const ar: Record<string, string> = {
   "org.invitations.title": "الدعوات",
   "org.invitations.empty": "لا توجد لديك دعوات قيد الانتظار.",
   "org.invitations.accept.accepted": "أصبحت الآن عضواً.",
+
+  "org.audit.title": "سجل التدقيق",
+  "org.audit.empty": "لا توجد سجلات تدقيق بعد.",
+  "org.audit.action.member.role_changed": "تم تغيير الدور",
 
 }
 
