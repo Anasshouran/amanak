@@ -17,6 +17,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from redact import cap, redact
+from redaction_cloud import redact_for_cloud
 
 DEFAULT_TIMEOUT_SECONDS = 15
 DEFAULT_MAX_TOKENS = 1024
@@ -67,6 +68,9 @@ class AIProvider(ABC):
 
     name = "abstract"
     default_model = "unknown"
+    # Redaction policy. Local providers (Ollama) use the lighter ``redact``;
+    # cloud providers override with the aggressive ``redact_for_cloud`` (P20.4).
+    redaction = staticmethod(redact)
 
     def __init__(self, *, timeout=DEFAULT_TIMEOUT_SECONDS, max_tokens=DEFAULT_MAX_TOKENS, model=None):
         self.timeout = timeout
@@ -79,8 +83,12 @@ class AIProvider(ABC):
         This is the single entry point used by the router and callers. The
         redaction happens *before* ``_complete`` receives anything, so a
         provider (real or fake) can never observe unredacted PII.
+
+        Cloud providers select the aggressive redaction; local providers keep
+        the default light redaction (P20.4).
         """
-        safe_prompt = cap(redact(prompt or ""), DEFAULT_MAX_PROMPT_CHARS)
+        redact_fn = self.redaction
+        safe_prompt = cap(redact_fn(prompt or ""), DEFAULT_MAX_PROMPT_CHARS)
         safe_context = redact_context(context)
         return self._complete(safe_prompt, safe_context)
 

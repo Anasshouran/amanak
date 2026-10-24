@@ -1,10 +1,18 @@
-"""Provider selection.
+"""Provider selection for the AI gateway (hybrid local + cloud, P20.4).
 
 Resolution order:
 
 1. ``AI_ENABLED`` false  -> :class:`NullProvider` (nothing can be sent).
 2. ``AI_FAKE_PROVIDER``  -> :class:`FakeProvider` (tests only, no network).
-3. Otherwise             -> the configured provider stub (openai/anthropic).
+3. Otherwise             -> the configured provider.
+
+Cloud posture (P20.4):
+
+* Cloud providers (``openai``, ``anthropic``, ``groq``) are only selectable
+  when ``AI_CLOUD_CONSENT`` is explicitly true *and* the provider has credentials
+  configured. Anything else fails closed.
+* Local providers (``ollama``) are always allowed when ``AI_ENABLED`` is true and
+  need no consent (inference stays on the operator's machine).
 
 Configuration is read from Django settings when available, falling back to the
 environment so the gateway can also be used standalone (e.g. ``run_eval``).
@@ -24,12 +32,17 @@ from .provider import (
     DEFAULT_TIMEOUT_SECONDS,
     AIProviderError,
 )
+from .groq_provider import GroqProvider
 
 _PROVIDERS = {
     "ollama": OllamaProvider,
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
+    "groq": GroqProvider,
 }
+
+# Providers that transmit prompts to a third-party cloud (P20.4).
+CLOUD_PROVIDERS = frozenset({"openai", "anthropic", "groq"})
 
 
 def _cfg(name, default=None):
@@ -55,6 +68,11 @@ def ai_enabled():
     return _as_bool(_cfg("AI_ENABLED", "false"))
 
 
+def is_cloud_provider(name: str) -> bool:
+    """True when ``name`` is a cloud-backed provider (P20.4 hybrid posture)."""
+    return str(name or "").strip().lower() in CLOUD_PROVIDERS
+
+
 def select_provider():
     """Return the provider instance dictated by the current configuration."""
     if not ai_enabled():
@@ -72,6 +90,13 @@ def select_provider():
         model = str(_cfg("OLLAMA_MODEL", "") or "").strip() or None
         timeout = _cfg("OLLAMA_TIMEOUT", 30)
         return OllamaProvider(base_url=base_url, model=model, timeout=timeout)
+
+    if name in CLOUD_PROVIDERS:
+        # Cloud requires an explicit, informed consent from the operator (P20.4).
+        if not _as_bool(_cfg("AI_CLOUD_CONSENT", "false")):
+            raise AIProviderError(
+                "cloud ai provider requires AI_CLOUD_CONSENT=true"
+            )
 
     factory = _PROVIDERS.get(name)
     if factory is None:

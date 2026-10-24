@@ -1,9 +1,4 @@
-"""AI assistant endpoints.
-
-All endpoints require authentication and return 503 with ``{"code":
-"ai_disabled"}`` whenever AI_ENABLED is false. Provider failures surface as a
-generic 502 with no input content in the body or logs.
-"""
+"""AI assistant endpoints."""
 
 from __future__ import annotations
 
@@ -11,12 +6,11 @@ import logging
 
 from django.conf import settings
 from rest_framework import status, viewsets
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from scanner.models import ScanResult
-
 from common.gating import can_use, consume, current_usage, get_limit
 
 from . import services
@@ -35,8 +29,6 @@ class AIViewSet(viewsets.ViewSet):
     throttle_classes = [AIUserRateThrottle, AIDailyRateThrottle]
 
     def initial(self, request, *args, **kwargs):
-        # Authenticate/authorize first, but skip throttling while AI is off so
-        # the disabled response is deterministic and consumes no budget.
         if not settings.AI_ENABLED:
             self.perform_authentication(request)
             self.check_permissions(request)
@@ -51,23 +43,17 @@ class AIViewSet(viewsets.ViewSet):
     def explain_scan(self, request):
         if not settings.AI_ENABLED:
             return self._disabled(request)
-        # billing gating
         if get_limit(request.user, "ai_enabled") == 0:
             return Response({"feature": "ai"}, status=status.HTTP_402_PAYMENT_REQUIRED)
         if not can_use(request.user, "ai_requests", amount=1):
             used = current_usage(request.user, "ai_requests")
             limit = get_limit(request.user, "ai_requests")
             return Response({"feature": "ai_requests", "limit": limit, "used": used}, status=status.HTTP_402_PAYMENT_REQUIRED)
-
         serializer = AIExplainScanRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-
         scan = self._resolve_scan(request.user, serializer.validated_data["scan_id"])
         if scan is None:
-            return Response(
-                {"code": "not_found", "message": "scan not found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"code": "not_found", "message": "scan not found"}, status=status.HTTP_404_NOT_FOUND)
         locale = serializer.validated_data.get("locale", "ar")
         resp = self._respond(lambda: services.explain_scan(request.user, scan, locale=locale))
         if resp.status_code == status.HTTP_200_OK:
@@ -84,7 +70,6 @@ class AIViewSet(viewsets.ViewSet):
             used = current_usage(request.user, "ai_requests")
             limit = get_limit(request.user, "ai_requests")
             return Response({"feature": "ai_requests", "limit": limit, "used": used}, status=status.HTTP_402_PAYMENT_REQUIRED)
-
         serializer = AIGuidanceRequestSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         topic = serializer.validated_data["topic"]
@@ -108,19 +93,23 @@ class AIViewSet(viewsets.ViewSet):
         except services.AIDisabled:
             return Response({"code": "ai_disabled"}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         except services.ProviderFailure:
-            return Response(
-                {"code": "ai_provider_error", "message": "AI provider unavailable"},
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
+            return Response({"code": "ai_provider_error", "message": "AI provider unavailable"}, status=status.HTTP_502_BAD_GATEWAY)
         return Response(AIResponseSerializer(payload).data)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def ai_status_view(request):
-    from django.conf import settings
-    return Response({
-        "enabled": bool(getattr(settings, "AI_ENABLED", False)),
-        "provider": getattr(settings, "AI_PROVIDER", "") if getattr(settings, "AI_ENABLED", False) else None,
-        "model": getattr(settings, "OLLAMA_MODEL", None) if getattr(settings, "AI_ENABLED", False) else None,
-    })
+    from ai.gateway.router import _as_bool, is_cloud_provider
+
+    provider_name = str(getattr(settings, "AI_PROVIDER", "") or "").strip().lower()
+    enabled = bool(getattr(settings, "AI_ENABLED", False))
+    return Response(
+        {
+            "enabled": enabled,
+            "provider": getattr(settings, "AI_PROVIDER", "") if enabled else None,
+            "model": getattr(settings, "OLLAMA_MODEL", None) if enabled else None,
+            "is_cloud": enabled and is_cloud_provider(provider_name),
+            "cloud_consent": _as_bool(getattr(settings, "AI_CLOUD_CONSENT", False)),
+        }
+    )

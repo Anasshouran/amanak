@@ -1,80 +1,77 @@
-# AMANAK AI Privacy Model (P3)
+# AMANAK AI Privacy Model (P20.4 — Hybrid: Cloud + Local)
 
-The AI Assistant is **provider-agnostic** and **disabled by default**. Nothing
-leaves the process unless `AI_ENABLED` is explicitly turned on. This document
-describes the guarantees the code enforces, not aspirations.
+The AI Assistant supports two operating modes. The default (`AI_ENABLED=false`)
+remains unchanged: nothing leaves the device, nothing is transmitted, and all
+`/api/v1/ai/*` endpoints return `503 {"code":"ai_disabled"}`.
 
-## Default posture
+When enabled, the gateway selects the provider based on `AI_PROVIDER` and
+`AI_CLOUD_CONSENT`.
 
-- `AI_ENABLED=false` (default). All `/api/v1/ai/*` endpoints return
-  `503` with body `{"code": "ai_disabled"}`. The attempt is logged without any
-  input content.
-- The default provider is `NullProvider`, which refuses every call with
-  `AIDisabledError`.
-- No outbound network call is made anywhere in the test suite. Tests use
-  `FakeProvider`, an offline deterministic provider.
+## Mode A — Local (Ollama)
 
-## What is sent to a provider
+Used when `AI_PROVIDER=ollama` (default model: `llama3.1:8b`).
 
-Only after redaction, and only ever:
+- **No external transmission**: inference runs on the operator's Ollama instance.
+- **Redaction**: the lighter `redaction_cloud` is applied (emails, phones, secrets,
+but URLs preserved for quality). The prompt is still capped to 4000 chars.
+- **No consent required** beyond `AI_ENABLED=true`.
 
-- `explain-scan`: a prompt built from **scan metadata** — verdict, score,
-  ruleset version, and the rule id/severity/description of each match. The raw
-  scanned input is never stored (P2) and never sent. Scan history is never sent.
-- `guidance`: a prompt built from the requested **topic** and curated, offline
-  knowledge-base entries.
+## Mode B — Cloud (Anthropic, Groq)
 
-Redaction runs in `AIProvider.complete()` (the base class) via
-`security-engine/redact.py::cap(redact(...))`, so no subclass — real or fake —
-can observe unredacted PII. Context string values are redacted as well.
+Used when `AI_PROVIDER=anthropic` (model: `claude-3-5-haiku`) or `groq` (model:
+`llama-3.3-70b-versatile`).
 
-## What is never sent or stored
+**Requirements** (both must be true; fail-closed otherwise):
+- `AI_ENABLED=true`
+- `AI_CLOUD_CONSENT=true`
+- `ANTHROPIC_API_KEY` (for Anthropic) or `GROQ_API_KEY` (for Groq) present
+- `AI_PROVIDER` set to the provider name
 
+**Privacy floor (P20.4)**:
+- **Aggressive redaction** (`security-engine/redaction_cloud.py`): before any
+  cloud transmission, the assembled prompt is stripped of:
+  - Emails (`[email redacted]`)
+  - Phone numbers (`[phone redacted]`)
+  - Token-like secrets (`[token redacted]`)
+  - **Full URLs** (`[redacted-url]` — host + query, the primary evidence in
+    phishing scans)
+- **No raw input stored** or transmitted: `build_explain_scan_prompt()` builds
+  from scan metadata (verdict, score, match descriptions), never the raw URL.
+- **No PII in DB**: `AIConversation` stores `prompt_hash`, `response_hash`,
+  provider, model, tokens, `kind`, owner, timestamp. No raw content.
+- **Rate limits**: `ai_user`: 10/min per user; `ai_daily`: `AI_DAILY_LIMIT`/day
+  (default 100) global rolling cap.
+- **No content in logs**: provider failures are generic (`ai_provider_error`);
+  disabled attempts log `user_id` only.
+- **Access control**: `explain-scan` resolves scans via
+  `ScanResult.objects.filter(id=..., user=user)`; cross-user access returns 404.
+
+### What is never sent or stored (both modes)
 - Raw user input from scans.
 - Scan history.
-- Credentials, passwords, one-time codes, recovery codes, or MFA secrets. The
-  product never asks for them.
-- Raw prompts or raw responses in logs. Provider failures are logged generically
-  (`ai_provider_failure kind=… provider=…`) with no content.
-- Raw prompts or raw responses in the database. `AIConversation` stores only
-  `prompt_hash`, `response_hash`, provider, model, token count, kind, owner, and
-  timestamp.
+- Credentials, passwords, one-time codes, recovery codes, MFA secrets.
+- Raw prompts or raw responses in logs or DB.
 
-## Access control
+### Provider status endpoint
+`GET /api/v1/ai/status/` returns:
+- `enabled`: bool
+- `provider`: configured provider name (or `None`)
+- `model`: configured model
+- `is_cloud`: `true` when provider is a cloud-backed provider and consent is set
+- `cloud_consent`: `true` when `AI_CLOUD_CONSENT=true`
 
-- Every AI endpoint requires authentication.
-- `explain-scan` resolves the scan with `ScanResult.objects.filter(id=…,
-  user=request.user)`; a scan owned by another user returns `404`.
-- `AIConversation` rows are owner-scoped.
+## Configuration reference
 
-## Rate limiting
-
-Two limits compose, backed by the shared Redis cache (DB 1):
-
-| Scope    | Limit                | Key            |
-| -------- | -------------------- | -------------- |
-| ai_user  | 10 requests / minute | per user       |
-| ai_daily | `AI_DAILY_LIMIT`/day (default 100) | global |
-
-Exceeding a limit returns `429`.
-
-## Configuration
-
-| Variable           | Default | Meaning                                   |
-| ------------------ | ------- | ----------------------------------------- |
-| `AI_ENABLED`       | false   | Master switch.                            |
-| `AI_FAKE_PROVIDER` | false   | Use the offline fake provider (tests).    |
-| `AI_PROVIDER`      | (empty) | `openai` or `anthropic` when enabled.     |
-| `AI_API_KEY`       | (empty) | Provider credential (never logged).       |
-| `AI_BASE_URL`      | (empty) | Provider endpoint (stubs validate it).    |
-| `AI_MODEL`         | (empty) | Override the provider default model.      |
-| `AI_TIMEOUT`       | 15      | Per-call timeout, seconds.                |
-| `AI_MAX_TOKENS`    | 1024    | Per-call token budget.                    |
-| `AI_DAILY_LIMIT`   | 100     | Global rolling-day request cap.           |
-
-## Provider status
-
-`openai_provider.py` and `anthropic_provider.py` are **stubs**: they validate
-configuration and then refuse. No transport is implemented in this phase, so
-they cannot make real network calls. Real transports and provider keys are out
-of scope for P3.
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `AI_ENABLED` | `false` | Master switch |
+| `AI_FAKE_PROVIDER` | `false` | Offline deterministic provider (tests) |
+| `AI_PROVIDER` | `""` | `ollama` / `anthropic` / `groq` / `openai` |
+| `AI_CLOUD_CONSENT` | `false` | Required for any cloud provider |
+| `AI_API_KEY` | `""` | Provider key (Anthropic / Groq / OpenAI) |
+| `AI_MODEL` | `""` | Override provider model |
+| `ANTHROPIC_API_KEY` | `""` | Anthropic-specific key |
+| `GROQ_API_KEY` | `""` | Groq-specific key |
+| `OLLAMA_BASE_URL` | `http://localhost:11434` | Local inference endpoint |
+| `OLLAMA_MODEL` | `llama3.1:8b` | Default Ollama model |
+| `AI_DAILY_LIMIT` | `100` | Global rolling-day cap |

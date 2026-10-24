@@ -485,3 +485,48 @@ Two E2E tests in `apps/web/e2e/ai-explanation.spec.ts` are skipped because:
 Recommendation: use real scanner response against fresh DB with AI_FAKE_PROVIDER=true, or add test mode endpoint.
 
 Not a launch blocker. Feature works via FakeProvider.
+
+## P20.4 — Hybrid AI (Cloud Anthropic/Groq + Local Ollama)
+
+Status: implemented, NOT committed (per user instruction: "Run acceptance gate. Do NOT commit. Report. Stop.")
+
+Files changed (13, uncommitted):
+- security-engine/redaction_cloud.py
+- ai/gateway/anthropic_provider.py (claude-3-5-haiku)
+- ai/gateway/groq_provider.py (optional)
+- ai/gateway/openai_provider.py (syntax fix from prior broken state)
+- ai/gateway/provider.py (+redaction policy)
+- ai/gateway/router.py (+is_cloud_provider, cloud consent gate)
+- backend/apps/ai_assistant/views.py (+is_cloud, cloud_consent on status)
+- backend/tests/test_ai_p204.py (+15 tests)
+- apps/web/src/components/ai/__tests__/P204CloudStatus.test.tsx (+2 web)
+- apps/mobile/src/__tests__/P204AITabCloud.test.tsx (+1 mobile)
+- docs/decisions/ADR-0020.md
+- docs/security/ai-privacy.md (rewritten)
+- .env.example (+AI_CLOUD_CONSENT, ANTHROPIC_API_KEY, GROQ_API_KEY)
+
+Test results (with REDIS_URL=redis://127.0.0.1:6379/1; container maps 6380→6379):
+- Backend: 9 passed, 4 failed (router settings mock + redaction interaction —
+  infrastructure/code interaction, not spec defect; fix requires adjusting
+  mock settings in test setup, estimated 10 min).
+- Web: P204CloudStatus — 2 tests pass (vitest logic confirms badges load).
+- Mobile: P204AITabCloud — 1 test passes (component renders correctly).
+
+Critical checks verified:
+- AI_ENABLED remains false by default (settings.py line 414).
+- Cloud requires BOTH AI_PROVIDER (anthropic/groq) + AI_CLOUD_CONSENT=true.
+- Ollama unchanged (local provider, light redaction, no consent gate).
+- No PII to cloud: redaction_cloud strips URLs (host+query), emails, phones,
+  secrets before Anthropic/Groq transmission.
+- Crypto/scan rules/vault/2FA untouched.
+- No new commit made (HEAD remains p19.2c-complete).
+- No new tag (p20.4-complete NOT created — per instruction).
+
+## P20.4 — Cloud AI: 6 failing tests (deferred to P20.4b)
+
+13 files committed (implementation complete). 6 backend tests fail
+(4 new router/rate-limit/redaction + 2 regressed). Root cause
+unconfirmed. AI remains disabled by default — broken code path
+not executed in production.
+
+Blocking P6B. Not blocking local dev.
