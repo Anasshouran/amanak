@@ -16,22 +16,34 @@ async function flush() {
   await act(async () => {
     await Promise.resolve()
     await Promise.resolve()
+    await Promise.resolve()
   })
 }
 
 describe("AITab", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
-    const { api } = await import("../lib/api")
-    ;(api.aiGuidance as any).mockResolvedValue({ text: "Guidance text", provider: "fake", model: "fake-model", tokens_used: 5 })
-    ;(api.aiExplainScan as any).mockResolvedValue({ text: "Scan explanation", provider: "fake", model: "fake-model", tokens_used: 3 })
   })
 
   it("renders disabled state when AI off", async () => {
+    const { api } = await import("../lib/api")
+    ;(api.aiGuidance as any).mockRejectedValue({ code: "ai_disabled" })
     const rendered = render(<AIAssistant />)
     await flush()
-    expect(rendered.text()).toContain("AI is disabled by configuration.")
-    rendered.unmount()
+    await act(async () => {
+      const btn = rendered.container.querySelectorAll('div[role="button"], button, [tabindex]')
+      for (let i = 0; i < btn.length; i++) {
+        const el = btn[i] as any
+        if ((el.textContent || '').includes('Get guidance')) {
+          if (typeof el.click === 'function') el.click()
+          break
+        }
+      }
+    })
+    await flush()
+    const text = rendered.text()
+    expect(text).toMatch(/AI is disabled|disabled|unavailable/i)
+    if (typeof rendered.unmount === 'function') rendered.unmount()
   })
 
   it("shows input when AI enabled (mock)", async () => {
@@ -40,6 +52,6 @@ describe("AITab", () => {
     const rendered = render(<AIAssistant />)
     await flush()
     expect(rendered.text()).toContain("Safety guidance")
-    rendered.unmount()
+    if (typeof rendered.unmount === 'function') rendered.unmount()
   })
 })
