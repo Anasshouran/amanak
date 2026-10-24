@@ -1,5 +1,7 @@
+/** @vitest-environment jsdom */
+import { describe, test, expect, vi } from "vitest"
 import { render, screen, fireEvent } from "@testing-library/react"
-import { ScannerExplainButton } from "./ScannerExplainButton"
+import { ScannerExplainButton } from "../ScannerExplainButton"
 
 describe("ScannerExplainButton", () => {
   test("disabled when AI off", () => {

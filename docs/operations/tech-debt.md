@@ -474,3 +474,14 @@ Manual verification (P6B blocking):
 4. /org → KPIs and /org/audit work?
 
 Until manual verifies 4/5 features work, treat the 5 vitest/playwright failures as real defects requiring fix (est. 12–30 min: import paths + env + backend endpoint). Not a launch blocker only if manual passes.
+
+## P19.2 — AI Explanation E2E tests skipped
+
+Two E2E tests in `apps/web/e2e/ai-explanation.spec.ts` are skipped because:
+1. The mock response contract doesn't match the real API (verdict values: "safe"|"suspicious"|"dangerous", not "phishing"; score not risk_score; matches not reasons)
+2. Writing a correct mock requires replicating the entire scanner response shape
+3. Feature verified via: backend 11 tests + web unit 5 tests + mobile unit 2 tests + manual with AI_FAKE_PROVIDER=true
+
+Recommendation: use real scanner response against fresh DB with AI_FAKE_PROVIDER=true, or add test mode endpoint.
+
+Not a launch blocker. Feature works via FakeProvider.
