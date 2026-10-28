@@ -24,6 +24,14 @@ def has_staff_role(user, *roles: str) -> bool:
     return user.groups.filter(name__in=roles).exists()
 
 
+def is_super_admin(user) -> bool:
+    if not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    return user.groups.filter(name="super_admin").exists()
+
+
 def user_staff_roles(user):
     """Return the sorted staff-role names held by ``user``."""
     if user is None or not getattr(user, "is_authenticated", False):

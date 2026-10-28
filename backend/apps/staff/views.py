@@ -34,7 +34,11 @@ from common.staff import (
     has_staff_role,
     require_staff_role,
     user_staff_roles,
+    is_super_admin,
 )
+from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth.models import Group
+from rest_framework_simplejwt.token_blacklist.models import OutstandingToken, BlacklistedToken
 
 from .export import build_user_export
 from .impersonation import IMPERSONATION_MAX_SECONDS, ImpersonationSession
@@ -103,47 +107,273 @@ def _paginate(queryset, request, serialize):
 
 
 @csrf_exempt
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "POST"])
 @require_staff_role(*USER_VIEW_ROLES)
 def users_list(request):
     throttled = enforce_throttle(request, "read")
     if throttled:
         return throttled
+    if request.method == "GET":
+        qs = User.objects.select_related("subscription").order_by("id")
+        q = request.GET.get("q", "").strip()
+        if q:
+            from django.db.models import Q
 
-    qs = User.objects.select_related("subscription").order_by("id")
-    q = request.GET.get("q", "").strip()
-    if q:
-        from django.db.models import Q
+            qs = qs.filter(Q(email__icontains=q) | Q(username__icontains=q))
 
-        qs = qs.filter(Q(email__icontains=q) | Q(username__icontains=q))
+        status_param = request.GET.get("status", "").strip().lower()
+        if status_param == "blocked":
+            qs = qs.filter(moderation__is_blocked=True)
+        elif status_param == "active":
+            from django.db.models import Q
 
-    status_param = request.GET.get("status", "").strip().lower()
-    if status_param == "blocked":
-        qs = qs.filter(moderation__is_blocked=True)
-    elif status_param == "active":
-        from django.db.models import Q
+            qs = qs.filter(Q(moderation__isnull=True) | Q(moderation__is_blocked=False))
 
-        qs = qs.filter(Q(moderation__isnull=True) | Q(moderation__is_blocked=False))
+        # Enrich without per-row queries: one annotated query for the whole page.
+        qs = qs.annotate(
+            subscription_plan=F("subscription__plan_id"),
+            is_blocked=Coalesce(F("moderation__is_blocked"), Value(False)),
+            tickets_count=Count("support_tickets", distinct=True),
+        )
 
-    # Enrich without per-row queries: one annotated query for the whole page.
-    qs = qs.annotate(
-        subscription_plan=F("subscription__plan_id"),
-        is_blocked=Coalesce(F("moderation__is_blocked"), Value(False)),
-        tickets_count=Count("support_tickets", distinct=True),
+        return JsonResponse(_paginate(qs, request, user_brief))
+    
+    # POST - create user (super_admin only)
+    throttled_w = enforce_throttle(request, "write")
+    if throttled_w:
+        return throttled_w
+    if not is_super_admin(request.user):
+        return JsonResponse({"code": "forbidden"}, status=403)
+    body = _json_body(request)
+    if body is None:
+        return _error("invalid_json")
+    email = (body.get("email") or "").strip().lower()
+    username = (body.get("username") or "").strip()
+    password = body.get("password") or ""
+    first_name = (body.get("first_name") or "").strip()
+    last_name = (body.get("last_name") or "").strip()
+    is_active = body.get("is_active", True)
+    is_superuser = bool(body.get("is_superuser", False))
+    groups = body.get("groups") or []
+    
+    errors = {}
+    if not email:
+        errors["email"] = ["This field is required."]
+    elif User.objects.filter(email=email).exists():
+        errors["email"] = ["A user with that email already exists."]
+    if not username:
+        errors["username"] = ["This field is required."]
+    elif len(username) < 1 or len(username) > 30 or not all(c.isalnum() or c == '_' for c in username):
+        errors["username"] = ["Enter a valid username."]
+    elif User.objects.filter(username=username).exists():
+        errors["username"] = ["A user with that username already exists."]
+    if not password:
+        errors["password"] = ["This field is required."]
+    else:
+        try:
+            validate_password(password)
+        except Exception as e:
+            errors["password"] = [str(e)]
+    if is_superuser and not request.user.is_superuser:
+        errors["is_superuser"] = ["Only superusers can create superusers."]
+    if groups and not isinstance(groups, list):
+        errors["groups"] = ["Groups must be a list."]
+    
+    if errors:
+        return JsonResponse(errors, status=400)
+    
+    user = User(email=email, username=username, first_name=first_name, last_name=last_name,
+                 is_active=bool(is_active), is_superuser=bool(is_superuser))
+    user.set_password(password)
+    user.is_staff = bool(groups) or bool(is_superuser)
+    user.save()
+    
+    for gname in groups:
+        try:
+            g = Group.objects.get(name=gname)
+            user.groups.add(g)
+        except Group.DoesNotExist:
+            g, _ = Group.objects.get_or_create(name=gname)
+            user.groups.add(g)
+    if groups:
+        user.is_staff = True
+        user.save(update_fields=["is_staff"])
+    
+    log_admin_action(
+        request.user,
+        "user.created",
+        target_user=user,
+        target_type="user",
+        target_id=user.id,
+        after=user_brief(user),
+        request=request,
     )
-
-    return JsonResponse(_paginate(qs, request, user_brief))
+    return JsonResponse(user_brief(user), status=201)
 
 
 @csrf_exempt
-@require_http_methods(["GET"])
+@require_http_methods(["GET", "PATCH", "DELETE"])
 @require_staff_role(*USER_VIEW_ROLES)
 def user_detail(request, user_id):
     throttled = enforce_throttle(request, "read")
     if throttled:
         return throttled
     user = get_object_or_404(User, pk=user_id)
-    return JsonResponse(user_snapshot(user))
+    if request.method == "GET":
+        return JsonResponse(user_snapshot(user))
+    
+    throttled_w = enforce_throttle(request, "write")
+    if throttled_w:
+        return throttled_w
+    
+    if request.method == "PATCH":
+        if not is_super_admin(request.user):
+            return JsonResponse({"code": "forbidden"}, status=403)
+        body = _json_body(request)
+        if body is None:
+            return _error("invalid_json")
+        
+        errors = {}
+        if "email" in body:
+            errors["email"] = ["This field cannot be updated."]
+        if "username" in body:
+            errors["username"] = ["This field cannot be updated."]
+        if "password" in body:
+            errors["password"] = ["This field cannot be updated."]
+        if "is_superuser" in body:
+            errors["is_superuser"] = ["This field cannot be updated."]
+        if errors:
+            return JsonResponse(errors, status=400)
+        
+        if body.get("is_active") is False and user.id == request.user.id:
+            return JsonResponse({"non_field_errors": ["Cannot deactivate self."]}, status=400)
+        
+        before = user_brief(user)
+        before_groups = sorted(list(user.groups.filter(name__in=("support", "billing_admin", "security_admin", "super_admin")).values_list("name", flat=True)))
+        
+        if "first_name" in body:
+            user.first_name = (body["first_name"] or "").strip()
+        if "last_name" in body:
+            user.last_name = (body["last_name"] or "").strip()
+        if "is_active" in body:
+            user.is_active = bool(body["is_active"])
+        if "groups" in body and isinstance(body["groups"], list):
+            user.groups.clear()
+            for gname in body["groups"]:
+                try:
+                    g = Group.objects.get(name=gname)
+                    user.groups.add(g)
+                except Group.DoesNotExist:
+                    pass
+            user.is_staff = user.groups.exists() or user.is_superuser
+        user.save()
+        
+        after = user_brief(user)
+        after_groups = sorted(list(user.groups.filter(name__in=("support", "billing_admin", "security_admin", "super_admin")).values_list("name", flat=True)))
+        
+        log_admin_action(
+            request.user,
+            "user.updated",
+            target_user=user,
+            target_type="user",
+            target_id=user.id,
+            before=before,
+            after=after,
+            request=request,
+        )
+        if before_groups != after_groups:
+            log_admin_action(
+                request.user,
+                "user.groups_changed",
+                target_user=user,
+                target_type="user",
+                target_id=user.id,
+                before={"groups": before_groups},
+                after={"groups": after_groups},
+                request=request,
+            )
+        return JsonResponse(user_brief(user))
+    
+    elif request.method == "DELETE":
+        if not is_super_admin(request.user):
+            return JsonResponse({"code": "forbidden"}, status=403)
+        body = _json_body(request)
+        if body is None:
+            return _error("invalid_json")
+        confirm_email = (body.get("confirm_email") or "").strip().lower()
+        if confirm_email != user.email.lower():
+            return JsonResponse({"confirm_email": ["Email does not match."]}, status=400)
+        if user.id == request.user.id:
+            return JsonResponse({"non_field_errors": ["Cannot deactivate self."]}, status=400)
+        if user.is_superuser:
+            return JsonResponse({"non_field_errors": ["Cannot delete superuser."]}, status=400)
+        
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+        
+        # Logout all sessions
+        try:
+            for token in OutstandingToken.objects.filter(user=user):
+                BlacklistedToken.objects.get_or_create(token=token)
+        except Exception:
+            pass
+        
+        log_admin_action(
+            request.user,
+            "user.deactivated",
+            target_user=user,
+            target_type="user",
+            target_id=user.id,
+            request=request,
+        )
+        return JsonResponse({"detail": "User deactivated"})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@require_staff_role(SECURITY_ADMIN)
+def user_reset_password(request, user_id):
+    throttled = enforce_throttle(request, "write")
+    if throttled:
+        return throttled
+    if not is_super_admin(request.user):
+        return JsonResponse({"code": "forbidden"}, status=403)
+    user = get_object_or_404(User, pk=user_id)
+    if user.id == request.user.id:
+        return JsonResponse({"non_field_errors": ["Cannot reset own password."]}, status=400)
+    body = _json_body(request)
+    if body is None:
+        return _error("invalid_json")
+    new_password = body.get("new_password") or ""
+    confirm_password = body.get("confirm_password") or ""
+    errors = {}
+    if not new_password:
+        errors["new_password"] = ["This field is required."]
+    if new_password != confirm_password:
+        errors["confirm_password"] = ["Passwords do not match."]
+    if new_password:
+        try:
+            validate_password(new_password, user=user)
+        except Exception as e:
+            errors["new_password"] = [str(e)]
+    if errors:
+        return JsonResponse(errors, status=400)
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    try:
+        for token in OutstandingToken.objects.filter(user=user):
+            BlacklistedToken.objects.get_or_create(token=token)
+    except Exception:
+        pass
+    log_admin_action(
+        request.user,
+        "user.password_reset",
+        target_user=user,
+        target_type="user",
+        target_id=user.id,
+        request=request,
+    )
+    return JsonResponse({"detail": "Password updated"})
 
 
 @csrf_exempt

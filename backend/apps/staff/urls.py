@@ -7,6 +7,7 @@ from . import views
 urlpatterns = [
     path("users/", views.users_list, name="staff-users"),
     path("users/<int:user_id>/", views.user_detail, name="staff-user-detail"),
+    path("users/<int:user_id>/reset-password/", views.user_reset_password, name="staff-user-reset-password"),
     path("users/<int:user_id>/block/", views.user_block, name="staff-user-block"),
     path("users/<int:user_id>/unblock/", views.user_unblock, name="staff-user-unblock"),
     path(
