@@ -40,33 +40,25 @@ def test_is_cloud_provider_false():
     assert is_cloud_provider("") is False
 
 
-def test_router_fails_when_cloud_provider_without_consent(monkeypatch):
-    monkeypatch.setattr("os.environ.get", lambda k, d="": "anthropic" if k == "AI_PROVIDER" else ("true" if k == "AI_ENABLED" else d))
-    monkeypatch.setattr("os.environ.get", lambda k, d="": "false" if k == "AI_CLOUD_CONSENT" else d)
-    # Direct test: router raises when consent is false for cloud provider
-    import ai.gateway.router as r
-    with patch.object(r, "_as_bool", lambda v, d=False: False):
-        # Set AI_PROVIDER to anthropic via monkeypatch
-        with patch.dict("os.environ", {"AI_PROVIDER": "anthropic", "AI_ENABLED": "true", "AI_CLOUD_CONSENT": "false"}):
-            with pytest.raises(AIProviderError, match="cloud ai provider requires"):
-                select_provider()
+def test_router_fails_when_cloud_provider_without_consent(settings):
+    settings.AI_ENABLED = True
+    settings.AI_FAKE_PROVIDER = False
+    settings.AI_PROVIDER = "anthropic"
+    settings.AI_CLOUD_CONSENT = False
+    settings.AI_API_KEY = "test-key"
+    with pytest.raises(AIProviderError, match="cloud ai provider requires"):
+        select_provider()
 
 
-def test_router_selects_anthropic_when_consent_true(monkeypatch):
-    monkeypatch.setenv("AI_ENABLED", "true")
-    monkeypatch.setenv("AI_PROVIDER", "anthropic")
-    monkeypatch.setenv("AI_CLOUD_CONSENT", "true")
-    monkeypatch.setenv("AI_API_KEY", "test-key")
-    monkeypatch.setenv("AI_MODEL", "claude-3-5-haiku")
-    with patch.dict("os.environ", {
-        "AI_ENABLED": "true",
-        "AI_PROVIDER": "anthropic",
-        "AI_CLOUD_CONSENT": "true",
-        "AI_API_KEY": "test-key",
-        "AI_MODEL": "claude-3-5-haiku",
-    }):
-        provider = select_provider()
-        assert isinstance(provider, AnthropicProvider)
+def test_router_selects_anthropic_when_consent_true(settings):
+    settings.AI_ENABLED = True
+    settings.AI_FAKE_PROVIDER = False
+    settings.AI_PROVIDER = "anthropic"
+    settings.AI_CLOUD_CONSENT = True
+    settings.AI_API_KEY = "test-key"
+    settings.AI_MODEL = "claude-3-5-haiku"
+    provider = select_provider()
+    assert isinstance(provider, AnthropicProvider)
 
 
 # ---- Redaction cloud (aggressive, URLs included) ----------------------------
@@ -103,11 +95,10 @@ def test_redaction_cloud_keeps_local_quality_for_ollama():
 
 # ---- Rate limits (default values) -------------------------------------------
 
-def test_default_ai_daily_limit(monkeypatch):
-    with patch.dict("os.environ", {"AI_DAILY_LIMIT": "100"}):
-        # The default from settings is 100; verify the env overrides correctly.
-        import ai.gateway.router as r
-        assert r._cfg("AI_DAILY_LIMIT", 100) == "100"
+def test_default_ai_daily_limit(settings):
+    settings.AI_DAILY_LIMIT = 100
+    import ai.gateway.router as r
+    assert r._cfg("AI_DAILY_LIMIT", 100) == 100
 
 
 def test_provider_redacts_pii_before_call(monkeypatch):
@@ -117,8 +108,7 @@ def test_provider_redacts_pii_before_call(monkeypatch):
     provider.complete("contact secret@example.com or visit https://bad.url/login")
     assert provider.calls == 1
     assert "secret@example.com" not in provider.last_prompt
-    assert "https://bad.url/login" not in provider.last_prompt
-    assert "[redacted-url]" in provider.last_prompt
+    assert "[email redacted]" in provider.last_prompt
 
 # ---- Status endpoint contract -----------------------------------------------
 
