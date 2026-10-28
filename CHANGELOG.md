@@ -2,6 +2,18 @@
 
 All notable changes to AMANAK. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.1] — 2026-10-28
+
+Full release (Web + Mobile). Supersedes v1.0.0.
+
+### Fixed
+- Mobile route: `src/app/` was missing 8 routes (black screen on Expo Go)
+- 4 failing Cloud AI tests (router consent, rate limit, redaction, status)
+
+### Note
+- `v1.0.0` remains valid for web-only deployments
+- `v1.0.1` is the recommended tag for web + mobile
+
 ## [1.0.0] — 2026-10-28
 
 Initial release. Feature-complete, production-ready for deployment.
@@ -35,4 +47,5 @@ Initial release. Feature-complete, production-ready for deployment.
 - Stripe/Moyasar integration
 - Real users
 
+[1.0.1]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.1
 [1.0.0]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.0
