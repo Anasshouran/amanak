@@ -101,6 +101,24 @@ class UrlAnalyzer:
         matches: List[ScanMatch] = []
         seen: set = set()
 
+        # Threat Intelligence check FIRST (P21.1)
+        try:
+            from apps.threat_intel.redis_store import check_domain
+            host = (parsed.host or "").lower().strip()
+            if host:
+                ti = check_domain(host)
+                if ti:
+                    matches.append(ScanMatch(
+                        rule_id="URL-TI-001",
+                        severity="high" if ti["confidence"] == "high" else "medium",
+                        description=f"Domain matched in {ti['source']} threat feed.",
+                        evidence_redacted=f"[match:{ti['source']}]",
+                    ))
+                    seen.add("URL-TI-001")
+        except Exception:
+            # TI must never break the scan
+            pass
+
         for rule in self.rules:
             if time.monotonic() > self._deadline:
                 break

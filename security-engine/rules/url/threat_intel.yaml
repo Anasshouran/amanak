@@ -1,0 +1,7 @@
+- id: URL-TI-001
+  severity: high
+  description: "Domain matched in a public threat intelligence feed."
+  rationale: "The scanned domain appears in a known phishing or malware blocklist (OpenPhish / URLhaus). Avoid visiting."
+  tags: ["threat_intel", "blocklist"]
+  pattern: "__THREAT_INTEL_MATCH__"
+  reference: "https://openphish.com, https://urlhaus.abuse.ch"

@@ -688,6 +688,19 @@ export class ApiClient {
     return this.request<StaffUserSnapshot>("GET", `/staff/users/${id}/`)
   }
 
+  // Threat Intelligence (P21.1)
+  getThreatIntelStatus() {
+    return this.request<any>("GET", `/threat-intel/status/`)
+  }
+
+  refreshThreatIntel() {
+    return this.request<any>("POST", `/threat-intel/refresh/`)
+  }
+
+  checkThreatIntelDomain(domain: string) {
+    return this.request<any>("GET", `/threat-intel/check/?domain=${encodeURIComponent(domain)}`)
+  }
+
   blockStaffUser(id: number, reason: string) {
     return this.request<StaffModeration>("POST", `/staff/users/${id}/block/`, { reason })
   }

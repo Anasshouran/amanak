@@ -105,6 +105,26 @@ class MessageAnalyzer:
                 seen.add(rule.id)
             if time.monotonic() - start > self.per_rule_budget_s:
                 continue
+
+        # Threat Intelligence check for embedded URLs (P21.1)
+        try:
+            from apps.threat_intel.redis_store import check_domain
+            for u in _PLAIN_URL_RE.findall(text):
+                p = urlparse(u)
+                host = (p.hostname or "").lower().strip()
+                if host:
+                    ti = check_domain(host)
+                    if ti:
+                        matches.append(ScanMatch(
+                            rule_id="URL-TI-001",
+                            severity="high" if ti["confidence"] == "high" else "medium",
+                            description=f"Message contains link to {ti['source']}-listed domain.",
+                            evidence_redacted=f"[match:{ti['source']}]",
+                        ))
+                        break  # only first match per message
+        except Exception:
+            pass
+
         return matches
 
     def _field(self, rule: Rule, text: str, text_lower: str) -> str:

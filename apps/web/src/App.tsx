@@ -36,6 +36,7 @@ import { StaffAudit } from "./pages/StaffAudit"
 import { StaffTickets } from "./pages/StaffTickets"
 import { StaffTicketDetail } from "./pages/StaffTicketDetail"
 import { StaffMetrics } from "./pages/StaffMetrics"
+import { ThreatIntel } from "./pages/ThreatIntel"
 
 export function App() {
   return (
@@ -118,6 +119,14 @@ export function App() {
           element={
             <StaffRoute>
               <StaffMetrics />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/threat-intel"
+          element={
+            <StaffRoute>
+              <ThreatIntel />
             </StaffRoute>
           }
         />

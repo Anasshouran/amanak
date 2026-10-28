@@ -145,6 +145,7 @@ INSTALLED_APPS = [
     "apps.billing",
     "apps.staff",
     "apps.organizations",
+    "apps.threat_intel",
 ]
 
 MIDDLEWARE = [
