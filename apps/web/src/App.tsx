@@ -26,6 +26,7 @@ import { OrgAudit } from "./pages/OrgAudit"
 import { InvitationsAccept } from "./pages/InvitationsAccept"
 import { Invitations } from "./pages/Invitations"
 import { StaffRoute } from "./components/StaffRoute"
+import AISettings from "./pages/staff/AISettings"
 import { StaffHome } from "./pages/StaffHome"
 import { StaffUsers } from "./pages/StaffUsers"
 import { StaffUserDetail } from "./pages/StaffUserDetail"
@@ -143,6 +144,14 @@ export function App() {
           element={
             <StaffRoute>
               <StaffAnnouncements />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/ai-settings"
+          element={
+            <StaffRoute requiredRole="super_admin">
+              <AISettings />
             </StaffRoute>
           }
         />

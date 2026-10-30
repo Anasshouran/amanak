@@ -3,9 +3,14 @@ import { Navigate } from "react-router-dom"
 import { useAuth } from "../state/AuthContext"
 import { useToast } from "../design/components"
 import { useT } from "../design/i18n"
-import { isStaff } from "../lib/staff"
+import { hasRole, isStaff } from "../lib/staff"
 
-export function StaffRoute({ children }: { children: ReactNode }) {
+export interface StaffRouteProps {
+  children: ReactNode
+  requiredRole?: "super_admin" | "security_admin" | "billing_admin" | "support"
+}
+
+export function StaffRoute({ children, requiredRole }: StaffRouteProps) {
   const { user, loading } = useAuth()
   const toast = useToast()
   const t = useT()
@@ -16,6 +21,11 @@ export function StaffRoute({ children }: { children: ReactNode }) {
         <span className="amk-spinner" style={{ width: 28, height: 28, color: "var(--c-brand)" }} />
       </div>
     )
+  }
+
+  if (requiredRole && !hasRole(user, requiredRole)) {
+    toast.push(t("staff.forbidden"), "error")
+    return <Navigate to="/dashboard" replace />
   }
 
   if (!isStaff(user)) {

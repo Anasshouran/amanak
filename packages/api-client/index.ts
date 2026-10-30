@@ -79,6 +79,10 @@ import type {
   OrgAuditResponse,
   OrgMemberRow,
   MyInvitation,
+  AISettings,
+  APIKeyStatus,
+  AITestResult,
+  AIProviderOption,
 } from "@amanak/shared-types"
 
 export type { ApiError }
@@ -423,6 +427,35 @@ export class ApiClient {
 
   aiGuidance(topic: AITopic) {
     return this.request<AIResponse>("POST", "/ai/guidance", { topic })
+  }
+
+  // ---- P21.3: Staff AI Settings ----
+  getAISettings() {
+    return this.request<AISettings>("GET", "/api/v1/staff/ai-settings/")
+  }
+
+  updateAISettings(input: {
+    provider: AISettings["provider"];
+    model: string;
+    is_enabled: boolean;
+    cloud_consent: boolean;
+  }) {
+    return this.request<AISettings>("PATCH", "/api/v1/staff/ai-settings/", {
+      body: JSON.stringify(input),
+    })
+  }
+
+  testAIProvider(input: {
+    provider: AISettings["provider"];
+    model: string;
+  }) {
+    return this.request<AITestResult>("POST", "/api/v1/staff/ai-settings/test/", {
+      body: JSON.stringify(input),
+    })
+  }
+
+  disableAI() {
+    return this.request<AISettings>("POST", "/api/v1/staff/ai-settings/disable/")
   }
 
   // ---- breach monitor ----

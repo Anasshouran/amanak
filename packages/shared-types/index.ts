@@ -766,3 +766,37 @@ export interface OrgAuditResponse {
   count: number;
   results: OrgAuditEntry[];
 }
+
+// ---- P21.3: Staff AI Settings ----
+
+export interface AIProviderOption {
+  id: "" | "ollama" | "anthropic" | "groq" | "openrouter";
+  label: string;
+}
+
+export interface APIKeyStatus {
+  available: boolean;
+  note: string;
+}
+
+export interface AISettings {
+  provider: AIProviderOption["id"];
+  model: string;
+  is_enabled: boolean;
+  cloud_consent: boolean;
+  available_providers: AIProviderOption[];
+  api_keys_status: Record<
+    "ollama" | "anthropic" | "groq" | "openrouter",
+    APIKeyStatus
+  >;
+  env_fallback: { AI_ENABLED: boolean; AI_PROVIDER: string };
+  updated_by: { id: number; email: string } | null;
+  updated_at: string;
+}
+
+export interface AITestResult {
+  ok: boolean;
+  response_sample?: string;
+  error?: string;
+  duration_ms: number;
+}

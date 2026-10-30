@@ -3,6 +3,7 @@
 from django.urls import path
 
 from . import views
+from apps.ai_assistant.views import ai_settings_dispatch
 
 urlpatterns = [
     path("users/", views.users_list, name="staff-users"),
@@ -53,6 +54,7 @@ urlpatterns = [
     ),
     path("audit/", views.audit_list, name="staff-audit"),
     path("metrics/", views.metrics_list, name="staff-metrics"),
+    path("ai-settings/", ai_settings_dispatch, name="ai-settings"),
     path("tickets/", views.tickets_collection, name="staff-tickets"),
     path("tickets/<int:ticket_id>/", views.ticket_detail_view, name="staff-ticket-detail"),
     path(

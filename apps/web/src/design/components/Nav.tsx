@@ -275,6 +275,9 @@ export function Nav({
       {has("security_admin") && (
         <NavItem to="/staff/audit" labelKey="staff.nav.audit" icon={IconAudit} />
       )}
+      {has("super_admin") && (
+        <NavItem to="/staff/ai-settings" labelKey="staff.ai_settings.title" icon={IconSettings} />
+      )}
       <NavItem to="/staff/metrics" labelKey="staff.nav.metrics" icon={IconMetrics} />
       {has("security_admin") && (
         <NavItem to="/staff/threat-intel" labelKey="threat_intel.title" icon={IconAudit} />

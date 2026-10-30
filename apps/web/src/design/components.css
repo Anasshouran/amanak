@@ -2768,6 +2768,9 @@
   white-space: nowrap;
 }
 
+white-space: nowrap;
+}
+
 .amk-org-dot {
   display: inline-block;
   width: 8px;
@@ -2775,3 +2778,22 @@
   border-radius: 50%;
   flex: none;
 }
+
+/* ---- P21.3: Staff AI Settings ----
+.staff-ai-settings { display: flex; flex-direction: column; gap: 16px; }
+.staff-ai-settings__header h1 { margin: 0; }
+.staff-ai-settings .kv { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 12px 0; }
+.staff-ai-settings .kv dt { font-weight: 600; color: var(--c-muted); }
+.staff-ai-settings .kv dd { margin: 0; }
+.staff-ai-settings .provider-radios { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.staff-ai-settings .provider-radio { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 6px; border-radius: 6px; }
+.staff-ai-settings .provider-radio:hover { background: var(--c-bg); }
+.staff-ai-settings .form-row { margin: 12px 0; display: flex; flex-direction: column; gap: 4px; }
+.staff-ai-settings .form-row--checkbox { flex-direction: row; align-items: flex-start; gap: 8px; }
+.staff-ai-settings .form-row--checkbox span small { display: block; font-size: 12px; margin-top: 2px; }
+.staff-ai-settings .actions { display: flex; gap: 8px; margin-top: 12px; }
+.staff-ai-settings .test-result { margin-top: 12px; padding: 8px 12px; border-radius: 6px; font-size: 14px; }
+.staff-ai-settings .test-result--ok { background: var(--c-success-bg, rgba(16,185,129,.1)); color: var(--c-success); }
+.staff-ai-settings .test-result--fail { background: var(--c-danger-bg, rgba(220,38,38,.1)); color: var(--c-danger); }
+.staff-ai-settings .api-keys { list-style: none; padding: 0; margin: 12px 0; display: flex; flex-direction: column; gap: 6px; }
+*/

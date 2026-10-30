@@ -47,7 +47,7 @@ export function ThreatIntel() {
   }
 
   if (status.loading) return <Skeleton />
-  if (status.error) return <ErrorState message={errorMessage(status.error)} />
+  if (status.error) return <ErrorState title="Error" message={errorMessage(status.error)} />
 
   const feeds = status.data ?? []
 
