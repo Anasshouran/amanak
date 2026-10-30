@@ -24,6 +24,7 @@ import os
 
 from .anthropic_provider import AnthropicProvider
 from .fake_provider import FakeProvider
+from .openrouter_provider import OpenRouterProvider
 from .null_provider import NullProvider
 from .ollama_provider import OllamaProvider
 from .openai_provider import OpenAIProvider
@@ -39,10 +40,11 @@ _PROVIDERS = {
     "openai": OpenAIProvider,
     "anthropic": AnthropicProvider,
     "groq": GroqProvider,
+    "openrouter": OpenRouterProvider,
 }
 
 # Providers that transmit prompts to a third-party cloud (P20.4).
-CLOUD_PROVIDERS = frozenset({"openai", "anthropic", "groq"})
+CLOUD_PROVIDERS = frozenset({"openai", "anthropic", "groq", "openrouter"})
 
 
 def _cfg(name, default=None):

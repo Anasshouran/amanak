@@ -389,6 +389,19 @@ def _production_security_settings(app_env, cors_allowed_origins):
 
 globals().update(_production_security_settings(APP_ENV, CORS_ALLOWED_ORIGINS))
 
+# CSRF trusted origins for local development behind nginx on :8080.
+# Without this, POST forms (incl. Django admin login) are rejected with
+# "Origin checking failed" when accessed via http://127.0.0.1:8080.
+CSRF_TRUSTED_ORIGINS = [
+    "http://127.0.0.1:8080",
+    "http://localhost:8080",
+] + [o for o in CORS_ALLOWED_ORIGINS if o]
+
+# OpenRouter settings (P20.5)
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openrouter/auto")
+OPENROUTER_REFERER = os.environ.get("OPENROUTER_REFERER", "")
+OPENROUTER_TITLE = os.environ.get("OPENROUTER_TITLE", "AMANAK")
+
 # JWT configuration (P5). Short-lived access tokens with rotating, revocable
 # refresh tokens. Old refresh tokens are blacklisted on rotation and logout.
 SIMPLE_JWT = {
