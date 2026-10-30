@@ -2,6 +2,19 @@
 
 All notable changes to AMANAK. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.0.2] — 2026-10-30
+
+Full release (Web + Mobile + OpenRouter AI). Supersedes v1.0.1.
+
+### Added
+- OpenRouter provider (OpenAI-compatible, hundreds of models)
+  - Privacy routing: data_collection=deny, zdr=true
+  - Redaction applied before send
+
+### Fixed
+- 6 Cloud AI tests (from P20.4): router consent, rate limits,
+  redaction mock, status shape. All 37 AI tests now pass.
+
 ## [1.0.1] — 2026-10-28
 
 Full release (Web + Mobile). Supersedes v1.0.0.
@@ -47,5 +60,6 @@ Initial release. Feature-complete, production-ready for deployment.
 - Stripe/Moyasar integration
 - Real users
 
+[1.0.2]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.2
 [1.0.1]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.1
 [1.0.0]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.0
