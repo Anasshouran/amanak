@@ -434,6 +434,14 @@ AI_MODEL = os.environ.get("AI_MODEL", "")
 AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", "15"))
 AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "1024"))
 AI_DAILY_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", "100"))
+# Cloud AI (P20.4/P21.3). ``AI_CLOUD_API_KEY`` is the name used by the staff
+# settings page; fall back to ``AI_API_KEY`` so either convention works.
+AI_CLOUD_CONSENT = _env_bool("AI_CLOUD_CONSENT", "false")
+AI_CLOUD_API_KEY = os.environ.get("AI_CLOUD_API_KEY", "") or AI_API_KEY
+OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "openrouter/auto")
+OPENROUTER_ZDR = _env_bool("OPENROUTER_ZDR", "true")
+OPENROUTER_DATA_COLLECTION = os.environ.get("OPENROUTER_DATA_COLLECTION", "deny")
 # Local Ollama (P19.2) — free, private, no external transmission.
 OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1:8b")

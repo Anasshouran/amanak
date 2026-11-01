@@ -17,7 +17,7 @@ if (typeof window !== "undefined") {
 }
 
 const BASE_URL =
-  (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL ?? "http://127.0.0.1:8000"
+  (import.meta.env as { VITE_API_URL?: string }).VITE_API_URL ?? "http://127.0.0.1:8080"
 
 // The access token is held in memory and mirrored to sessionStorage so it
 // survives an intentional page reload (P18.1c2 context switch). The refresh

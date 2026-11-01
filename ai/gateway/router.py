@@ -156,10 +156,11 @@ def _provider_from_env():
     name = getattr(settings, "AI_PROVIDER", "").lower()
     if name == "ollama":
         return OllamaProvider()
-    if name == "anthropic":
-        return AnthropicProvider()
-    if name == "groq":
-        return GroqProvider()
-    if name == "openrouter":
-        return OpenRouterProvider()
-    return NullProvider()
+    if name in CLOUD_PROVIDERS:
+        # Fail closed: a cloud provider is never used without explicit consent.
+        if not _as_bool(_cfg("AI_CLOUD_CONSENT", "false")):
+            raise AIProviderError("cloud ai provider requires explicit consent")
+        return _PROVIDERS[name]()
+    # AI_ENABLED=true but no provider selected → fail closed instead of
+    # silently succeeding with no provider.
+    raise AIProviderError("ai_enabled_without_provider")

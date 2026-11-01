@@ -6,7 +6,6 @@ import { ThemeProvider } from "../../../design/ThemeProvider"
 
 describe("AISettings", () => {
   beforeEach(() => {
-    // Set up localStorage for session
     Object.defineProperty(window, "localStorage", {
       value: {
         getItem: () => null,
@@ -34,9 +33,9 @@ describe("AISettings", () => {
         <AISettings />
       </ThemeProvider>
     )
-    expect(container).toContainText("Loading…")
+    expect(container.querySelector(".amk-skeleton")).toBeInTheDocument()
   })
-})
+
   it("shows consent checkbox when cloud provider selected", () => {
     const { container } = render(
       <ThemeProvider>
@@ -45,3 +44,4 @@ describe("AISettings", () => {
     )
     expect(container).toBeInTheDocument()
   })
+})

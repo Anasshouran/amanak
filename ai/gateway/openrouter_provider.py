@@ -35,6 +35,17 @@ class OpenRouterProvider(AIProvider):
         self.model = model or os.environ.get("OPENROUTER_MODEL", self.DEFAULT_MODEL)
         self.referer = os.environ.get("OPENROUTER_REFERER", "")
         self.title = os.environ.get("OPENROUTER_TITLE", "AMANAK")
+        # P20.5 privacy default is ZDR-only. Some free/community endpoints do
+        # not offer zero data retention, so this can be relaxed explicitly with
+        # OPENROUTER_ZDR=false while still denying training data collection.
+        zdr_raw = (os.environ.get("OPENROUTER_ZDR", "") or "").strip().lower()
+        self.zdr = zdr_raw not in ("0", "false", "no", "off", "n")
+        # Free OpenRouter models generally require opting into provider training
+        # ("Free model training"), which conflicts with the default privacy
+        # posture. Keep "deny" unless explicitly relaxed.
+        self.data_collection = (
+            os.environ.get("OPENROUTER_DATA_COLLECTION", "deny") or "deny"
+        ).strip().lower()
         self.timeout = timeout
         self.max_tokens = max_tokens
         if not self.api_key:
@@ -51,8 +62,8 @@ class OpenRouterProvider(AIProvider):
             "temperature": 0.3,
             "provider": {
                 "allow_fallbacks": True,
-                "data_collection": "deny",
-                "zdr": True,
+                "data_collection": self.data_collection,
+                "zdr": self.zdr,
             },
         }
         headers = {

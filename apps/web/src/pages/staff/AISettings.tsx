@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react"
 import { api } from "../../lib/api"
 import { useT } from "../../design/i18n"
-import { useAuth } from "../../state/AuthContext"
 import {
   Card,
   Button,
@@ -31,7 +30,6 @@ const PROVIDER_PLACEHOLDERS: Record<ProviderId, string> = {
 
 export default function AISettings() {
   const t = useT()
-  const { user } = useAuth()
   const [config, setConfig] = useState<AISettingsType | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
