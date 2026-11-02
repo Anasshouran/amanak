@@ -37,7 +37,7 @@ jobs:
         with:
           python-version: "3.11"
       - run: pip install -r backend/requirements.txt
-      - run: pip install pyyaml==5.4.1
+      - run: pip install pyyaml==6.0.1
       - name: Run tests
         env:
           POSTGRES_HOST: 127.0.0.1
