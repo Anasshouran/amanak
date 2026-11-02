@@ -29,12 +29,18 @@ services:
              python manage.py migrate --noinput &&
              python manage.py runserver 0.0.0.0:8080"
     environment:
-      DATABASE_URL: postgres://amanak:testpass@db-test:5432/amanak_test
+      USE_POSTGRES: "true"
+      POSTGRES_DB: amanak_test
+      POSTGRES_USER: amanak
+      POSTGRES_PASSWORD: testpass
+      POSTGRES_HOST: db-test
+      POSTGRES_PORT: 5432
       REDIS_URL: redis://redis-test:6379/0
       DJANGO_SETTINGS_MODULE: config.settings
       AI_ENABLED: "False"
       AI_CLOUD_CONSENT: "False"
       DJANGO_SECRET_KEY: test-secret-key
+      DEBUG: "True"
     ports: ["8080:8080"]
     depends_on:
       db-test: { condition: service_healthy }
