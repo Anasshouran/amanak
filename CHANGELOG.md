@@ -63,3 +63,11 @@ Initial release. Feature-complete, production-ready for deployment.
 [1.0.2]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.2
 [1.0.1]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.1
 [1.0.0]: https://github.com/swnamhmd/amanak/releases/tag/v1.0.0
+
+### v1.1.0 — Screenshots
+- docs/screenshots/v1.1/01-login.png — login page
+- docs/screenshots/v1.1/02-dashboard.png — staff dashboard (super_admin)
+- docs/screenshots/v1.1/03-ai-settings.png — /staff/ai-settings page
+- docs/screenshots/v1.1/04-401-unauth.png — 401 without auth
+
+Refs: #3
