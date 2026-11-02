@@ -14,20 +14,12 @@ test.describe('Auth — API level (authed)', () => {
   });
 });
 
-test.describe('Auth — UI level', () => {
+test.describe('Auth — UI level (authed)', () => {
   test('/staff/ai-settings renders (authenticated)', async ({ page }) => {
     await page.goto('/staff/ai-settings');
     await expect(page).toHaveURL(/\/staff\/ai-settings/);
     await expect(
-      page.getByRole('heading', { name: /ai settings|إعدادات/i })
+      page.getByRole('heading', { name: /AI Provider Settings|ai settings|إعدادات/i })
     ).toBeVisible({ timeout: 15000 });
-  });
-
-  test('unauthenticated visit to /staff/ai-settings → redirect to /login', async ({ browser }) => {
-    const ctx = await browser.newContext();
-    const page = await ctx.newPage();
-    await page.goto('/staff/ai-settings');
-    await expect(page).toHaveURL(/\/login/, { timeout: 10000 });
-    await ctx.close();
   });
 });

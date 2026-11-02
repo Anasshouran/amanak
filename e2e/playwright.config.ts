@@ -40,6 +40,12 @@ export default defineConfig({
       },
       dependencies: ['setup'],
       testMatch: /ai-settings\.spec\.ts|auth\.ui\.spec\.ts/,
+      testIgnore: /unauth/,
+    },
+    {
+      name: 'noauth',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /unauth\.spec\.ts/,
     },
   ],
 });
