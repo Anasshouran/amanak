@@ -36,6 +36,8 @@ services:
       DJANGO_SETTINGS_MODULE: config.settings
       AI_ENABLED: "False"
       AI_CLOUD_CONSENT: "False"
+      CORS_ALLOWED_ORIGINS: "http://localhost:5173"
+      CORS_ORIGIN_WHITELIST: "http://localhost:5173"
       DJANGO_SECRET_KEY: test-secret-key
       DEBUG: "True"
     ports: ["8080:8080"]
