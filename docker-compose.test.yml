@@ -1,0 +1,45 @@
+services:
+  db-test:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: amanak_test
+      POSTGRES_USER: amanak
+      POSTGRES_PASSWORD: testpass
+    ports: ["5433:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U amanak -d amanak_test"]
+      interval: 2s
+      retries: 15
+
+  redis-test:
+    image: redis:7-alpine
+    ports: ["6380:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 15
+
+  backend-test:
+    build: ./backend
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python manage.py runserver 0.0.0.0:8080"
+    environment:
+      DATABASE_URL: postgres://amanak:testpass@db-test:5432/amanak_test
+      REDIS_URL: redis://redis-test:6379/0
+      DJANGO_SETTINGS_MODULE: config.settings
+      AI_ENABLED: "False"
+      AI_CLOUD_CONSENT: "False"
+      DJANGO_SECRET_KEY: test-secret-key
+    ports: ["8080:8080"]
+    depends_on:
+      db-test: { condition: service_healthy }
+      redis-test: { condition: service_healthy }
+
+  frontend-test:
+    build: ./apps/web
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    environment:
+      VITE_API_URL: http://localhost:8080
+    ports: ["5173:5173"]
+    depends_on: [backend-test]
