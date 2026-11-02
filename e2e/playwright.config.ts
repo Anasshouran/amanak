@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
+import path from 'node:path';
 
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
 const API_URL  = process.env.E2E_API_URL  ?? 'http://localhost:8080';
+const AUTH_FILE = path.join(process.cwd(), 'playwright', '.auth', 'superadmin.json');
 
 export default defineConfig({
   testDir: './tests',
@@ -36,7 +38,7 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        storageState: 'playwright/.auth/superadmin.json',
+        storageState: AUTH_FILE,
       },
       dependencies: ['setup'],
       testMatch: /ai-settings\.spec\.ts|auth\.ui\.spec\.ts/,

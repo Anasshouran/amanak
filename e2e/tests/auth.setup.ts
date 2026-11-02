@@ -2,7 +2,8 @@ import { test as setup, expect } from '@playwright/test';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-const AUTH_FILE = 'playwright/.auth/superadmin.json';
+const AUTH_DIR = path.join(process.cwd(), 'playwright', '.auth');
+const AUTH_FILE = path.join(AUTH_DIR, 'superadmin.json');
 const API_URL   = process.env.E2E_API_URL ?? 'http://localhost:8080';
 
 setup('authenticate as super_admin', async ({ page, request }) => {
@@ -16,6 +17,9 @@ setup('authenticate as super_admin', async ({ page, request }) => {
 
   await expect(page).toHaveURL(/\/(staff|dashboard)/, { timeout: 15000 });
 
-  await fs.mkdir(path.dirname(AUTH_FILE), { recursive: true });
+  await fs.mkdir(AUTH_DIR, { recursive: true });
   await page.context().storageState({ path: AUTH_FILE });
+  // verify
+  const fs2 = await import('node:fs');
+  console.log('AUTH_FILE written:', fs2.existsSync(AUTH_FILE));
 });
