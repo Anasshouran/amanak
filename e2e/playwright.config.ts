@@ -24,13 +24,13 @@ export default defineConfig({
 
   projects: [
     {
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
+    },
+    {
       name: 'api',
       testMatch: /auth\.api\.spec\.ts/,
       use: { baseURL: API_URL },
-    },
-    {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
     },
     {
       name: 'chromium',
