@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: auth.spec.ts >> Auth — UI level >> /staff/ai-settings renders (authenticated)
-- Location: tests/auth.spec.ts:23:7
+- Name: auth.spec.ts >> Auth — UI level (authed) >> /staff/ai-settings renders (authenticated)
+- Location: tests/auth.spec.ts:18:7
 
 # Error details
 

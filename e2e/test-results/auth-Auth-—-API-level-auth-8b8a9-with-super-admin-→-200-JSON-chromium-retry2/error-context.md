@@ -6,7 +6,7 @@
 
 # Test info
 
-- Name: auth.spec.ts >> Auth — API level >> GET /api/v1/staff/ai-settings/ without token → 401
+- Name: auth.spec.ts >> Auth — API level (authed) >> GET /api/v1/staff/ai-settings/ with super_admin → 200 JSON
 - Location: tests/auth.spec.ts:6:7
 
 # Error details

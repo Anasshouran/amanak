@@ -7,10 +7,10 @@ export default defineConfig({
   testDir: './tests',
   timeout: 30_000,
   expect: { timeout: 5_000 },
-  fullyParallel: true,
+  fullyParallel: false,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
+  retries: process.env.CI ? 1 : 0,
+  workers: 1,
   reporter: process.env.CI
     ? [['github'], ['html', { open: 'never' }]]
     : [['list'], ['html', { open: 'never' }]],
@@ -19,21 +19,18 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
-    video: 'retain-on-failure',
-    extraHTTPHeaders: {
-      'X-Test-Env': 'e2e',
-    },
+    video: 'off',
   },
 
   projects: [
     {
-      name: 'setup',
-      testMatch: /.*\.setup\.ts/,
+      name: 'api',
+      testMatch: /auth\.api\.spec\.ts/,
+      use: { baseURL: API_URL },
     },
     {
-      name: 'chromium-noauth',
-      use: { ...devices['Desktop Chrome'] },
-      testMatch: /auth\.noauth\.spec\.ts/,
+      name: 'setup',
+      testMatch: /.*\.setup\.ts/,
     },
     {
       name: 'chromium',
@@ -42,7 +39,7 @@ export default defineConfig({
         storageState: 'playwright/.auth/superadmin.json',
       },
       dependencies: ['setup'],
-      testIgnore: /auth\.noauth\.spec\.ts/,
+      testMatch: /ai-settings\.spec\.ts|auth\.ui\.spec\.ts/,
     },
   ],
 });

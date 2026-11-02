@@ -6,8 +6,8 @@
 
 # Test info
 
-- Name: auth.spec.ts >> Auth — UI level >> unauthenticated visit to /staff/ai-settings → redirect to /login
-- Location: tests/auth.spec.ts:31:7
+- Name: auth.spec.ts >> Auth — UI level (authed) >> /staff/ai-settings renders (authenticated)
+- Location: tests/auth.spec.ts:18:7
 
 # Error details
 
