@@ -27,6 +27,13 @@ services:
     command: >
       sh -c "pip install -q -r requirements.txt &&
              python manage.py migrate --noinput &&
+             python manage.py shell -c \"
+from django.contrib.auth import get_user_model
+User = get_user_model()
+u, _ = User.objects.get_or_create(email='admin@local.dev', defaults={'username':'admin@local.dev','role':'super_admin','is_staff':True,'is_superuser':True})
+u.role='super_admin'; u.is_staff=True; u.is_superuser=True; u.set_password('AdminTest2026!'); u.save()
+print('seeded')
+\" &&
              python manage.py runserver 0.0.0.0:8080"
     environment:
       USE_POSTGRES: "true"
