@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const BASE_URL = process.env.E2E_BASE_URL ?? 'http://localhost:5173';
-const API_URL  = process.env.E2E_API_URL  ?? 'http://localhost:8000';
+const API_URL  = process.env.E2E_API_URL  ?? 'http://localhost:8080';
 
 export default defineConfig({
   testDir: './tests',
@@ -31,12 +31,18 @@ export default defineConfig({
       testMatch: /.*\.setup\.ts/,
     },
     {
+      name: 'chromium-noauth',
+      use: { ...devices['Desktop Chrome'] },
+      testMatch: /auth\.noauth\.spec\.ts/,
+    },
+    {
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
         storageState: 'playwright/.auth/superadmin.json',
       },
       dependencies: ['setup'],
+      testIgnore: /auth\.noauth\.spec\.ts/,
     },
   ],
 });
