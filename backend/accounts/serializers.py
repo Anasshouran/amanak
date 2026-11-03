@@ -234,7 +234,9 @@ class UserCreateSerializer(serializers.Serializer):
         initial_org = validated_data.pop("initial_org", None)
         pwd = get_random_string(16)
         user = User.objects.create_user(
-            email=validated_data["email"], password=pwd,
+            username=validated_data["email"],
+            email=validated_data["email"],
+            password=pwd,
             first_name=validated_data.get("first_name", ""),
             last_name=validated_data.get("last_name", ""),
             is_staff=validated_data.get("is_staff", False),
@@ -271,7 +273,7 @@ class PasswordResetSerializer(serializers.Serializer):
 
 class InvitationCreateSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    organization_id = serializers.IntegerField()
+    organization_id = serializers.UUIDField()
     role = serializers.ChoiceField(choices=["owner","admin","member","analyst","employee"], default="member")
 
     def validate_email(self, value): return value.lower()

@@ -13,14 +13,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(
-            model_name='account',
-            name='context_id',
-        ),
-        migrations.RemoveField(
-            model_name='account',
-            name='sharing',
-        ),
         migrations.AlterField(
             model_name='user',
             name='display_name',
