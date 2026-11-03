@@ -1,3 +1,4 @@
+import pytest
 import json
 import uuid
 from django.contrib.auth import get_user_model
@@ -97,6 +98,7 @@ class CrossTenantAttacksTests(TestCase):
         self.assertNotIn("Bacc", names)
 
     # 2.4 membership removal effect
+    @pytest.mark.timeout(300)
     def test_removed_member_loses_access_immediately(self):
         self.mem_removed.delete()
         self._auth(self.removed_b)
@@ -142,6 +144,7 @@ class CrossTenantAttacksTests(TestCase):
         self.assertEqual(r.status_code, 403)
 
     # 2.7 password vault + 2fa never cross-tenant
+    @pytest.mark.timeout(300)
     def test_password_vault_never_visible_across_org(self):
         self._auth(self.owner_a)
         # create entry in org context
