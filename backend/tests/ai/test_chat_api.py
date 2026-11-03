@@ -8,7 +8,7 @@ BASE = "/api/v1/ai/conversations/"
 
 @pytest.fixture
 def user(db):
-    return User.objects.create_user(email="c@test.local", password="pass12345")
+    return User.objects.create_user(email="c@test.local", username="chatuser", password="pass12345")
 
 
 @pytest.fixture
@@ -25,7 +25,7 @@ class TestConversationCRUD:
         assert r.data["id"]
 
     def test_list_only_own(self, client_, user, db):
-        other = User.objects.create_user(email="o@test.local", password="x")
+        other = User.objects.create_user(email="o@test.local", username="other1", password="x")
         from apps.ai_assistant.models import AIConversation
         AIConversation.objects.create(user=other, provider="disabled", model="")
         AIConversation.objects.create(user=user, provider="disabled", model="")
@@ -58,7 +58,7 @@ class TestSendMessage:
         assert r.data["user"]["content"] == "hello world"
 
     def test_owner_only(self, client_, user, db):
-        other = User.objects.create_user(email="o2@test.local", password="x")
+        other = User.objects.create_user(email="o2@test.local", username="other2", password="x")
         from apps.ai_assistant.models import AIConversation
         conv = AIConversation.objects.create(user=other, provider="disabled", model="")
         r = client_.get(f"{BASE}{conv.id}/")
