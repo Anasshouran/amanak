@@ -3,7 +3,12 @@
 from django.conf import settings
 from django.db import models
 import django.db.models.deletion
+import hashlib
 from django.core.cache import cache
+
+
+def _sha256(text: str) -> str:
+    return hashlib.sha256((text or "").encode("utf-8")).hexdigest()
 
 
 class AIConversation(models.Model):
@@ -13,25 +18,32 @@ class AIConversation(models.Model):
     hashes and non-identifying metadata are stored so usage can be audited and
     throttled without creating a secondary copy of user data.
     """
-
     KIND_EXPLAIN_SCAN = "explain_scan"
     KIND_GUIDANCE = "guidance"
+    KIND_CHAT = "chat"
     KIND_CHOICES = [
         (KIND_EXPLAIN_SCAN, "explain_scan"),
         (KIND_GUIDANCE, "guidance"),
+        (KIND_CHAT, "chat"),
     ]
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="ai_conversations"
     )
-    kind = models.CharField(max_length=20, choices=KIND_CHOICES)
-    prompt_hash = models.CharField(max_length=64)
-    response_hash = models.CharField(max_length=64)
-    provider = models.CharField(max_length=32)
-    model = models.CharField(max_length=64)
+    kind = models.CharField(max_length=20, choices=KIND_CHOICES, default=KIND_GUIDANCE)
+    prompt_hash = models.CharField(max_length=64, blank=True, default="")
+    response_hash = models.CharField(max_length=64, blank=True, default="")
+    provider = models.CharField(max_length=32, blank=True, default="")
+    model = models.CharField(max_length=64, blank=True, default="")
     tokens_used = models.PositiveIntegerField(default=0)
     injection_flagged = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    # Chat history fields (v1.3.0)
+    title = models.CharField(max_length=120, blank=True, default="")
+    message_count = models.IntegerField(default=0)
+    last_message_at = models.DateTimeField(null=True, blank=True)
+    content_storage_enabled = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "ai conversation"
@@ -40,6 +52,45 @@ class AIConversation(models.Model):
 
     def __str__(self):
         return f"{self.kind} via {self.provider} by {self.user.email}"
+
+
+class AIMessage(models.Model):
+    """A single message in a chat conversation.
+
+    Content is stored only when ``AIConversation.content_storage_enabled``
+    is True (dev/staging). Otherwise only ``content_hash`` is kept.
+    """
+
+    ROLE_CHOICES = [
+        ("system", "system"),
+        ("user", "user"),
+        ("assistant", "assistant"),
+    ]
+
+    conversation = models.ForeignKey(
+        AIConversation, on_delete=models.CASCADE, related_name="messages"
+    )
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    content = models.TextField(blank=True, default="")
+    content_hash = models.CharField(max_length=64, db_index=True, blank=True, default="")
+    tokens = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [models.Index(fields=["conversation", "created_at"])]
+
+    def save(self, *args, **kwargs):
+        if not self.content_hash and self.content:
+            self.content_hash = _sha256(self.content)
+        super().save(*args, **kwargs)
+
+    @property
+    def snippet(self) -> str:
+        """Safe preview when content is disabled."""
+        if self.content:
+            return self.content[:80]
+        return f"[{self.role} message {self.content_hash[:8]}]"
 
 
 def _provider_config_cache_key():
