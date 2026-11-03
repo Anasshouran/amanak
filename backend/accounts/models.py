@@ -1,86 +1,46 @@
-from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.utils.translation import gettext_lazy as _
+from django.db import models
+from django.conf import settings
+import hashlib, secrets
+from datetime import timedelta
 
 
 class User(AbstractUser):
-    """Custom User model with email login."""
-
-    LOCALE_CHOICES = [("ar", "Arabic"), ("en", "English")]
-
-    email = models.EmailField(_("email address"), unique=True)
-    is_verified = models.BooleanField(default=False)
-    # P17.7b: user-editable profile fields. `display_name` is shown in the UI;
-    # `locale` mirrors the interface language the user picked on the server so
-    # it survives a device switch. Never used for auth or authorization.
-    display_name = models.CharField(max_length=100, blank=True, default="")
-    locale = models.CharField(
-        max_length=2, choices=LOCALE_CHOICES, default="ar", blank=True
-    )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = ["username"]
 
-    class Meta:
-        verbose_name = "user"
-        verbose_name_plural = "users"
+    email = models.EmailField(unique=True)
+    is_verified = models.BooleanField(default=False)
+    display_name = models.CharField(max_length=150, blank=True)
+    locale = models.CharField(max_length=10, blank=True, default="en")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return self.email
 
 
 class Account(models.Model):
-    """
-    A user's own account entry (metadata only).
-
-    SECURITY: This model MUST NOT store third-party passwords, MFA codes,
-    recovery codes, or any authentication secrets. Only descriptive metadata
-    such as the service name, the username used there, and free-form notes.
-    """
-
-    # Sharing is per-row for Accounts: the creator chooses whether an org
-    # account is visible to the whole organization (P18.1c1, ADR-0017).
-    SHARING_MODE = "configurable"
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="accounts")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="accounts")
     service_name = models.CharField(max_length=200)
     username = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
-    # NULL = personal context; UUID = organization context (P18.1b).
-    context_id = models.UUIDField(
-        null=True,
-        blank=True,
-        db_index=True,
-        help_text="NULL = personal context; UUID = organization context",
-    )
-    sharing = models.CharField(
-        max_length=16,
-        choices=[("private", "Private"), ("org", "Organization")],
-        default="private",
-        help_text="Private: only creator sees. Org: all org members see.",
-    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
+        ordering = ["-created_at"]
         verbose_name = "account"
         verbose_name_plural = "accounts"
-        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.service_name} ({self.user.email})"
+        return f"{self.service_name}:{self.username}"
 
 
 class LoginEvent(models.Model):
-    """Record of a login attempt (successful or not) for compromise detection."""
-
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="login_events"
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="login_events")
     timestamp = models.DateTimeField(auto_now_add=True)
-    ip = models.GenericIPAddressField(null=True, blank=True)
+    ip = models.GenericIPAddressField(blank=True, null=True)
     user_agent = models.CharField(max_length=500, blank=True)
     device_fingerprint = models.CharField(max_length=64, blank=True)
     country = models.CharField(max_length=2, blank=True)
@@ -100,16 +60,10 @@ class LoginEvent(models.Model):
 
 
 class SessionAlert(models.Model):
-    """Unread alert raised when a login looks suspicious."""
-
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="session_alerts"
-    )
-    event = models.ForeignKey(
-        LoginEvent, on_delete=models.CASCADE, related_name="alerts"
-    )
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="session_alerts")
+    event = models.ForeignKey(LoginEvent, on_delete=models.CASCADE, related_name="alerts")
     reasons = models.JSONField(default=list, blank=True)
-    seen_at = models.DateTimeField(null=True, blank=True)
+    seen_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -117,3 +71,29 @@ class SessionAlert(models.Model):
 
     def __str__(self):
         return f"session-alert[{self.id}] user={self.user_id}"
+
+
+class Invitation(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+        EXPIRED = "expired", "Expired"
+        REVOKED = "revoked", "Revoked"
+
+    email = models.EmailField(db_index=True)
+    organization = models.ForeignKey("organizations.Organization", on_delete=models.CASCADE, related_name="account_invitations")
+    role = models.CharField(max_length=20, default="member")
+    token_hash = models.CharField(max_length=64, unique=True)
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.PENDING)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="account_invitations_sent")
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [models.Index(fields=["email", "status"])]
+
+    @staticmethod
+    def new_token():
+        raw = secrets.token_urlsafe(32)
+        return raw, hashlib.sha256(raw.encode()).hexdigest()

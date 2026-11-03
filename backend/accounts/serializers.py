@@ -3,6 +3,10 @@ from django.contrib.auth import authenticate
 from django.contrib.auth import get_user_model
 
 from .models import Account
+from datetime import timedelta
+from django.utils import timezone
+import hashlib, secrets
+from .models import Invitation
 
 User = get_user_model()
 
@@ -166,3 +170,150 @@ class AccountSerializer(serializers.ModelSerializer):
                     {"sharing": "sharing='org' requires an organization context."}
                 )
         return attrs
+# --- v1.2 accounts management serializers ---
+from django.contrib.auth import get_user_model
+from django.utils.crypto import get_random_string
+from rest_framework import serializers
+
+User = get_user_model()
+
+
+class OrgRoleSerializer(serializers.Serializer):
+    organization_id = serializers.IntegerField()
+    organization_name = serializers.CharField()
+    role = serializers.CharField()
+
+
+class UserReadSerializer(serializers.ModelSerializer):
+    system = serializers.SerializerMethodField()
+    orgs = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["id", "email", "first_name", "last_name",
+                  "is_active", "date_joined", "last_login", "system", "orgs"]
+        read_only_fields = fields
+
+    def get_system(self, obj):
+        return {"is_staff": obj.is_staff, "is_superuser": obj.is_superuser}
+
+    def get_orgs(self, obj):
+        return [
+            {"organization_id": m.organization_id,
+             "organization_name": m.organization.name,
+             "role": m.role}
+            for m in obj.memberships.select_related("organization").all()
+        ]
+
+
+class UserCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    first_name = serializers.CharField(required=False, allow_blank=True, default="")
+    last_name = serializers.CharField(required=False, allow_blank=True, default="")
+    is_staff = serializers.BooleanField(default=False)
+    is_superuser = serializers.BooleanField(default=False)
+    initial_org = serializers.DictField(required=False, allow_null=True)
+
+    def validate_email(self, value):
+        value = value.lower()
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("A user with this email already exists.")
+        return value
+
+    def validate_initial_org(self, value):
+        if not value:
+            return value
+        if "organization_id" not in value:
+            raise serializers.ValidationError("organization_id is required.")
+        role = value.get("role", "member")
+        if role not in {"owner", "admin", "member", "analyst", "employee"}:
+            raise serializers.ValidationError(f"Invalid role: {role}")
+        return value
+
+    def create(self, validated_data):
+        initial_org = validated_data.pop("initial_org", None)
+        pwd = get_random_string(16)
+        user = User.objects.create_user(
+            email=validated_data["email"], password=pwd,
+            first_name=validated_data.get("first_name", ""),
+            last_name=validated_data.get("last_name", ""),
+            is_staff=validated_data.get("is_staff", False),
+            is_superuser=validated_data.get("is_superuser", False),
+        )
+        if initial_org:
+            from apps.orgs.models import Membership
+            Membership.objects.get_or_create(
+                user=user,
+                organization_id=initial_org["organization_id"],
+                defaults={"role": initial_org.get("role", "member")},
+            )
+        user._temp_password = pwd
+        return user
+
+
+class UserUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["email", "first_name", "last_name", "is_active", "is_staff", "is_superuser"]
+
+    def validate_email(self, value):
+        value = value.lower()
+        qs = User.objects.filter(email__iexact=value).exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("Email already in use.")
+        return value
+
+
+class PasswordResetSerializer(serializers.Serializer):
+    password = serializers.CharField(min_length=8, write_only=True)
+    force_change = serializers.BooleanField(default=True, required=False)
+
+
+class InvitationCreateSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    organization_id = serializers.IntegerField()
+    role = serializers.ChoiceField(choices=["owner","admin","member","analyst","employee"], default="member")
+
+    def validate_email(self, value): return value.lower()
+
+    def validate(self, attrs):
+        from .models import Invitation
+        exists = Invitation.objects.filter(
+            email=attrs["email"], organization_id=attrs["organization_id"], status="pending"
+        ).exists()
+        if exists:
+            raise serializers.ValidationError("A pending invitation already exists.")
+        return attrs
+
+    def create(self, validated_data):
+        import hashlib, secrets
+        from datetime import timedelta
+        from django.utils import timezone
+        raw = secrets.token_urlsafe(32)
+        hash_ = hashlib.sha256(raw.encode()).hexdigest()
+        from .models import Invitation
+        inv = Invitation.objects.create(
+            email=validated_data["email"],
+            organization_id=validated_data["organization_id"],
+            role=validated_data["role"],
+            token_hash=hash_,
+            created_by=self.context["request"].user,
+            expires_at=timezone.now() + timedelta(days=7),
+        )
+        inv._raw_token = raw
+        return inv
+
+
+class InvitationReadSerializer(serializers.ModelSerializer):
+    created_by = serializers.SerializerMethodField()
+    organization = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Invitation
+        fields = ["id","email","organization","role","status","created_at","expires_at","created_by"]
+
+    def get_created_by(self, obj):
+        return {"id": obj.created_by_id, "email": obj.created_by.email}
+
+    def get_organization(self, obj):
+        return {"id": obj.organization_id, "name": obj.organization.name}

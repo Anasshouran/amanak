@@ -1,21 +1,10 @@
-"""AMANAK user accounts API URLs (mounted at /api/v1/accounts/)."""
+"""AMANAK accounts API URLs (mounted at /api/v1/accounts/)."""
+from rest_framework.routers import DefaultRouter
+from .views_users import UserViewSet
+from .views_invitations import InvitationViewSet
 
-from django.urls import path
+router = DefaultRouter()
+router.register(r"users", UserViewSet, basename="account-user")
+router.register(r"invitations", InvitationViewSet, basename="account-invitation")
 
-from .views import AccountViewSet
-
-urlpatterns = [
-    path("", AccountViewSet.as_view({"get": "list", "post": "create"}), name="account-list"),
-    path(
-        "<int:pk>/",
-        AccountViewSet.as_view(
-            {
-                "get": "retrieve",
-                "put": "update",
-                "patch": "partial_update",
-                "delete": "destroy",
-            }
-        ),
-        name="account-detail",
-    ),
-]
+urlpatterns = router.urls
