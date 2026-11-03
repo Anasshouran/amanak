@@ -55,6 +55,7 @@ The router (`apps/ai/gateway/router.py`) raises `AIProviderError` when:
 
 Callers must catch this and degrade gracefully — never fall back to a cloud provider implicitly.
 
+> **Note:** `backend-integration` CI job requires `OPENROUTER_API_KEY` secret; if absent, job is skipped via `continue-on-error: true`, not failed. Set with: `gh secret set OPENROUTER_API_KEY -R Anasshouran/amanak`
 ## 6. Testing AI features
 
 Env-sensitive tests are marked:
@@ -73,3 +74,14 @@ CI: `backend-integration` job runs with real key on master only.
 3. Add env vars to `.env.example` (with comments)
 4. Document privacy implications in **this file** — section 3
 5. Add integration test in `tests/ai/test_provider_<name>.py` (marked `integration`)
+
+## 8. Free tier policy
+
+AI features are **disabled on the free plan** (`plans.py::free.ai_enabled=False`, line 18).
+This is enforced by design — no separate failing test exists in the current suite.
+
+**Rationale:**
+- Free tier uses a shared OpenRouter key → cost risk + abuse potential
+- Re-evaluate for v1.2 with rate-limiting (e.g. 10 calls/month)
+
+To enable for a specific plan: edit `backend/apps/billing/plans.py` → `ai_enabled=True`

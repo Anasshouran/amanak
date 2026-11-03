@@ -49,3 +49,6 @@ docker-compose.local-prod.cors.yml
 yarn.lock
 *.bundle
 P18.2-prompt.md
+
+# Migration pycache (leftover from manual runs)
+**/migrations/__pycache__/
