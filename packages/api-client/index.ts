@@ -9,6 +9,9 @@ import type {
   Account,
   AccountInput,
   AIResponse,
+  AIConversation,
+  AIConversationDetail,
+  AIMessage,
   AITopic,
   ApiError,
   AuthResponse,
@@ -427,6 +430,29 @@ export class ApiClient {
 
   aiGuidance(topic: AITopic) {
     return this.request<AIResponse>("POST", "/ai/guidance", { topic })
+  }
+
+  // ---- AI Chat (v1.3.0) ----
+  listConversations() {
+    return this.request<AIConversation[]> ("GET", "/ai/conversations/")
+  }
+
+  createConversation(title?: string) {
+    return this.request<AIConversation>("POST", "/ai/conversations/", { title: title ?? "" })
+  }
+
+  getConversation(id: number) {
+    return this.request<AIConversationDetail>("GET", `/ai/conversations/${id}/`)
+  }
+
+  sendChatMessage(id: number, content: string) {
+    return this.request<{ user: AIMessage; assistant: AIMessage }>(
+      "POST", `/ai/conversations/${id}/messages/`, { content }
+    )
+  }
+
+  deleteConversation(id: number) {
+    return this.request<void>("DELETE", `/ai/conversations/${id}/`)
   }
 
   // ---- P21.3: Staff AI Settings ----

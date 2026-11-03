@@ -21,10 +21,13 @@ class User(AbstractUser):
 
 
 class Account(models.Model):
+    SHARING_MODE = "configurable"
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="accounts")
     service_name = models.CharField(max_length=200)
     username = models.CharField(max_length=200, blank=True)
     notes = models.TextField(blank=True)
+    context_id = models.IntegerField(null=True, blank=True)
+    sharing = models.CharField(max_length=20, default="private", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

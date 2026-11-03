@@ -11,6 +11,7 @@ import { Devices } from "./pages/Devices"
 import { Incidents } from "./pages/Incidents"
 import { Scanner } from "./pages/Scanner"
 import { AIAssistant } from "./pages/AIAssistant"
+import Chat from "./pages/Chat"
 import { BreachMonitor } from "./pages/BreachMonitor"
 import { TwoFactor } from "./pages/TwoFactor"
 import { PasswordVault } from "./pages/PasswordVault"
@@ -60,6 +61,7 @@ export function App() {
         <Route path="/incidents" element={<Incidents />} />
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/ai" element={<AIAssistant />} />
+        <Route path="/chat" element={<Chat />} />
         <Route path="/breach" element={<BreachMonitor />} />
         <Route path="/vault" element={<TwoFactor />} />
         <Route path="/passwords" element={<PasswordVault />} />

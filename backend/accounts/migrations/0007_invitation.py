@@ -28,14 +28,6 @@ class Migration(migrations.Migration):
             name='locale',
             field=models.CharField(blank=True, default='en', max_length=10),
         ),
-        migrations.RemoveField(
-            model_name='account',
-            name='context_id',
-        ),
-        migrations.RemoveField(
-            model_name='account',
-            name='sharing',
-        ),
         migrations.CreateModel(
             name='Invitation',
             fields=[

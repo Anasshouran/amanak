@@ -204,6 +204,33 @@ export type AIResponse = {
   tokens_used: number
 }
 
+// ---- AI Chat (v1.3.0) ----
+export type AIRole = "system" | "user" | "assistant"
+
+export type AIMessage = {
+  id: number
+  role: AIRole
+  content: string
+  snippet: string
+  tokens: number
+  created_at: string
+}
+
+export type AIConversation = {
+  id: number
+  title: string
+  provider: string
+  model: string
+  message_count: number
+  last_message_at: string | null
+  created_at: string
+}
+
+export type AIConversationDetail = AIConversation & {
+  messages: AIMessage[]
+  content_storage_enabled: boolean
+}
+
 // ---- Breach monitor (P7). Opt-in, privacy-preserving, disabled by default. ----
 
 export type MonitoredEmail = {

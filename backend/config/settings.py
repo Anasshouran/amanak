@@ -434,6 +434,8 @@ AI_MODEL = os.environ.get("AI_MODEL", "")
 AI_TIMEOUT = int(os.environ.get("AI_TIMEOUT", "15"))
 AI_MAX_TOKENS = int(os.environ.get("AI_MAX_TOKENS", "1024"))
 AI_DAILY_LIMIT = int(os.environ.get("AI_DAILY_LIMIT", "100"))
+# Chat history: store raw message content only when explicitly enabled (dev/staging).
+AI_CONTENT_STORAGE_ENABLED = _env_bool("AI_CONTENT_STORAGE_ENABLED", "false")
 # Cloud AI (P20.4/P21.3). ``AI_CLOUD_API_KEY`` is the name used by the staff
 # settings page; fall back to ``AI_API_KEY`` so either convention works.
 AI_CLOUD_CONSENT = _env_bool("AI_CLOUD_CONSENT", "false")
