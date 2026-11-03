@@ -16,6 +16,9 @@ class CanManageUser(BasePermission):
     def has_object_permission(self, request, view, obj):
         if request.user.is_superuser:
             return True
+        # Self-management allowed
+        if obj.id == request.user.id:
+            return True
         target_orgs = obj.memberships.values_list("organization_id", flat=True)
         return request.user.memberships.filter(
             organization_id__in=target_orgs, role__in=ADMIN_ROLES

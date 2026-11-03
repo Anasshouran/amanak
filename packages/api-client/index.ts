@@ -734,6 +734,39 @@ export class ApiClient {
     return this.request<any>("GET", `/threat-intel/check/?domain=${encodeURIComponent(domain)}`)
   }
 
+  // ── Accounts (v1.2.0) ──
+  listAccountsUsers(params: Record<string, string> = {}) {
+    const qs = new URLSearchParams(params).toString()
+    return this.request<{ count: number; results: any[] }>("GET", `/accounts/users/${qs ? "?" + qs : ""}`)
+  }
+  getAccountsUser(id: number) {
+    return this.request<any>("GET", `/accounts/users/${id}/`)
+  }
+  createAccountsUser(body: any) {
+    return this.request<any>("POST", "/accounts/users/", body)
+  }
+  updateAccountsUser(id: number, body: any) {
+    return this.request<any>("PATCH", `/accounts/users/${id}/`, body)
+  }
+  deactivateAccountsUser(id: number) {
+    return this.request<any>("DELETE", `/accounts/users/${id}/`)
+  }
+  resetAccountsUserPassword(id: number, password: string) {
+    return this.request<any>("POST", `/accounts/users/${id}/reset-password/`, { password })
+  }
+  listAccountsInvitations() {
+    return this.request<{ count: number; results: any[] }>("GET", "/accounts/invitations/")
+  }
+  createAccountsInvitation(body: { email: string; organization_id: string; role: string }) {
+    return this.request<any>("POST", "/accounts/invitations/", body)
+  }
+  resendAccountsInvitation(id: number) {
+    return this.request<any>("POST", `/accounts/invitations/${id}/resend/`)
+  }
+  revokeAccountsInvitation(id: number) {
+    return this.request<any>("DELETE", `/accounts/invitations/${id}/`)
+  }
+
   blockStaffUser(id: number, reason: string) {
     return this.request<StaffModeration>("POST", `/staff/users/${id}/block/`, { reason })
   }

@@ -30,6 +30,8 @@ import AISettings from "./pages/staff/AISettings"
 import { StaffHome } from "./pages/StaffHome"
 import { StaffUsers } from "./pages/StaffUsers"
 import { StaffUserDetail } from "./pages/StaffUserDetail"
+import UsersList from "./pages/staff/UsersList"
+import UserCreate from "./pages/staff/UserCreate"
 import { StaffSubscriptions } from "./pages/StaffSubscriptions"
 import { StaffAnnouncements } from "./pages/StaffAnnouncements"
 import { Notifications } from "./pages/Notifications"
@@ -88,6 +90,22 @@ export function App() {
           element={
             <StaffRoute>
               <StaffUserDetail />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/accounts"
+          element={
+            <StaffRoute>
+              <UsersList />
+            </StaffRoute>
+          }
+        />
+        <Route
+          path="/staff/accounts/new"
+          element={
+            <StaffRoute>
+              <UserCreate />
             </StaffRoute>
           }
         />

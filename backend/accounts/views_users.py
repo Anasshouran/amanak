@@ -27,12 +27,18 @@ class UserViewSet(viewsets.ModelViewSet):
         scope = self.request.query_params.get("scope", "self")
         user = self.request.user
 
+        # super_admin defaults to "all" scope
+        if user.is_superuser and "scope" not in self.request.query_params:
+            scope = "all"
+
         if scope == "all":
             if not user.is_superuser:
                 self.permission_denied(self.request, "scope=all requires super_admin")
         else:
             my_org_ids = user.memberships.values_list("organization_id", flat=True)
-            qs = qs.filter(memberships__organization_id__in=my_org_ids).distinct()
+            qs = qs.filter(memberships__organization_id__in=my_org_ids)
+            # Always include self (use union via OR on id)
+            qs = qs | User.objects.filter(id=user.id)
 
         org_id = self.request.query_params.get("organization_id")
         if org_id:
