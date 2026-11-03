@@ -32,7 +32,7 @@ describe("InviteModal", () => {
     const apiMod = await import("../../../lib/api")
     const api = (apiMod as any).api || apiMod
     api.getOrgUsage = api.getOrgUsage || vi.fn()
-    api.getOrgUsage.mockResolvedValue({ plan: "business", members: { used: 1, limit: 10 }, devices: { used: 0, limit: -1 }, incidents: { used: 0, limit: -1 }, ai_requests: { used: 0, limit: 2000 } })
+    ;(api.getOrgUsage as any).mockResolvedValue({ plan: "business", members: { used: 1, limit: 10 }, devices: { used: 0, limit: -1 }, incidents: { used: 0, limit: -1 }, ai_requests: { used: 0, limit: 2000 } })
   })
 
   it("validates email - shows error for invalid email", async () => {
@@ -48,7 +48,7 @@ describe("InviteModal", () => {
   it("submits valid invite for owner", async () => {
     const { api } = await import("../../../lib/api")
     ;(api.post as any).mockResolvedValue({})
-    api.getOrgUsage.mockResolvedValue({ plan: "business", members: { used: 1, limit: 10 }, devices: { used: 0, limit: -1 }, incidents: { used: 0, limit: -1 }, ai_requests: { used: 0, limit: 2000 } })
+    ;(api.getOrgUsage as any).mockResolvedValue({ plan: "business", members: { used: 1, limit: 10 }, devices: { used: 0, limit: -1 }, incidents: { used: 0, limit: -1 }, ai_requests: { used: 0, limit: 2000 } })
     const onClose = vi.fn()
     render(<InviteModal open onClose={onClose} orgId="o1" orgName="Acme" isOwner={true} />)
     await waitFor(() => {})
@@ -64,7 +64,7 @@ describe("InviteModal", () => {
   it("owner can invite admin role", async () => {
     const { api } = await import("../../../lib/api")
     ;(api.post as any).mockResolvedValue({})
-    api.getOrgUsage.mockResolvedValue({ plan: "business", members: { used: 1, limit: 10 }, devices: { used: 0, limit: -1 }, incidents: { used: 0, limit: -1 }, ai_requests: { used: 0, limit: 2000 } })
+    ;(api.getOrgUsage as any).mockResolvedValue({ plan: "business", members: { used: 1, limit: 10 }, devices: { used: 0, limit: -1 }, incidents: { used: 0, limit: -1 }, ai_requests: { used: 0, limit: 2000 } })
     render(<InviteModal open onClose={() => {}} orgId="o1" orgName="Acme" isOwner={true} />)
     await waitFor(() => {})
     const input = screen.getByLabelText(/email/i)

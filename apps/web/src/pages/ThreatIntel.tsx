@@ -42,12 +42,12 @@ export function ThreatIntel() {
       const res = await api.checkThreatIntelDomain(checkDomain.trim())
       setCheckResult(res.matched ? `${res.source} (${res.confidence})` : "not matched")
     } catch (e) {
-      setCheckResult(errorMessage(e))
+      setCheckResult(errorMessage(e, "Check failed"))
     }
   }
 
   if (status.loading) return <Skeleton />
-  if (status.error) return <ErrorState title="Error" message={errorMessage(status.error)} />
+  if (status.error) return <ErrorState title="Error" message={errorMessage(status.error, "Unknown error")} />
 
   const feeds = status.data ?? []
 

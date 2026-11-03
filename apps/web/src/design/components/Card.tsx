@@ -1,4 +1,4 @@
-import type { ElementType, ReactNode } from "react"
+import type { ElementType, ReactNode, CSSProperties } from "react"
 import { cx } from "../utils"
 
 export type CardProps = {
@@ -7,15 +7,17 @@ export type CardProps = {
   elevated?: boolean
   as?: ElementType
   className?: string
+  style?: CSSProperties
   title?: ReactNode
   action?: ReactNode
 }
 
-export function Card({ children, padded, elevated, as, className, title, action }: CardProps) {
+export function Card({ children, padded, elevated, as, className, style, title, action }: CardProps) {
   const Tag = (as ?? "section") as ElementType
   return (
     <Tag
       className={cx("amk-card", padded && "amk-card--padded", elevated && "amk-card--elevated", className)}
+      style={style}
     >
       {(title || action) && (
         <div className="amk-card__head">

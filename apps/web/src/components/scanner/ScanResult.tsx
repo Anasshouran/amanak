@@ -1,5 +1,5 @@
 import type { ScanMatch, ScanVerdict } from "@amanak/shared-types"
-import { Badge, Button } from "../../design/components"
+import { Badge, Button, Card } from "../../design/components"
 import type { BadgeVariant } from "../../design/components"
 import { IconCheck, IconClose, IconAlert } from "../../design/icons"
 import { useT } from "../../design/i18n"

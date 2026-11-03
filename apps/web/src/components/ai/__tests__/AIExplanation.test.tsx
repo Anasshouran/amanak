@@ -1,8 +1,7 @@
 /** @vitest-environment jsdom */
 import { describe, test, expect } from "vitest"
-import { describe, test, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
-import { AIExplanation } from "../AIExplanation.tsx"
+import { AIExplanation } from "../AIExplanation"
 
 describe("AIExplanation", () => {
   test("renders explanation text", () => {
