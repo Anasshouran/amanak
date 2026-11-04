@@ -860,3 +860,15 @@ select {
     scroll-behavior: auto !important;
   }
 }
+
+.amk-spinner {
+  display: inline-block;
+  border: 3px solid var(--c-muted, #ccc);
+  border-top-color: var(--c-brand, #3b82f6);
+  border-radius: 50%;
+  animation: amk-spin 0.8s linear infinite;
+}
+
+@keyframes amk-spin {
+  to { transform: rotate(360deg); }
+}

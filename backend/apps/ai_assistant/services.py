@@ -148,3 +148,40 @@ def explain_scan(user, scan, locale="ar"):
 
 def guidance(user, topic):
     return _generate(user, AIConversation.KIND_GUIDANCE, build_guidance_prompt(topic))
+
+
+SYSTEM_PROMPT = (
+    "You are a helpful cybersecurity assistant. Answer concisely in the user's language. "
+    "Do not provide harmful advice. If you don't know, say so."
+)
+
+
+def chat_completion(user, conversation) -> dict:
+    """
+    General multi-turn chat. Sends full message history to the LLM.
+    Returns {"reply": str, "tokens": int}.
+    """
+    from ai.gateway.router import select_provider
+    from .models import AIMessage
+
+    provider = select_provider()
+
+    # Build a single prompt with conversation history
+    lines = [f"System: {SYSTEM_PROMPT}", ""]
+    history = conversation.messages.order_by("created_at")
+    for m in history:
+        text = (m.content or "").strip() or (m.snippet or "").strip()
+        if not text:
+            continue
+        role_label = "User" if m.role == "user" else "Assistant"
+        lines.append(f"{role_label}: {text}")
+
+    # The last message is the user's latest input; prompt the assistant to reply
+    lines.append("Assistant:")
+    prompt = "\n".join(lines)
+
+    response = provider.complete(prompt)
+    return {
+        "reply": (response.text or "").strip(),
+        "tokens": getattr(response, "tokens_used", 0),
+    }

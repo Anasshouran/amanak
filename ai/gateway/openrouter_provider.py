@@ -83,7 +83,8 @@ class OpenRouterProvider(AIProvider):
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as r:
                 data = json.loads(r.read().decode())
-                text = data["choices"][0]["message"]["content"].strip()
+                msg = data["choices"][0]["message"]
+                text = (msg.get("content") or msg.get("reasoning") or "").strip()
                 usage = data.get("usage", {})
                 return AIResponse(
                     text=text,

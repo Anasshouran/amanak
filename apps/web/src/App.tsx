@@ -62,6 +62,7 @@ export function App() {
         <Route path="/scanner" element={<Scanner />} />
         <Route path="/ai" element={<AIAssistant />} />
         <Route path="/chat" element={<Chat />} />
+        <Route path="/staff/chat" element={<Chat />} />
         <Route path="/breach" element={<BreachMonitor />} />
         <Route path="/vault" element={<TwoFactor />} />
         <Route path="/passwords" element={<PasswordVault />} />

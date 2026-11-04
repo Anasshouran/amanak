@@ -15,7 +15,7 @@ from .serializers_chat import (
     AIMessageSerializer,
     ChatMessageCreateSerializer,
 )
-from .services import guidance as guidance_service
+from .services import chat_completion
 from .throttles import AIUserRateThrottle
 
 
@@ -68,11 +68,13 @@ class ConversationViewSet(viewsets.ModelViewSet):
             )
 
             try:
-                result = guidance_service(user=request.user, topic=user_text[:200])
-                reply_text = result.get("text", "")
-                tokens = result.get("tokens_used", 0)
-            except Exception:
-                reply_text = "[error: provider unavailable]"
+                result = chat_completion(user=request.user, conversation=conv)
+                reply_text = result.get("reply", "") or "[no reply]"
+                tokens = result.get("tokens", 0)
+            except Exception as exc:
+                import logging
+                logging.exception("chat_completion failed")
+                reply_text = f"[error: {type(exc).__name__}: {exc}]"
                 tokens = 0
 
             assistant_msg = AIMessage.objects.create(
