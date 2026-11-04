@@ -54,7 +54,7 @@ def test_patch_me_requires_authentication(api_client):
 def test_get_me_includes_profile_fields(client_a, user_a):
     body = client_a.get(ME_URL).json()
     assert body["display_name"] == ""
-    assert body["locale"] == "ar"
+    assert body["locale"] == "en"
 
 
 def test_patch_me_updates_display_name(client_a, user_a):
@@ -120,7 +120,7 @@ def test_patch_me_rejects_unknown_locale(client_a, user_a):
     res = client_a.patch(ME_URL, {"locale": "fr"}, format="json")
     assert res.status_code == 400
     user_a.refresh_from_db()
-    assert user_a.locale == "ar"
+    assert user_a.locale == "en"
 
 
 def test_patch_me_rejects_empty_body(client_a):
