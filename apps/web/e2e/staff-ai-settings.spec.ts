@@ -6,7 +6,7 @@ test("super_admin can switch provider from ollama to openrouter", async ({ page 
   // Login as admin
   await page.goto("/login")
   await page.fill('input[name="email"], input[type="email"]', "admin@local.dev")
-  await page.fill('input[name="password"], input[type="password"]", "Admin123456!")
+  await page.fill('input[name="password"], input[type="password"]', "Admin123456!")
   await page.getByRole("button", { name: /login|sign in|دخول/i }).click()
   await page.waitForURL("/staff/ai-settings", { timeout: 15000 })
 
