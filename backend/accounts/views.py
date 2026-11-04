@@ -15,7 +15,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_decode, urlsafe_base64_encode
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, throttle_classes
-from rest_framework.exceptions import AuthenticationFailed, NotFound
+from rest_framework.exceptions import AuthenticationFailed, NotFound, PermissionDenied
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -395,6 +395,7 @@ class AccountViewSet(viewsets.ModelViewSet):
 
     serializer_class = AccountSerializer
     permission_classes = [IsAuthenticated]
+    throttle_classes = [UserRateThrottle]
 
     def get_queryset(self):
         from common.context import filter_by_context_sharing
@@ -430,6 +431,8 @@ class AccountViewSet(viewsets.ModelViewSet):
 
     def perform_update(self, serializer):
         instance = self.get_object()
+        if instance.user_id != self.request.user.id:
+            raise PermissionDenied("Only the owner can modify this account.")
         before_sharing = getattr(instance, "sharing", "private")
         ctx = getattr(self.request, "context", None)
         updated = serializer.save()
@@ -453,6 +456,11 @@ class AccountViewSet(viewsets.ModelViewSet):
             except Exception:
                 pass
 
+
+    def perform_destroy(self, instance):
+        if instance.user_id != self.request.user.id:
+            raise PermissionDenied("Only the owner can delete this account.")
+        instance.delete()
 
 def _device_label(ua: str) -> str:
     """Best-effort short device label from a User-Agent string."""

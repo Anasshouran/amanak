@@ -277,3 +277,49 @@ def test_context_switching_preserves_data(
         )
         assert personal == ["p1", "p2"]
         assert org == ["o1", "o2"]
+
+
+def test_non_owner_cannot_update_shared_account(
+    client_a, client_b, organization_a, membership_a_in_org_a, membership_b_in_org_a
+):
+    """IDOR: User B (non-owner) must not be able to modify User A's shared account."""
+    org_header = str(organization_a.id)
+    # User A creates a shared account
+    r = client_a.post(
+        ACCOUNTS,
+        {"service_name": "github", "sharing": "org"},
+        format="json",
+        HTTP_X_CONTEXT_ID=org_header,
+    )
+    assert r.status_code == 201
+    acc_id = r.json()["id"]
+
+    # User B tries to update it
+    r2 = client_b.patch(
+        f"{ACCOUNTS}{acc_id}/",
+        {"service_name": "hacked"},
+        format="json",
+        HTTP_X_CONTEXT_ID=org_header,
+    )
+    assert r2.status_code in (403, 404), r2.data
+
+
+def test_non_owner_cannot_delete_shared_account(
+    client_a, client_b, organization_a, membership_a_in_org_a, membership_b_in_org_a
+):
+    """IDOR: User B (non-owner) must not be able to delete User A's shared account."""
+    org_header = str(organization_a.id)
+    r = client_a.post(
+        ACCOUNTS,
+        {"service_name": "github", "sharing": "org"},
+        format="json",
+        HTTP_X_CONTEXT_ID=org_header,
+    )
+    assert r.status_code == 201
+    acc_id = r.json()["id"]
+
+    r2 = client_b.delete(
+        f"{ACCOUNTS}{acc_id}/",
+        HTTP_X_CONTEXT_ID=org_header,
+    )
+    assert r2.status_code in (403, 404), getattr(r2, "data", None)
