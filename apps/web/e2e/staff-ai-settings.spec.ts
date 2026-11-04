@@ -30,8 +30,8 @@ test("non-super-admin is blocked", async ({ browser }) => {
 
   // Login as support (not super_admin)
   await page.goto("/login")
-  await page.fill('input[name="email"], input[type="email"]", "support@local.dev")
-  await page.fill('input[name="password"], input[type="password"]", "Support2026!")
+  await page.fill('input[name="email"], input[type="email"]', "support@local.dev")
+  await page.fill('input[name="password"], input[type="password"]', "Support2026!")
   await page.getByRole("button", { name: /login|sign in|دخول/i }).click()
   await page.waitForURL("/dashboard", { timeout: 15000 })
 
