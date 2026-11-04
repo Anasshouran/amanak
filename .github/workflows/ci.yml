@@ -149,7 +149,7 @@ jobs:
           python backend/manage.py runserver 0.0.0.0:8080 &
           sleep 5
           curl -fsS http://127.0.0.1:8080/healthz/ || (echo "backend not up"; exit 1)
-      - run: npx playwright install --with-deps chromium
+      - run: npm exec --workspace apps/web playwright install --with-deps chromium
       - run: npm run e2e --workspace apps/web
       - uses: actions/upload-artifact@v4
         if: always()
