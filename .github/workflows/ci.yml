@@ -144,7 +144,7 @@ jobs:
           NOTIF_PREFS_THROTTLE_RATE: "1000/min"
           ME_EXPORT_THROTTLE_RATE: "1000/hour"
         run: |
-          pip install -r backend/requirements.txt pyyaml==5.4.1
+          pip install -r backend/requirements.txt pyyaml==6.0.1
           python backend/manage.py migrate
           python backend/manage.py runserver 0.0.0.0:8080 &
           sleep 5
