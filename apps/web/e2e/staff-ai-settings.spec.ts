@@ -6,9 +6,10 @@ test("super_admin can switch provider from ollama to openrouter", async ({ page 
   // Login as admin
   await page.goto("/login")
   await page.fill('input[name="email"], input[type="email"]', "admin@local.dev")
-  await page.fill('input[name="password"], input[type="password"]', "Admin123456!")
+  await page.fill('input[name="password"], input[type="password"]', "AdminTest2026!")
   await page.getByRole("button", { name: /login|sign in|دخول/i }).click()
-  await page.waitForURL("/staff/ai-settings", { timeout: 15000 })
+  await page.waitForURL("/dashboard", { timeout: 15000 })
+  await page.goto("/staff/ai-settings")
 
   // Verify AI settings page is visible
   await expect(page.getByRole("heading", { name: /AI Provider Settings/i })).toBeVisible()
@@ -26,7 +27,7 @@ test("super_admin can switch provider from ollama to openrouter", async ({ page 
 })
 
 test("non-super-admin is blocked", async ({ browser }) => {
-  const ctx = await browser.newPage()
+  const page = await browser.newPage()
 
   // Login as support (not super_admin)
   await page.goto("/login")
@@ -39,5 +40,5 @@ test("non-super-admin is blocked", async ({ browser }) => {
   // Either 403 page or redirect
   await expect(page.getByText(/forbidden|403|super_admin|غير مصرح/i)).toBeVisible({ timeout: 5000 })
 
-  await ctx.close()
+  await page.close()
 })
