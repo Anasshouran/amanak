@@ -66,5 +66,10 @@ gh api "repos/$REPO/dependabot/alerts?state=open" 2>/dev/null \
   --jq 'if length == 0 then "✅ no open alerts" else "\(length) alert(s)" end' \
   || echo "(dependabot not enabled or no access)"
 echo ""
+echo "── Dependabot PRs ───────────────────────────"
+DEPBOT_PRS=$(gh pr list -R "$REPO" --state open --author "app/dependabot" --limit 10 \
+  --json number,title --jq '.[] | "#\(.number) \(.title[0:70])"' 2>/dev/null || true)
+if [ -n "$DEPBOT_PRS" ]; then echo "$DEPBOT_PRS"; else echo "(none)"; fi
+echo ""
 
 echo "════════════════════════════════════════════"
