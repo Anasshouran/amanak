@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from "react-native"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 import type { Device } from "@amanak/shared-types"
 
 export default function Devices() {

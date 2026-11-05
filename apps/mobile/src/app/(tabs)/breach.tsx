@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 import type { BreachHit, CheckSummary, MonitoredEmail } from "@amanak/shared-types"
 
 function errorCode(err: unknown): string | undefined {

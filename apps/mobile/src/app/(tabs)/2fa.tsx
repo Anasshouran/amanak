@@ -11,20 +11,20 @@ import {
 } from "react-native"
 import { CameraView, useCameraPermissions } from "expo-camera"
 import type { TwoFactorEntry, TwoFactorProfile } from "@amanak/shared-types"
-import { Header } from "../../src/components/Header"
-import { TwoFactorListMobile } from "../../src/components/twofa/TwoFactorListMobile"
-import { useLocale } from "../../src/design/LocaleProvider"
-import { useTokens } from "../../src/design/tokens"
-import { api } from "../../src/lib/api"
-import { decode as base32Decode } from "../../src/lib/vault/base32"
-import { b64Decode, b64Encode } from "../../src/lib/vault/bytes"
-import { randomBytes } from "../../src/lib/vault/random"
+import { Header } from "../../components/Header"
+import { TwoFactorListMobile } from "../../components/twofa/TwoFactorListMobile"
+import { useLocale } from "../../design/LocaleProvider"
+import { useTokens } from "../../design/tokens"
+import { api } from "../../lib/api"
+import { decode as base32Decode } from "../../lib/vault/base32"
+import { b64Decode, b64Encode } from "../../lib/vault/bytes"
+import { randomBytes } from "../../lib/vault/random"
 import {
   aadFromEntryId,
   decryptWithIv,
   deriveKeyBytes,
   encryptWithIv,
-} from "../../src/lib/vault/vault"
+} from "../../lib/vault/vault"
 
 const MAX_ATTEMPTS = 5
 const ATTEMPT_WINDOW_MS = 5 * 60 * 1000

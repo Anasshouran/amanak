@@ -1,7 +1,7 @@
 import { Redirect } from "expo-router"
 import { ActivityIndicator, View } from "react-native"
-import { useTokens } from "../src/design/tokens"
-import { useAuth } from "../src/state/AuthContext"
+import { useTokens } from "../design/tokens"
+import { useAuth } from "../state/AuthContext"
 
 /**
  * Root route (`/`).

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 import type { AIResponse, AITopic } from "@amanak/shared-types"
 
 const TOPICS: { id: AITopic; label: string }[] = [

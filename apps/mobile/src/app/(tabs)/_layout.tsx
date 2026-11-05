@@ -3,12 +3,12 @@ import { Animated, Modal, Pressable, Text, View } from "react-native"
 import { Ionicons } from "@expo/vector-icons"
 import { Redirect, Tabs } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { MoreList } from "../../src/components/MoreList"
-import { useLocale, useT } from "../../src/design/LocaleProvider"
-import { useContext_ } from "../../src/design/ContextProvider"
-import { useReducedMotion } from "../../src/design/motion"
-import { useTokens } from "../../src/design/tokens"
-import { useAuth } from "../../src/state/AuthContext"
+import { MoreList } from "../../components/MoreList"
+import { useLocale, useT } from "../../design/LocaleProvider"
+import { useContext_ } from "../../design/ContextProvider"
+import { useReducedMotion } from "../../design/motion"
+import { useTokens } from "../../design/tokens"
+import { useAuth } from "../../state/AuthContext"
 
 /** Secondary destinations hidden behind the More tab. */
 const HIDDEN_FROM_TAB_BAR = [

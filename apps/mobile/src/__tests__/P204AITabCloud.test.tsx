@@ -2,14 +2,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { act } from "react-dom/test-utils"
 
-vi.mock("../../lib/api", () => ({
+vi.mock("../lib/api", () => ({
   api: {
     aiGuidance: vi.fn(),
     aiExplainScan: vi.fn(),
   },
 }))
 
-import { render } from "../../test/render"
+import { render } from "../test/render"
 import AIAssistant from "../../app/(tabs)/ai"
 
 async function flush() {
@@ -22,7 +22,7 @@ async function flush() {
 describe("P20.4 — AI hybrid cloud consent", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
-    const { api } = await import("../../lib/api")
+    const { api } = await import("../lib/api")
     ;(api.aiGuidance as any).mockResolvedValue({ text: "OK", provider: "fake", model: "fake-model", tokens_used: 1 })
   })
 

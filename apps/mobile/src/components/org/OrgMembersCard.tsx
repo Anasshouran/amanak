@@ -142,7 +142,7 @@ export function OrgMembersCard({
             accessibilityRole="button"
             onPress={() => setInviteOpen((open) => !open)}
           >
-            <Text style={{ color: tokens.c.accent, fontWeight: "600" }}>
+            <Text style={{ color: tokens.c.brand, fontWeight: "600" }}>
               + {t("org.members.invite")}
             </Text>
           </Pressable>
@@ -194,12 +194,12 @@ export function OrgMembersCard({
                   paddingVertical: tokens.space[1],
                   borderRadius: tokens.radius.sm,
                   borderWidth: 1,
-                  borderColor: inviteRole === r ? tokens.c.accent : tokens.c.border,
+                  borderColor: inviteRole === r ? tokens.c.brand : tokens.c.border,
                 }}
               >
                 <Text
                   style={{
-                    color: inviteRole === r ? tokens.c.accent : tokens.c.text,
+                    color: inviteRole === r ? tokens.c.brand : tokens.c.text,
                     fontSize: tokens.size.xs,
                   }}
                 >
@@ -214,7 +214,7 @@ export function OrgMembersCard({
             onPress={submitInvite}
             style={{ opacity: busy ? 0.5 : 1 }}
           >
-            <Text style={{ color: tokens.c.accent, fontWeight: "600", textAlign: align }}>
+            <Text style={{ color: tokens.c.brand, fontWeight: "600", textAlign: align }}>
               {t("org.invite.submit")}
             </Text>
           </Pressable>

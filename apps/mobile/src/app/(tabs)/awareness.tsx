@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react"
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 
 export default function Awareness() {
   const [loading, setLoading] = useState(false)

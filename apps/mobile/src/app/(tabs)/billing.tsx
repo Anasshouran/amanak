@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native"
 import type { BillingUsage, Subscription, OrgUsage } from "@amanak/shared-types"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 
 type UsageRow = { key: keyof BillingUsage; label: string }
 

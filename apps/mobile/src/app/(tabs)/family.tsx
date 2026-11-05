@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Button, ScrollView, StyleSheet, Switch, Text, TextInput, View } from "react-native"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 
 export default function Family() {
   const [loading, setLoading] = useState(true)

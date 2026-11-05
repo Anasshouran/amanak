@@ -7,7 +7,7 @@ import {
   TextInput,
   View,
 } from "react-native"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 import type { Account } from "@amanak/shared-types"
 
 export default function Accounts() {

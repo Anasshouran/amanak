@@ -129,7 +129,7 @@ export function OrgDashboardScreen() {
 
       {canSeeMembers && (
         <OrgMembersCard
-          orgId={contextId}
+          orgId={contextId ?? ""}
           role={role}
           members={members}
           onChanged={() => {

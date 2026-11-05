@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native"
 import type { NotificationItem } from "@amanak/shared-types"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 
 export default function Notifications() {
   const [items, setItems] = useState<NotificationItem[]>([])

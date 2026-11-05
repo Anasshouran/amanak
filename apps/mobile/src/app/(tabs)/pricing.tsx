@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react"
 import { Button, ScrollView, StyleSheet, Text, View } from "react-native"
 import type { Plan } from "@amanak/shared-types"
-import { api } from "../../src/lib/api"
+import { api } from "../../lib/api"
 
 function price(plan: Plan, period: "monthly" | "yearly"): string {
   const value = period === "yearly" ? plan.price_yearly : plan.price_monthly

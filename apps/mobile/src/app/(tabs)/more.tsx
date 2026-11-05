@@ -1,7 +1,7 @@
 import { ScrollView, Text, View } from "react-native"
-import { MoreList } from "../../src/components/MoreList"
-import { useLocale, useT } from "../../src/design/LocaleProvider"
-import { useTokens } from "../../src/design/tokens"
+import { MoreList } from "../../components/MoreList"
+import { useLocale, useT } from "../../design/LocaleProvider"
+import { useTokens } from "../../design/tokens"
 
 /**
  * Full-screen fallback for the More tab.

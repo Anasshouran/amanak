@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router"
-import { InvitationsAcceptScreen } from "../../src/components/org/InvitationsAcceptScreen"
+import { InvitationsAcceptScreen } from "../../components/org/InvitationsAcceptScreen"
 
 /**
  * Deep-link landing route: `/invitations/accept?token=…`.

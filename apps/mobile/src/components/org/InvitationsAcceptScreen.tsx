@@ -84,7 +84,7 @@ export function InvitationsAcceptScreen({
               {t("org.invitations.accept.invited_as")}…
             </Text>
             <Pressable accessibilityRole="button" onPress={accept}>
-              <Text style={{ color: tokens.c.accent, fontWeight: "600", textAlign: align }}>
+              <Text style={{ color: tokens.c.brand, fontWeight: "600", textAlign: align }}>
                 {t("org.invitations.accept.accept")}
               </Text>
             </Pressable>
@@ -103,7 +103,7 @@ export function InvitationsAcceptScreen({
               {message}
             </Text>
             <Pressable accessibilityRole="button" onPress={onDone}>
-              <Text style={{ color: tokens.c.accent, fontWeight: "600", textAlign: align }}>
+              <Text style={{ color: tokens.c.brand, fontWeight: "600", textAlign: align }}>
                 {t("org.dashboard.title")}
               </Text>
             </Pressable>

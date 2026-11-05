@@ -80,7 +80,7 @@ describe("OrgAuditScreen", () => {
         target_type: "member",
         target_id: "7",
         target_email: "b@x.com",
-        metadata: {},
+        metadata: { before: { role: "employee" }, after: { role: "admin" } },
         ip: "127.0.0.1",
         created_at: "2026-01-01T00:00:00Z",
       },

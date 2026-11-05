@@ -6,15 +6,15 @@ import type {
   ScanResultRecord,
   ScoreHistoryResponse,
 } from "@amanak/shared-types"
-import { ActionCards } from "../../src/components/ActionCards"
-import { ActivityFeed } from "../../src/components/ActivityFeed"
-import { Greeting } from "../../src/components/Greeting"
-import { Header } from "../../src/components/Header"
-import { KpiRow, type KpiItem } from "../../src/components/KpiRow"
-import { ScoreCard } from "../../src/components/ScoreCard"
-import { useT } from "../../src/design/LocaleProvider"
-import { useTokens } from "../../src/design/tokens"
-import { api } from "../../src/lib/api"
+import { ActionCards } from "../../components/ActionCards"
+import { ActivityFeed } from "../../components/ActivityFeed"
+import { Greeting } from "../../components/Greeting"
+import { Header } from "../../components/Header"
+import { KpiRow, type KpiItem } from "../../components/KpiRow"
+import { ScoreCard } from "../../components/ScoreCard"
+import { useT } from "../../design/LocaleProvider"
+import { useTokens } from "../../design/tokens"
+import { api } from "../../lib/api"
 
 /**
  * P17.2 dashboard: greeting, score card, KPI strip, action cards, activity feed.

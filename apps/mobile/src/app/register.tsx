@@ -1,7 +1,7 @@
 import { useRouter } from "expo-router"
 import { useState } from "react"
 import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput } from "react-native"
-import { useAuth } from "../src/state/AuthContext"
+import { useAuth } from "../state/AuthContext"
 
 export default function Register() {
   const router = useRouter()
