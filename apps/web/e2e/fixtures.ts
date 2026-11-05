@@ -154,9 +154,12 @@ export function createOrgIncident(email: string, orgId: string, title: string): 
   ])
 }
 
-/** Run a snippet of Python inside the backend container's Django shell. */
+/** Run a snippet of Python inside the backend's Django shell.
+ *
+ *  Works in both local dev (Docker container) and CI (direct process).
+ *  Tries `docker exec` first; falls back to running manage.py directly.
+ */
 function djangoShell(lines: string[]): string {
-  const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"
   const script = [
     "import os, django",
     "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')",
@@ -164,11 +167,44 @@ function djangoShell(lines: string[]): string {
     "from django.contrib.auth import get_user_model",
     ...lines,
   ].join("; ")
-  return execFileSync(
-    "docker",
-    ["exec", container, "python", "backend/manage.py", "shell", "-c", script],
-    { encoding: "utf8" },
-  )
+
+  const backendDir = process.env.E2E_BACKEND_DIR || "../../../backend"
+  const pythonBin = process.env.E2E_PYTHON || "python"
+  const env = {
+    ...process.env,
+    POSTGRES_HOST: process.env.POSTGRES_HOST || "127.0.0.1",
+    POSTGRES_PORT: process.env.POSTGRES_PORT || "5433",
+    POSTGRES_DB: process.env.POSTGRES_DB || "amanak",
+    POSTGRES_USER: process.env.POSTGRES_USER || "amanak",
+    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || "amanak-ci",
+    DJANGO_DEBUG: "true",
+    USE_POSTGRES: "true",
+    DJANGO_SECRET_KEY: process.env.DJANGO_SECRET_KEY || "ci-secret-key",
+    PYTHONPATH: `${backendDir}:${process.env.PYTHONPATH || ""}`,
+  }
+
+  // Try docker exec first (local dev)
+  const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"
+  try {
+    return execFileSync(
+      "docker",
+      ["exec", container, "python", "backend/manage.py", "shell", "-c", script],
+      { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
+    )
+  } catch (dockerErr: any) {
+    // Docker not available or container doesn't exist — run directly (CI)
+    try {
+      return execFileSync(
+        pythonBin,
+        ["manage.py", "shell", "-c", script],
+        { encoding: "utf8", cwd: backendDir, env, stdio: ["pipe", "pipe", "pipe"] },
+      )
+    } catch (directErr: any) {
+      throw new Error(
+        `djangoShell failed (docker: ${dockerErr.message?.slice(0, 100)}, direct: ${directErr.message?.slice(0, 200)})`,
+      )
+    }
+  }
 }
 
 export const test = base
