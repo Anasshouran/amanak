@@ -61,21 +61,6 @@ export async function waitForApiIdle(page: Page) {
  * name can be overridden with E2E_BACKEND_CONTAINER.
  */
 export function grantStaffRole(email: string, role: string): void {
-  const backendDir = process.env.E2E_BACKEND_DIR || "../../../backend"
-  const pythonBin = process.env.E2E_PYTHON || "python"
-  const env = {
-    ...process.env,
-    POSTGRES_HOST: process.env.POSTGRES_HOST || "127.0.0.1",
-    POSTGRES_PORT: process.env.POSTGRES_PORT || "5433",
-    POSTGRES_DB: process.env.POSTGRES_DB || "amanak",
-    POSTGRES_USER: process.env.POSTGRES_USER || "amanak",
-    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || "amanak-ci",
-    DJANGO_DEBUG: "true",
-    USE_POSTGRES: "true",
-    DJANGO_SECRET_KEY: process.env.DJANGO_SECRET_KEY || "ci-secret-key",
-    PYTHONPATH: `${backendDir}:${process.env.PYTHONPATH || ""}`,
-  }
-
   const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"
   try {
     execFileSync(
@@ -85,11 +70,7 @@ export function grantStaffRole(email: string, role: string): void {
     )
   } catch {
     try {
-      execFileSync(
-        pythonBin,
-        ["manage.py", "grant_role", email, role],
-        { stdio: "ignore", cwd: backendDir, env },
-      )
+      runPython(["manage.py", "grant_role", email, role], { stdio: "ignore" })
     } catch (e: any) {
       throw new Error(`grantStaffRole failed: ${e.message}`)
     }
@@ -186,17 +167,8 @@ export function createOrgIncident(email: string, orgId: string, title: string): 
  *  Works in both local dev (Docker container) and CI (direct process).
  *  Tries `docker exec` first; falls back to running manage.py directly.
  */
-function djangoShell(lines: string[]): string {
-  const script = [
-    "import os, django",
-    "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')",
-    "django.setup()",
-    "from django.contrib.auth import get_user_model",
-    ...lines,
-  ].join("; ")
-
+function runPython(args: string[], opts: any = {}): string {
   const backendDir = process.env.E2E_BACKEND_DIR || "../../../backend"
-  const pythonBin = process.env.E2E_PYTHON || "python"
   const env = {
     ...process.env,
     POSTGRES_HOST: process.env.POSTGRES_HOST || "127.0.0.1",
@@ -210,6 +182,27 @@ function djangoShell(lines: string[]): string {
     PYTHONPATH: `${backendDir}:${process.env.PYTHONPATH || ""}`,
   }
 
+  const pythons = [process.env.E2E_PYTHON, "python3", "python"].filter(Boolean)
+  let lastErr: any
+  for (const py of pythons) {
+    try {
+      return execFileSync(py as string, args, { encoding: "utf8", cwd: backendDir, env, stdio: ["pipe", "pipe", "pipe"], ...opts })
+    } catch (e: any) {
+      lastErr = e
+    }
+  }
+  throw lastErr
+}
+
+function djangoShell(lines: string[]): string {
+  const script = [
+    "import os, django",
+    "os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')",
+    "django.setup()",
+    "from django.contrib.auth import get_user_model",
+    ...lines,
+  ].join("; ")
+
   // Try docker exec first (local dev)
   const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"
   try {
@@ -218,18 +211,11 @@ function djangoShell(lines: string[]): string {
       ["exec", container, "python", "backend/manage.py", "shell", "-c", script],
       { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
     )
-  } catch (dockerErr: any) {
-    // Docker not available or container doesn't exist — run directly (CI)
+  } catch {
     try {
-      return execFileSync(
-        pythonBin,
-        ["manage.py", "shell", "-c", script],
-        { encoding: "utf8", cwd: backendDir, env, stdio: ["pipe", "pipe", "pipe"] },
-      )
-    } catch (directErr: any) {
-      throw new Error(
-        `djangoShell failed (docker: ${dockerErr.message?.slice(0, 100)}, direct: ${directErr.message?.slice(0, 200)})`,
-      )
+      return runPython(["manage.py", "shell", "-c", script])
+    } catch (e: any) {
+      throw new Error(`djangoShell failed: ${e.message?.slice(0, 200)}`)
     }
   }
 }
