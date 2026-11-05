@@ -18,7 +18,7 @@
     "@amanak/api-client": "0.1.0",
     "@amanak/shared-types": "0.1.0",
     "jsqr": "^1.4.0",
-    "react": "^18.3.1",
+    "react": "^19.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.26.0"
   },
