@@ -4,7 +4,7 @@
 # This workflow does NOT deploy anywhere and contains no hardcoded secrets —
 # authentication uses the runner-provided GITHUB_TOKEN.
 #
-# Published image: ghcr.io/swnamhmd/amanak-backend:<tag>
+# Published image: ghcr.io/anasshouran/amanak-backend:<tag>
 
 name: release
 
@@ -12,6 +12,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -38,7 +39,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ghcr.io/swnamhmd/amanak-backend
+          images: ghcr.io/anasshouran/amanak-backend
           tags: |
             type=ref,event=tag
 
