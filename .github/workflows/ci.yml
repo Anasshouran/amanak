@@ -153,6 +153,9 @@ jobs:
           curl -fsS http://127.0.0.1:8080/healthz/ || (echo "backend not up"; exit 1)
       - run: npm exec --workspace apps/web playwright install --with-deps chromium
       - run: npm run e2e --workspace apps/web
+        env:
+          E2E_BACKEND_DIR: ${{ github.workspace }}/backend
+          E2E_PYTHON: python3
       - uses: actions/upload-artifact@v4
         if: always()
         with:

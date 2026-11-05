@@ -168,7 +168,7 @@ export function createOrgIncident(email: string, orgId: string, title: string): 
  *  Tries `docker exec` first; falls back to running manage.py directly.
  */
 function runPython(args: string[], opts: any = {}): string {
-  const backendDir = process.env.E2E_BACKEND_DIR || "../../../backend"
+  const backendDir = process.env.E2E_BACKEND_DIR || "../../backend"
   const env = {
     ...process.env,
     POSTGRES_HOST: process.env.POSTGRES_HOST || "127.0.0.1",
@@ -182,22 +182,18 @@ function runPython(args: string[], opts: any = {}): string {
     PYTHONPATH: `${backendDir}:${process.env.PYTHONPATH || ""}`,
   }
 
-  const pythons = [process.env.E2E_PYTHON, "python3", "python", "/usr/bin/python3", "/usr/bin/python"].filter(Boolean)
-  let lastErr: any
-  for (const py of pythons) {
+  let pyBin = process.env.E2E_PYTHON
+  if (!pyBin) {
     try {
-      return execFileSync(py as string, args, { encoding: "utf8", cwd: backendDir, env, stdio: ["pipe", "pipe", "pipe"], ...opts })
-    } catch (e: any) {
-      lastErr = e
-      continue
+      pyBin = execFileSync("sh", ["-c", "command -v python3 || command -v python || echo python3"], { encoding: "utf8", env }).trim()
+    } catch {
+      pyBin = "python3"
     }
   }
-  // Last resort: try via shell
   try {
-    const cmd = `cd ${backendDir} && (python3 manage.py ${args.slice(1).join(" ")} || python manage.py ${args.slice(1).join(" ")})`
-    return execFileSync("sh", ["-c", cmd], { encoding: "utf8", env, stdio: ["pipe", "pipe", "pipe"], ...opts })
+    return execFileSync(pyBin, args, { encoding: "utf8", cwd: backendDir, env, stdio: ["pipe", "pipe", "pipe"], ...opts })
   } catch (e: any) {
-    throw lastErr || e
+    throw new Error(`runPython(${pyBin}) failed: ${e.message?.slice(0, 300)}`)
   }
 }
 
