@@ -68,6 +68,13 @@ class Command(BaseCommand):
         for slug, meta in plans.items():
             BillingPlan.objects.get_or_create(slug=slug, defaults={**meta, "price": None})
 
+        # 4b) staff roles
+        try:
+            from django.core.management import call_command
+            call_command("create_staff_roles", verbosity=0)
+        except Exception as e:
+            self.stdout.write(f"[skip] create_staff_roles: {e}")
+
         # 5) AI conversation (chat e2e)
         try:
             from apps.ai_assistant.models import AIConversation
