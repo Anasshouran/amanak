@@ -72,4 +72,10 @@ DEPBOT_PRS=$(gh pr list -R "$REPO" --state open --author "app/dependabot" --limi
 if [ -n "$DEPBOT_PRS" ]; then echo "$DEPBOT_PRS"; else echo "(none)"; fi
 echo ""
 
+
+echo "── Major upgrade tracking ──────────────────"
+gh issue list -R "$REPO" --label "major" --state open --limit 10 \
+  --json number,title --jq '.[] | "#\(.number) \(.title[0:60])"' 2>/dev/null || echo "(none)"
+echo ""
+
 echo "════════════════════════════════════════════"
