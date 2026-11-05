@@ -7,7 +7,7 @@
 # branch (Django 4.2 is end-of-support) are tracked in
 # docs/security/dependency-audit.md with the upgrade path to 3.11.
 
-Django>=5.2.17,<6.0; python_version >= "3.10"
+Django>=6.1.2,<7.0; python_version >= "3.10"
 Django>=4.2,<5.0; python_version < "3.10"
 djangorestframework>=3.17.2; python_version >= "3.10"
 djangorestframework>=3.15; python_version < "3.10"
