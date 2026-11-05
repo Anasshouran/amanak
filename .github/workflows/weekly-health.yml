@@ -1,0 +1,57 @@
+name: Weekly Health Check
+
+on:
+  schedule:
+    - cron: "0 9 * * 1"      # كل اثنين 09:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 50 }
+
+      - name: Collect metrics
+        id: metrics
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          REPO="${{ github.repository }}"
+          RUNS=$(gh run list -R "$REPO" --limit 20 --json conclusion \
+            --jq '[.[] | select(.conclusion)] | "\(map(select(.conclusion=="success"))|length)/\(length)"')
+          ISSUES=$(gh issue list -R "$REPO" --state open --json number --jq 'length')
+          PRS=$(gh pr list -R "$REPO" --state open --json number --jq 'length')
+          echo "runs=$RUNS"     >> $GITHUB_OUTPUT
+          echo "issues=$ISSUES" >> $GITHUB_OUTPUT
+          echo "prs=$PRS"       >> $GITHUB_OUTPUT
+
+      - name: Evaluate success rate
+        run: |
+          RUNS="${{ steps.metrics.outputs.runs }}"
+          PASSED=$(echo "$RUNS" | cut -d/ -f1)
+          TOTAL=$(echo "$RUNS" | cut -d/ -f2)
+          RATE=$((PASSED * 100 / TOTAL))
+          echo "Success rate: $RATE% ($RUNS)"
+          # TODO: raise to 80 after 2026-11-19 (2 weeks from v1.3.1)
+          if [ "$RATE" -lt 70 ]; then
+            echo "::error::Success rate below 70% — investigate"
+            exit 1
+          fi
+
+      - name: Open issue on failure
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create -R "${{ github.repository }}" \
+            --title "🚨 Weekly health check failed — $(date +%Y-%m-%d)" \
+            --label "maintenance" \
+            --body "CI success rate below threshold (${{ steps.metrics.outputs.runs }}). Open issues: ${{ steps.metrics.outputs.issues }}. PRs: ${{ steps.metrics.outputs.prs }}.
+
+Check: https://github.com/${{ github.repository }}/actions"
