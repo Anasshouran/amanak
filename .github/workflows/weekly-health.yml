@@ -49,9 +49,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          BODY=$(printf "CI success rate below threshold (%s). Open issues: %s. PRs: %s\n\nCheck: https://github.com/%s/actions" \
+            "${{ steps.metrics.outputs.runs }}" "${{ steps.metrics.outputs.issues }}" "${{ steps.metrics.outputs.prs }}" "${{ github.repository }}")
           gh issue create -R "${{ github.repository }}" \
             --title "🚨 Weekly health check failed — $(date +%Y-%m-%d)" \
             --label "maintenance" \
-            --body "CI success rate below threshold (${{ steps.metrics.outputs.runs }}). Open issues: ${{ steps.metrics.outputs.issues }}. PRs: ${{ steps.metrics.outputs.prs }}.
-
-Check: https://github.com/${{ github.repository }}/actions"
+            --body "$BODY"
