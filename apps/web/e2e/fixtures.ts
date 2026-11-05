@@ -182,16 +182,23 @@ function runPython(args: string[], opts: any = {}): string {
     PYTHONPATH: `${backendDir}:${process.env.PYTHONPATH || ""}`,
   }
 
-  const pythons = [process.env.E2E_PYTHON, "python3", "python"].filter(Boolean)
+  const pythons = [process.env.E2E_PYTHON, "python3", "python", "/usr/bin/python3", "/usr/bin/python"].filter(Boolean)
   let lastErr: any
   for (const py of pythons) {
     try {
       return execFileSync(py as string, args, { encoding: "utf8", cwd: backendDir, env, stdio: ["pipe", "pipe", "pipe"], ...opts })
     } catch (e: any) {
       lastErr = e
+      continue
     }
   }
-  throw lastErr
+  // Last resort: try via shell
+  try {
+    const cmd = `cd ${backendDir} && (python3 manage.py ${args.slice(1).join(" ")} || python manage.py ${args.slice(1).join(" ")})`
+    return execFileSync("sh", ["-c", cmd], { encoding: "utf8", env, stdio: ["pipe", "pipe", "pipe"], ...opts })
+  } catch (e: any) {
+    throw lastErr || e
+  }
 }
 
 function djangoShell(lines: string[]): string {
