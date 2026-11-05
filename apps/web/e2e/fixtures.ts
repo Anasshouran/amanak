@@ -61,12 +61,39 @@ export async function waitForApiIdle(page: Page) {
  * name can be overridden with E2E_BACKEND_CONTAINER.
  */
 export function grantStaffRole(email: string, role: string): void {
+  const backendDir = process.env.E2E_BACKEND_DIR || "../../../backend"
+  const pythonBin = process.env.E2E_PYTHON || "python"
+  const env = {
+    ...process.env,
+    POSTGRES_HOST: process.env.POSTGRES_HOST || "127.0.0.1",
+    POSTGRES_PORT: process.env.POSTGRES_PORT || "5433",
+    POSTGRES_DB: process.env.POSTGRES_DB || "amanak",
+    POSTGRES_USER: process.env.POSTGRES_USER || "amanak",
+    POSTGRES_PASSWORD: process.env.POSTGRES_PASSWORD || "amanak-ci",
+    DJANGO_DEBUG: "true",
+    USE_POSTGRES: "true",
+    DJANGO_SECRET_KEY: process.env.DJANGO_SECRET_KEY || "ci-secret-key",
+    PYTHONPATH: `${backendDir}:${process.env.PYTHONPATH || ""}`,
+  }
+
   const container = process.env.E2E_BACKEND_CONTAINER || "amanak-local-backend-1"
-  execFileSync(
-    "docker",
-    ["exec", container, "python", "backend/manage.py", "grant_role", email, role],
-    { stdio: "ignore" },
-  )
+  try {
+    execFileSync(
+      "docker",
+      ["exec", container, "python", "backend/manage.py", "grant_role", email, role],
+      { stdio: "ignore" },
+    )
+  } catch {
+    try {
+      execFileSync(
+        pythonBin,
+        ["manage.py", "grant_role", email, role],
+        { stdio: "ignore", cwd: backendDir, env },
+      )
+    } catch (e: any) {
+      throw new Error(`grantStaffRole failed: ${e.message}`)
+    }
+  }
 }
 
 /** Reload so AuthContext re-fetches /me/ and picks up a freshly granted role. */
