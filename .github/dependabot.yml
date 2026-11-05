@@ -92,3 +92,10 @@ updates:
   commit-message:
     prefix: chore(deps-actions)
     include: scope
+  groups:
+    actions-minor-patch:
+      patterns:
+      - '*'
+      update-types:
+      - minor
+      - patch
