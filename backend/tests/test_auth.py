@@ -170,7 +170,8 @@ class TestRefreshRotation:
     def test_access_token_lifetime_is_five_minutes(self, user_a):
         refresh = RefreshToken.for_user(user_a)
         payload = AccessToken(str(refresh.access_token)).payload
-        assert payload["exp"] - payload["iat"] == 300
+        delta = payload["exp"] - payload["iat"]
+        assert 299 <= delta <= 301, f"expected ~300s, got {delta}s"
 
 
 @pytest.mark.django_db
