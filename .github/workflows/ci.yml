@@ -120,6 +120,9 @@ jobs:
   secret-scan:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    # Dependabot's GITHUB_TOKEN is restricted by design → pull_requests API 403.
+    # Skip for Dependabot PRs; gitleaks still runs on master + normal PRs.
+    if: github.actor != 'dependabot[bot]'
     permissions:
       contents: read
       pull-requests: read
