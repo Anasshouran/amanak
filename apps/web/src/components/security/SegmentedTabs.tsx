@@ -41,7 +41,7 @@ export function SegmentedTabs({
         return (
           <button
             key={t.id}
-            ref={(el) => (refs.current[i] = el)}
+            ref={(el) => { refs.current[i] = el }}
             role="tab"
             aria-selected={selected}
             type="button"

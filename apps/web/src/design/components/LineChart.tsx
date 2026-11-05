@@ -18,7 +18,7 @@ export type LineChartProps = {
 
 const VIEW_WIDTH = 600
 
-function useIsRtl(ref: RefObject<HTMLDivElement>) {
+function useIsRtl(ref: RefObject<HTMLDivElement | null>) {
   const [rtl, setRtl] = useState(false)
 
   const readDir = () => {
