@@ -107,7 +107,7 @@ jobs:
       - run: npm test --workspace apps/web
 
   frontend-mobile:
-    name: Frontend (mobile) — typecheck
+    name: Frontend (mobile) — typecheck, unit
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -116,6 +116,7 @@ jobs:
           node-version: "20"
       - run: npm ci
       - run: npm run typecheck --workspace apps/mobile
+      - run: npm run test --workspace apps/mobile
 
   secret-scan:
     name: Secret scan (gitleaks)
