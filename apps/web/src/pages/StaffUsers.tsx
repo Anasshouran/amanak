@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import type { MouseEvent } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import type { Column } from "../design/components"
 import {
@@ -120,7 +121,7 @@ export function StaffUsers() {
       key: "actions",
       header: t("staff.users.actions"),
       render: (r) => (
-        <Link to={`/staff/users/${r.id}`} onClick={(e) => e.stopPropagation()}>
+        <Link to={`/staff/users/${r.id}`} onClick={(e: MouseEvent) => e.stopPropagation()}>
           {t("staff.users.open")}
         </Link>
       ),

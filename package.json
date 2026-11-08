@@ -11,9 +11,13 @@
     "dev:mobile": "npm run start -w @amanak/mobile"
   },
   "overrides": {
-    "react-native": "0.74.5"
+    "@amanak/mobile": {
+      "react-native": "0.76.7"
+    }
   },
   "devDependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "vitest": "^3.2.7"
   }
 }
