@@ -103,3 +103,15 @@ They are not imported by application code and are not included in the Android/iO
 
 **Re-evaluate:** Expo SDK 53 (expected to bump `@expo/cli` / metro pins). Re-run `npm audit --omit=dev`
 then; do not force majors without running `expo prebuild` + `expo export` + EAS build.
+
+## Dependabot security PRs override semver-major ignore
+
+**Observation:** Dependabot opens PRs for major version bumps when they contain security fixes, even if `update-types: [version-update:semver-major]` is in `.github/dependabot.yml`.
+
+**Example:** #42 (vite 5→7), #43 (vitest 3→5) appeared despite the major ignore.
+
+**Policy:**
+- **Security-tagged major PRs:** Evaluate each. If CI is green and breaking changes are minimal → merge. If CI is red or changes are extensive → close PR, open a tracking issue (see #36, #37, #45, #46, #47).
+- **Non-security major PRs:** Continue to ignore automatically.
+
+**Why overrides still make sense:** without `semver-major` ignore, we'd get 10–20 major PRs per week (one per dependency). With it, only security majors surface — manageable volume.
