@@ -74,3 +74,32 @@ Even if you delete the message, assume compromise. Rotate.
 Open a private security advisory: https://github.com/Anasshouran/amanak/security/advisories/new
 
 Do **not** open a public issue for security matters.
+
+## 7. Dependency CVE history
+
+### Expo SDK 52 (v1.5.0, 2026-11-08)
+
+Triaged 79 open Dependabot alerts (3 critical, 35 high, 36 moderate, 5 low).
+All high/critical alerts were in **build-time tools** (not shipped in the app bundle):
+
+| Package | Installed | Vulnerable | Shipped? | Fix status |
+|---|---|---|---|---|
+| `@xmldom/xmldom` | 0.9.12 (hoisted, patched) | 0.7.13 via `@expo/plist` | No (build) | **Patched** via `overrides` in root `package.json` |
+| `undici` | 6.29.0 (hoisted, CLI) / 7.30.0 (jsdom) | 6.x < 6.29.1 | No (build/test) | Accepted risk — CLI pin `^6.18.2`; forcing 7.x breaks `expo prebuild` |
+| `postcss` | 8.4.49 (metro-config) | <= 8.5.17 | No (build) | Accepted risk — pin `~8.4.32` in `@expo/metro-config` |
+| `tar` | 6.2.1 (CLI) | <= 7.5.20 (critical) | No (build) | Accepted risk — pin `^6.2.1`; 7.x breaks template extraction |
+| `image-size` | 1.2.1 (metro) | <= 2.0.2 | No (build) | Accepted risk — pin `^1.0.2`; 2.x breaks metro peer |
+
+**Why build-time only:** The mobile app ships a JS bundle (React, expo-router, navigation).
+`tar`, `postcss`, `@xmldom/xmldom`, `image-size`, and `undici@6` are used by
+`@expo/cli`, `@expo/metro-config`, and `@expo/plist` during `expo prebuild` / EAS build.
+They are not imported by application code and are not included in the Android/iOS bundle.
+
+**Verified:**
+- `npm audit --omit=dev` (web): 0 vulnerabilities
+- `npm audit --omit=dev` (mobile): high/critical are the build-time entries above only
+- `expo prebuild --clean`: passes (tar 7.x / image-size 2.x / undici 7.x were tested and break prebuild)
+- Web 242/242, mobile 98/98, both typechecks pass
+
+**Re-evaluate:** Expo SDK 53 (expected to bump `@expo/cli` / metro pins). Re-run `npm audit --omit=dev`
+then; do not force majors without running `expo prebuild` + `expo export` + EAS build.
