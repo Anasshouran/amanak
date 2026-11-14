@@ -115,3 +115,49 @@ then; do not force majors without running `expo prebuild` + `expo export` + EAS 
 - **Non-security major PRs:** Continue to ignore automatically.
 
 **Why overrides still make sense:** without `semver-major` ignore, we'd get 10–20 major PRs per week (one per dependency). With it, only security majors surface — manageable volume.
+
+## Workspace React duplication under Vite (v1.6.0)
+
+**Symptom:** after upgrading to Vite 7, the web app rendered a blank page and the
+browser console showed `Invalid hook call` plus
+`Cannot read properties of null (reading 'useRef')`. Typecheck and all 242 unit
+tests passed — the failure was runtime-only.
+
+**Root cause:** the workspace root installs `react@18.3.1` / `react-dom@18.3.1` as
+devDependencies (required by the mobile app's hoisted `react-native-web` CJS
+`require('react')`). Vite 7's dependency optimizer resolved the bare `react`
+import to that root copy while the app code imported `react@19.3.1` from
+`apps/web/node_modules`. Two React instances in one bundle → hooks fail.
+
+**Fix** — `apps/web/vite.config.ts`:
+
+```ts
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    // Force a single React copy (the web one) in a workspace where the root
+    // also installs a conflicting major of react/react-dom.
+    dedupe: ["react", "react-dom"],
+  },
+  optimizeDeps: {
+    include: ["react", "react-dom", "react-dom/client", "react/jsx-runtime", "react/jsx-dev-runtime"],
+  },
+  // ...
+})
+```
+
+**Why this must not be reverted:** the workspace layout is identical in CI
+(`npm ci` at the root, then the E2E frontend container installs the same tree).
+Without `dedupe`, the production bundle would ship duplicate React — invisible to
+typecheck and unit tests, visible only at runtime.
+
+**General rule:** whenever the workspace root carries a conflicting major version
+of a package that also exists in a child package, the child's build config must
+pin the resolution (`resolve.dedupe` for Vite, `overrides` for npm, an alias for
+the bundler in use). The symptom is always the same: "Invalid hook call" /
+"more than one copy of React" at runtime, with a clean typecheck.
+
+**Also required for the mobile app:** `expo-router@4.0.22` `require()`s
+`query-string` without declaring it, and lists `expo-linking` / `expo-constants`
+as peer dependencies only. Both must be declared as direct dependencies or Metro
+cannot bundle ("Unable to resolve module query-string" / "expo-linking").
