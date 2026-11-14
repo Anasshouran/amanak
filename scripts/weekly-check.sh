@@ -80,4 +80,25 @@ gh issue list -R "$REPO" --label "major" --state open --limit 10 \
   --json number,title --jq '.[] | "#\(.number) \(.title[0:60])"' 2>/dev/null || echo "(none)"
 echo ""
 
+# 9) استهلاك GitHub Actions — خاص repos تستهلك من حصة الحساب (2000 دقيقة/شهر).
+#    تجاوز الحصة يوقف كل الـ workflows فوراً ("The job was not started because
+#    recent account payments have failed or your spending limit needs to be
+#    increased") — لذلك نراقب الاستهلاك قبل حدوثه.
+echo "── Actions minutes (this month) ──────────────"
+OWNER="${REPO%%/*}"
+MONTH_PREFIX=$(date -u +%Y-%m)
+USAGE=$(gh api "users/$OWNER/settings/billing/usage?year=$(date -u +%Y)&month=$(date -u +%m)" 2>/dev/null \
+  --jq "[.usageItems[] | select(.date | startswith(\"$MONTH_PREFIX\")) | select(.repositoryName == \"${REPO#*/}\") | select(.sku == \"Actions Linux\") | .quantity] | add // 0")
+if [ -z "$USAGE" ]; then
+  echo "(no billing data — private repo on a personal account may not expose usage)"
+elif [ "$USAGE" -ge 1800 ] 2>/dev/null; then
+  echo "🚨 $USAGE min used this month for $REPO — near the free 2000 min/min quota."
+  echo "   Reduce CI minutes, or raise the Actions spending limit in Settings → Billing & plans."
+elif [ "$USAGE" -ge 1200 ] 2>/dev/null; then
+  echo "⚠️  $USAGE min used this month for $REPO (watch the 2000 min free quota)"
+else
+  echo "✅ $USAGE min used this month for $REPO"
+fi
+echo ""
+
 echo "════════════════════════════════════════════"
