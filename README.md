@@ -210,3 +210,16 @@ Full specification: [`docs/api/openapi.yaml`](docs/api/openapi.yaml).
 - Documentation is maintained bilingually (`*.md` and `*.ar.md`).
 - Significant decisions are recorded as ADRs in `docs/decisions/`.
 - Agents/automation should follow [`AGENTS.md`](AGENTS.md).
+
+## License
+
+AMANAK — أمانك is free software: you can redistribute it and/or modify it under
+the terms of the **GNU General Public License, version 3** as published by the
+Free Software Foundation. The full text is in [`LICENSE`](LICENSE).
+
+This program is distributed in the hope that it will be useful, but WITHOUT ANY
+WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A
+PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+SPDX-License-Identifier: GPL-3.0-or-later
+

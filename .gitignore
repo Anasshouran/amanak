@@ -52,3 +52,5 @@ P18.2-prompt.md
 
 # Migration pycache (leftover from manual runs)
 **/migrations/__pycache__/
+e2e/playwright-report/
+e2e/test-results/
