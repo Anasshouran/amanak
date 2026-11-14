@@ -16,10 +16,12 @@ gh run list -R "$REPO" --limit 10 \
   --jq '.[] | "\(.conclusion // .status | ascii_upcase | .[0:7]) | \(.name[0:40]) | \(.headSha[0:7]) | \(.createdAt[0:10])"'
 echo ""
 
-# 2) نسبة النجاح (آخر 20)
-echo "── Success rate (last 20) ───────────────────"
-gh run list -R "$REPO" --limit 20 --json conclusion \
-  --jq '[.[] | select(.conclusion)] | if length == 0 then "n/a" else "\(map(select(.conclusion=="success"))|length)/\(length) (\((map(select(.conclusion=="success"))|length) * 100 / length | floor)%)" end'
+# 2) نسبة النجاح (آخر 20) — نطاق CI على master فقط
+# الـ scope مقصود: `gh run list` بدون scope يحصي أيضاً مهام Dependabot
+# الآلية وفحص الصحة نفسه، فيضيع الحكم في ضجيج غير ذي صلة.
+echo "── Success rate (last 20 CI runs on master) ────"
+gh run list -R "$REPO" --workflow CI --branch master --limit 20 --json conclusion,status \
+  --jq '[.[] | select(.status=="completed")] | if length == 0 then "n/a" else "\(map(select(.conclusion=="success"))|length)/\(length) (\((map(select(.conclusion=="success"))|length) * 100 / length | floor)%)" end'
 echo ""
 
 # 3) issues مفتوحة

@@ -9,6 +9,10 @@ permissions:
   contents: read
   issues: write
   actions: read
+  # `gh pr list` goes through the GraphQL API, which needs pull-requests: read.
+  # Without it the step dies with "Resource not accessible by integration
+  # (repository.pullRequests)" and every metric comes out empty.
+  pull-requests: read
 
 jobs:
   health:
@@ -23,21 +27,34 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           REPO="${{ github.repository }}"
-          RUNS=$(gh run list -R "$REPO" --limit 20 --json conclusion \
-            --jq '[.[] | select(.conclusion)] | "\(map(select(.conclusion=="success"))|length)/\(length)"')
-          ISSUES=$(gh issue list -R "$REPO" --state open --json number --jq 'length')
-          PRS=$(gh pr list -R "$REPO" --state open --json number --jq 'length')
+          # Measure the gate that actually matters: the CI workflow on master.
+          # Scoped on purpose — an unscoped `gh run list` also counts Dependabot
+          # version-update jobs and the health check itself, so unrelated
+          # automation noise could drag the verdict below the threshold.
+          # Collect each metric independently: a single failing call must not
+          # blank out the others (and must not silently produce empty values
+          # that later look like a real regression).
+          RUNS=$(gh run list -R "$REPO" --workflow CI --branch master --limit 20 --json conclusion,status \
+            --jq '[.[] | select(.status=="completed")] | "\(map(select(.conclusion=="success"))|length)/\(length)"' || echo "")
+          ISSUES=$(gh issue list -R "$REPO" --state open --json number --jq 'length' || echo "")
+          PRS=$(gh pr list -R "$REPO" --state open --json number --jq 'length' || echo "")
           echo "runs=$RUNS"     >> $GITHUB_OUTPUT
           echo "issues=$ISSUES" >> $GITHUB_OUTPUT
           echo "prs=$PRS"       >> $GITHUB_OUTPUT
 
       - name: Evaluate success rate
+        id: evaluate
         run: |
           RUNS="${{ steps.metrics.outputs.runs }}"
           PASSED=$(echo "$RUNS" | cut -d/ -f1)
           TOTAL=$(echo "$RUNS" | cut -d/ -f2)
+          if [ -z "$RUNS" ] || [ -z "$PASSED" ] || [ -z "$TOTAL" ] || [ "$TOTAL" -eq 0 ]; then
+            echo "::error::Could not collect CI metrics (runs='$RUNS') — skipping the health verdict."
+            exit 1
+          fi
           RATE=$((PASSED * 100 / TOTAL))
           echo "Success rate: $RATE% ($RUNS)"
+          echo "rate=$RATE" >> $GITHUB_OUTPUT
           # TODO: raise to 80 after 2026-11-19 (2 weeks from v1.3.1)
           if [ "$RATE" -lt 70 ]; then
             echo "::error::Success rate below 70% — investigate"
@@ -45,12 +62,14 @@ jobs:
           fi
 
       - name: Open issue on failure
-        if: failure()
+        # Only when the rate verdict actually failed. A metric-collection
+        # failure (no `rate` output) must not open an alarm with empty values.
+        if: failure() && steps.evaluate.outputs.rate != ''
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BODY=$(printf "CI success rate below threshold (%s). Open issues: %s. PRs: %s\n\nCheck: https://github.com/%s/actions" \
-            "${{ steps.metrics.outputs.runs }}" "${{ steps.metrics.outputs.issues }}" "${{ steps.metrics.outputs.prs }}" "${{ github.repository }}")
+          BODY=$(printf "CI success rate below threshold (%s%%). Open issues: %s. PRs: %s\n\nCheck: https://github.com/%s/actions" \
+            "${{ steps.evaluate.outputs.rate }}" "${{ steps.metrics.outputs.issues }}" "${{ steps.metrics.outputs.prs }}" "${{ github.repository }}")
           gh issue create -R "${{ github.repository }}" \
             --title "🚨 Weekly health check failed — $(date +%Y-%m-%d)" \
             --label "maintenance" \
