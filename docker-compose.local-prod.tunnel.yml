@@ -1,0 +1,21 @@
+# Local-only override: expose the local API to a physical phone.
+#
+# A quick tunnel hands out a random `*.trycloudflare.com` hostname on every run
+# and Django rejects unknown hosts with `DisallowedHost` (HTTP 400), so the host
+# has to be allow-listed before the APK can talk to this machine.
+#
+#   cloudflared tunnel --url http://127.0.0.1:8080
+#   docker compose \
+#     -f docker-compose.prod.yml \
+#     -f docker-compose.local-prod.yml \
+#     -f docker-compose.local-prod.ports.yml \
+#     -f docker-compose.local-prod.cors.yml \
+#     -f docker-compose.local-prod.tunnel.yml \
+#     up -d backend
+#
+# Never use this in staging/production: the wildcard trusts every quick tunnel
+# hostname, not just yours. Django reads a leading dot as a subdomain wildcard.
+services:
+  backend:
+    environment:
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS_TUNNEL:-localhost,127.0.0.1,.trycloudflare.com}
