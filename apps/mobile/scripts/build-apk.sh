@@ -30,6 +30,15 @@ case "$EXPO_PUBLIC_API_URL" in
 esac
 export EXPO_PUBLIC_API_URL
 
+# Runtime API override screen (test/self-hosted builds only). Off by default so
+# store builds never ship an editable server URL. Enable with ALLOW_API_OVERRIDE=1.
+if [ "${ALLOW_API_OVERRIDE:-0}" = "1" ]; then
+  export EXPO_PUBLIC_ALLOW_API_OVERRIDE=1
+  echo "==> API override screen ENABLED in this build"
+else
+  unset EXPO_PUBLIC_ALLOW_API_OVERRIDE
+fi
+
 export ANDROID_HOME="${ANDROID_HOME:-/opt/android-sdk}"
 export ANDROID_SDK_ROOT="$ANDROID_HOME"
 export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-17-openjdk-amd64}"
@@ -69,9 +78,17 @@ KEY_PASSWORD="$(prop keyPassword)"
 command -v java >/dev/null || { echo "java not found (install JDK 17)" >&2; exit 1; }
 [ -d "$ANDROID_HOME/platforms/android-35" ] || { echo "missing $ANDROID_HOME/platforms/android-35 (run sdkmanager)" >&2; exit 1; }
 
-echo "==> prebuild (regenerates android/ from app.json)"
-rm -rf android
-EXPO_NO_DOTENV=1 npx --no-install expo prebuild --clean --platform android --no-install
+if [ "${SKIP_CLEAN:-0}" = "1" ] && [ -d android ]; then
+  echo "==> prebuild (incremental, android/ kept — SKIP_CLEAN=1)"
+  EXPO_NO_DOTENV=1 npx --no-install expo prebuild --platform android --no-install
+  # Gradle does not treat EXPO_PUBLIC_API_URL as an input of the bundle task, so
+  # an incremental build would happily ship the previous URL. Drop the output.
+  rm -rf android/app/build/generated/assets/createBundleReleaseJsAndAssets
+else
+  echo "==> prebuild (regenerates android/ from app.json)"
+  rm -rf android
+  EXPO_NO_DOTENV=1 npx --no-install expo prebuild --clean --platform android --no-install
+fi
 
 echo "==> point the release build type at the real keystore"
 python3 - "$STORE_FILE" <<'PY'

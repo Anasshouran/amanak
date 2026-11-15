@@ -12,6 +12,9 @@ import { resolveApiUrl } from "./apiUrl"
 
 const API_URL = resolveApiUrl()
 
+/** Baked-in URL the override can reset to. Re-exported for apiSettings. */
+export const BAKED_API_URL = API_URL
+
 const ACCESS_KEY = "amanak.access"
 const REFRESH_KEY = "amanak.refresh"
 

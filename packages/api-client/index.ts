@@ -138,7 +138,7 @@ export type ApiClientOptions = {
 }
 
 export class ApiClient {
-  private readonly baseUrl: string
+  private baseUrl: string
   private readonly tokens: TokenStore
   private readonly options: ApiClientOptions
   private refreshing: Promise<string | null> | null = null
@@ -147,6 +147,23 @@ export class ApiClient {
     this.baseUrl = baseUrl.replace(/\/+$/, "")
     this.tokens = tokens
     this.options = options
+  }
+
+  /**
+   * Repoint this client at another host.
+   *
+   * The mobile app bakes its API base URL at build time, which makes every
+   * server move (a new tunnel URL, a self-hosted instance) require a rebuild.
+   * The override screen calls this instead, so a new URL takes effect without
+   * reinstalling. Tokens are kept: the same account is expected on the new host.
+   */
+  setBaseUrl(baseUrl: string): void {
+    this.baseUrl = baseUrl.replace(/\/+$/, "")
+  }
+
+  /** The URL every request is currently sent to. */
+  getBaseUrl(): string {
+    return this.baseUrl
   }
 
   private async request<T>(

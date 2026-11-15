@@ -7,7 +7,8 @@ import { ThemeProvider, useTheme } from "../design/ThemeProvider"
 import { AuthProvider, useAuth } from "../state/AuthContext"
 import { registerForPush, setupNotificationTapHandler } from "../lib/push"
 import { useRouter } from "expo-router"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
+import { loadApiOverride, API_OVERRIDE_ENABLED } from "../lib/apiSettings"
 
 /** Status bar tint follows the active theme rather than a hardcoded colour. */
 function ThemedStatusBar() {
@@ -29,6 +30,21 @@ function PushRegistrar() {
 }
 
 export default function RootLayout() {
+  // When the runtime API override is enabled (test builds), load any saved
+  // override before rendering children so the first request already points at
+  // the right host. Store builds skip this entirely (API_OVERRIDE_ENABLED=false).
+  const [apiReady, setApiReady] = useState(!API_OVERRIDE_ENABLED)
+  useEffect(() => {
+    if (!API_OVERRIDE_ENABLED) return
+    let cancelled = false
+    void loadApiOverride().finally(() => {
+      if (!cancelled) setApiReady(true)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  if (!apiReady) return null
   return (
     <SafeAreaProvider>
       <ThemeProvider>

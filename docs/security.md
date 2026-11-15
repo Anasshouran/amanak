@@ -161,3 +161,12 @@ the bundler in use). The symptom is always the same: "Invalid hook call" /
 `query-string` without declaring it, and lists `expo-linking` / `expo-constants`
 as peer dependencies only. Both must be declared as direct dependencies or Metro
 cannot bundle ("Unable to resolve module query-string" / "expo-linking").
+
+## Mobile — runtime API override is test-only
+
+The login screen gains an editable "Server" URL only when the build was made
+with `EXPO_PUBLIC_ALLOW_API_OVERRIDE=1` (`ALLOW_API_OVERRIDE=1` in
+`scripts/build-apk.sh`). Store builds must not set it: an editable server URL
+hands anyone holding the phone a way to redirect credentials to a host of their
+choosing. The override is persisted in SecureStore (native) / localStorage
+(web) and the "Reset to built-in" action restores the baked-in URL.

@@ -129,6 +129,29 @@ npx eas-cli env:create --name EXPO_PUBLIC_API_URL \
 
 The `development` profile is exempt: dev-client builds to a LAN host are normal.
 
+### Runtime API override (test / self-hosted builds only)
+
+A release APK bakes `EXPO_PUBLIC_API_URL` at build time, so a moving backend
+(a restarted cloudflared tunnel hands out a new random hostname every time)
+used to mean rebuilding and reinstalling. Builds made with `ALLOW_API_OVERRIDE=1`
+ship an editable "Server" panel on the login screen that repoints the app at a
+new host without a reinstall:
+
+```bash
+ALLOW_API_OVERRIDE=1 \\
+  EXPO_PUBLIC_API_URL=https://your-tunnel.trycloudflare.com \\
+  ./scripts/build-apk.sh
+```
+
+The override is stored on the device (SecureStore on native, localStorage on
+web) and takes effect on the next request; "Reset to built-in" restores the URL
+baked into the build. Tokens are kept, so the same account is expected on the
+new host.
+
+**Never set this flag for a store build.** An editable server URL hands anyone
+holding the phone a way to redirect credentials to a host of their choosing, so
+`EXPO_PUBLIC_ALLOW_API_OVERRIDE` must stay unset for `preview`/`production`.
+
 ### Permissions
 
 The generated manifest grants only `INTERNET`, `CAMERA`, `VIBRATE` and

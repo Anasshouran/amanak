@@ -29,3 +29,20 @@ export function pickApiUrl(platform: string, envUrl?: string): string {
 export function resolveApiUrl(): string {
   return pickApiUrl(Platform.OS, process.env.EXPO_PUBLIC_API_URL)
 }
+
+/**
+ * Validate a user-entered API base URL.
+ *
+ * Used by the in-app server override (test builds only). Anything that does not
+ * look like a bare http(s) origin — with an optional port and path prefix, no
+ * spaces, no credentials — is rejected rather than stored, so a typo surfaces
+ * immediately instead of as a mysterious "Request failed" later.
+ */
+export function normalizeApiUrl(input: string): string | null {
+  const trimmed = input.trim().replace(/\/+$/, "")
+  if (!trimmed) return null
+  const match = /^(https?):\/\/([^\s@/?#:]+)(?::(\d{1,5}))?(\/[^\s?#]*)?$/i.exec(trimmed)
+  if (!match) return null
+  if (match[3] && (Number(match[3]) < 1 || Number(match[3]) > 65535)) return null
+  return trimmed
+}
