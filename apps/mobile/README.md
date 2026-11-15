@@ -84,6 +84,32 @@ Profiles live in `eas.json`:
 | `preview` | release APK | Install on a physical device |
 | `production` | release AAB | Play Store upload |
 
+### Building an APK locally (no EAS account)
+
+`scripts/build-apk.sh` runs the same Gradle build EAS would run in the cloud, on
+this machine, and signs the result with a local keystore:
+
+```bash
+EXPO_PUBLIC_API_URL=https://your-api.example ./scripts/build-apk.sh
+# -> dist/amanak-<version>-<versionCode>.apk
+```
+
+It needs JDK 17 and an Android SDK (`ANDROID_HOME`, default `/opt/android-sdk`)
+with `platforms;android-35` and `build-tools;35.0.0`; the first run also
+downloads Gradle and the Maven dependencies. The script regenerates `android/`
+with `prebuild --clean` every time, so nothing in the native project is a
+source of truth.
+
+Signing reads `$AMANAK_SIGNING_PROPS` (default
+`~/.amanak-credentials/signing.properties`, kept out of the repository) and
+passes the values to Gradle as environment variables, so they appear neither in
+`ps` nor in the generated project. **Back up the keystore**: Android only accepts
+updates signed by the same key, and the Play Store key cannot be replaced for an
+existing listing. The script verifies the APK with `apksigner`, prints the
+badging (package, label, permissions) and checks that the JS bundle contains the
+`EXPO_PUBLIC_API_URL` host, because a bundle built against `localhost` looks
+fine until it is installed on a phone.
+
 ### `EXPO_PUBLIC_API_URL` is validated at build time
 
 `app.config.js` fails the build for `preview`/`production` when:
