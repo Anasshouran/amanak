@@ -3,6 +3,7 @@ import type { ScoreHistoryResponse } from "@amanak/shared-types"
 import { useT } from "../design/LocaleProvider"
 import { useTokens } from "../design/tokens"
 import { ProgressRing } from "./ProgressRing"
+import { theme } from "../theme"
 
 export type ScoreCardProps = {
   score: number
@@ -32,6 +33,8 @@ export function ScoreCard({ score, history, loading, error, onRetry }: ScoreCard
     borderColor: tokens.c.border,
     width: "100%" as const,
   }
+  // Theme alias (new design system) — used for the shield glow.
+  const T = theme
 
   const level = levelOf(Math.round(score))
   const statusLabel = t(`dashboard.score.status.${level}`)
@@ -53,7 +56,7 @@ export function ScoreCard({ score, history, loading, error, onRetry }: ScoreCard
         : t("dashboard.score.steady")
 
   const levelColor =
-    level === "good" ? tokens.c.success : level === "fair" ? tokens.c.warning : tokens.c.danger
+    level === "good" ? theme.color.glow : level === "fair" ? tokens.c.warning : tokens.c.danger
 
   return (
     <View style={card}>

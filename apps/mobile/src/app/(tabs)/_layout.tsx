@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons"
 import { Redirect, Tabs } from "expo-router"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { MoreList } from "../../components/MoreList"
+import { CustomTabBar } from "../../components/CustomTabBar"
 import { useLocale, useT } from "../../design/LocaleProvider"
 import { useContext_ } from "../../design/ContextProvider"
 import { useReducedMotion } from "../../design/motion"
@@ -145,18 +146,8 @@ function TabsNavigator() {
           headerStyle: { backgroundColor: tokens.c.surface },
           headerTintColor: tokens.c.text,
           headerTitleStyle: { color: tokens.c.textStrong, fontWeight: "700" },
-          tabBarStyle: {
-            backgroundColor: tokens.c.surface,
-            borderTopColor: tokens.c.border,
-            borderTopWidth: 1,
-            height: 56 + insets.bottom,
-            paddingTop: 8,
-            paddingBottom: insets.bottom > 0 ? insets.bottom : 8,
-          },
-          tabBarActiveTintColor: tokens.c.brand,
-          tabBarInactiveTintColor: tokens.c.muted,
-          tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
         }}
+        tabBar={(props) => <CustomTabBar {...(props as any)} onMorePress={() => setMoreOpen(true)} />}
       >
         <Tabs.Screen
           name="dashboard"

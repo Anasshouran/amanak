@@ -14,6 +14,7 @@ import { KpiRow, type KpiItem } from "../../components/KpiRow"
 import { ScoreCard } from "../../components/ScoreCard"
 import { useT } from "../../design/LocaleProvider"
 import { useTokens } from "../../design/tokens"
+import { theme } from "../../theme"
 import { api } from "../../lib/api"
 
 /**
@@ -94,7 +95,7 @@ export default function Dashboard() {
   ]
 
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.color.bg }}>
       <Header title={t("dashboard.title")} />
       <ScrollView
         contentContainerStyle={{

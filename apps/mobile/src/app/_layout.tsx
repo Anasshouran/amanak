@@ -8,6 +8,12 @@ import { AuthProvider, useAuth } from "../state/AuthContext"
 import { registerForPush, setupNotificationTapHandler } from "../lib/push"
 import { useRouter } from "expo-router"
 import { useEffect, useState } from "react"
+import { useFonts } from "expo-font"
+import {
+  Cairo_400Regular,
+  Cairo_600SemiBold,
+  Cairo_700Bold,
+} from "@expo-google-fonts/cairo"
 import { loadApiOverride, API_OVERRIDE_ENABLED } from "../lib/apiSettings"
 
 /** Status bar tint follows the active theme rather than a hardcoded colour. */
@@ -30,6 +36,12 @@ function PushRegistrar() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Cairo_400Regular,
+    Cairo_600SemiBold,
+    Cairo_700Bold,
+  })
+
   // When the runtime API override is enabled (test builds), load any saved
   // override before rendering children so the first request already points at
   // the right host. Store builds skip this entirely (API_OVERRIDE_ENABLED=false).
@@ -44,7 +56,8 @@ export default function RootLayout() {
       cancelled = true
     }
   }, [])
-  if (!apiReady) return null
+
+  if (!fontsLoaded || !apiReady) return null
   return (
     <SafeAreaProvider>
       <ThemeProvider>
