@@ -11,7 +11,7 @@ vi.mock("../lib/api", () => ({
 }))
 
 import { render } from "../test/render"
-import Pricing from "../../app/(tabs)/pricing"
+import Pricing from "../../src/app/(tabs)/pricing"
 
 async function flush() {
   await act(async () => {

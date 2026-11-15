@@ -12,7 +12,9 @@
       "bundleIdentifier": "local.amanak.app"
     },
     "android": {
-      "package": "local.amanak.app"
+      "package": "local.amanak.app",
+      "versionCode": 1,
+      "allowBackup": false
     },
     "web": {
       "bundler": "metro"
@@ -20,10 +22,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
+      "expo-notifications",
+      "./plugins/withMinimalPermissions",
       [
         "expo-camera",
         {
-          "cameraPermission": "AMANAK uses the camera only to scan 2FA QR codes on your device."
+          "cameraPermission": "AMANAK uses the camera only to scan 2FA QR codes on your device.",
+          "recordAudioAndroid": false
         }
       ]
     ],

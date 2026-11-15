@@ -10,7 +10,7 @@ vi.mock("../lib/api", () => ({
 }))
 
 import { render } from "../test/render"
-import AIAssistant from "../../app/(tabs)/ai"
+import AIAssistant from "../../src/app/(tabs)/ai"
 
 async function flush() {
   await act(async () => {
