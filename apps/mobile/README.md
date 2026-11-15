@@ -120,12 +120,38 @@ grep uses-permission android/app/src/main/AndroidManifest.xml
 rm -rf android        # managed workflow: the native project is generated, not committed
 ```
 
+### Brand assets
+
+| File | Size | Used for |
+| --- | --- | --- |
+| `assets/icon.png` | 1024×1024, opaque | iOS icon and store listing |
+| `assets/adaptive-icon.png` | 1024×1024, transparent | Android adaptive icon foreground |
+
+Android derives the launcher icon from the adaptive icon (`#0B1E3A`
+background + foreground), so both `ic_launcher` and `ic_launcher_round` are
+generated with the mark at 60% width, centred. The foreground must stay inside
+the central 66% safe zone or the launcher mask clips it.
+
+The splash is the same mark on `#0B1E3A`, **not** a full-screen artwork. SDK 52
+feeds any `splash.image` through the SplashScreen API as a ~200 dp logo, and it
+is squashed to a square regardless of `resizeMode` (measured against the 1242×2436
+portrait design: MAE 36 for a stretch vs 49 for the aspect-preserving
+alternatives). A portrait splash therefore cannot be used as-is — the delivered
+`splash.png` was dropped, and the square transparent mark is used instead, which
+is distortion-free by construction. A full-bleed designed splash needs an
+in-app splash component, not this key.
+
+Asset provenance: these are raster crops of the approved concept image, and the
+adaptive foreground is an approximate background-removal cutout (hard-edged, no
+antialiasing). They are production-sized but a vector master from the designer
+will look sharper at high densities.
+
 ### Before the first Play Store upload
 
-`android.package` is currently `local.amanak.app`. A package name is permanent
-once published — change it to a reverse-DNS id you control **before** the first
-upload. Bump `android.versionCode` for every store upload (`preview` builds can
-reuse it).
+`android.package` is `com.amanak.app`. A package name is permanent once
+published — this one is final, and changing it later would ship a different app
+(users would not receive updates). Bump `android.versionCode` for every store
+upload (`preview` builds can reuse it).
 
 ## Scripts
 

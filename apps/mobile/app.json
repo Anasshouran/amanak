@@ -2,19 +2,29 @@
   "expo": {
     "name": "AMANAK أمانك",
     "slug": "amanak",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "amanak",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#0f172a",
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/adaptive-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1E3A"
+    },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "local.amanak.app"
+      "bundleIdentifier": "com.amanak.app"
     },
     "android": {
-      "package": "local.amanak.app",
+      "package": "com.amanak.app",
       "versionCode": 1,
-      "allowBackup": false
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0B1E3A"
+      }
     },
     "web": {
       "bundler": "metro"
