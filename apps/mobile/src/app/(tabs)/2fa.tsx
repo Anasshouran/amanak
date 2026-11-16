@@ -54,7 +54,7 @@ function messageOf(err: unknown, fallback: string): string {
 function ScreenShell({ title, children }: { title: string; children: ReactNode }) {
   const tokens = useTokens()
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+    <View style={{ flex: 1, backgroundColor: "#0B1E3A" }}>
       <Header title={title} />
       <ScrollView
         keyboardShouldPersistTaps="handled"
@@ -115,7 +115,7 @@ export default function TwoFactor() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+      <View style={{ flex: 1, backgroundColor: "#0B1E3A" }}>
         <Header title={t("2fa.title")} />
         <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
           <ActivityIndicator color={tokens.c.brand} />
@@ -163,7 +163,7 @@ export default function TwoFactor() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+    <View style={{ flex: 1, backgroundColor: "#0B1E3A" }}>
       <Header title={t("twofa.title")} />
       {notice ? (
         <Text

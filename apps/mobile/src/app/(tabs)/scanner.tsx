@@ -10,6 +10,7 @@ import { ScanHistoryMobile } from "../../components/scanner/ScanHistoryMobile"
 import { ScanTabs, type ScanKind } from "../../components/scanner/ScanTabs"
 import { useLocale } from "../../design/LocaleProvider"
 import { useTokens } from "../../design/tokens"
+import { theme } from "../../theme"
 
 function messageOf(err: unknown, fallback: string): string {
   if (err && typeof err === "object" && "message" in err && typeof (err as { message: unknown }).message === "string") {
@@ -136,7 +137,7 @@ export default function Scanner() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+    <View style={{ flex: 1, backgroundColor: theme.color.bg }}>
       <Header title={t("scanner.title")} />
       <ScrollView
         contentContainerStyle={{ padding: tokens.space[4], gap: tokens.space[4], paddingBottom: 48 }}

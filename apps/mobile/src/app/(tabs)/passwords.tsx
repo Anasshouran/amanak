@@ -49,7 +49,7 @@ function isValidUrl(value: string): boolean {
 function ScreenShell({ title, children }: { title: string; children: React.ReactNode }) {
   const tokens = useTokens()
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+    <View style={{ flex: 1, backgroundColor: "#0B1E3A" }}>
       <Header title={title} />
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: tokens.space[4], paddingBottom: tokens.space[12], gap: tokens.space[4] }}>
         {children}

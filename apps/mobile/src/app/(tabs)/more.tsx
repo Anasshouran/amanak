@@ -14,7 +14,7 @@ export default function More() {
   const { isRTL, t } = useLocale()
 
   return (
-    <View style={{ flex: 1, backgroundColor: tokens.c.bg }}>
+    <View style={{ flex: 1, backgroundColor: "#0B1E3A" }}>
       <ScrollView contentContainerStyle={{ padding: tokens.space[4], paddingTop: tokens.space[6] }}>
         <Text
           accessibilityRole="header"

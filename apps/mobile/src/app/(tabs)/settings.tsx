@@ -86,7 +86,7 @@ export default function Settings() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: tokens.c.bg }}>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "#0B1E3A" }}>
         <Text style={{ color: tokens.c.muted }}>{t("common.loading")}</Text>
       </View>
     )

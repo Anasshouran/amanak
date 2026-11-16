@@ -60,13 +60,13 @@ export default function Devices() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#0f172a", padding: 16 },
+  container: { flex: 1, backgroundColor: "#0B1E3A", padding: 16 },
   form: { gap: 8, marginBottom: 16 },
-  input: { backgroundColor: "#1e293b", color: "#e2e8f0", borderRadius: 12, padding: 14 },
-  button: { backgroundColor: "#38bdf8", borderRadius: 12, padding: 14, alignItems: "center" },
-  buttonText: { color: "#0f172a", fontWeight: "700" },
-  row: { backgroundColor: "#1e293b", borderRadius: 12, padding: 14, marginBottom: 8 },
-  rowTitle: { color: "#e2e8f0", fontWeight: "600" },
-  rowSub: { color: "#94a3b8", marginTop: 2 },
-  del: { color: "#f87171", marginTop: 6 },
+  input: { backgroundColor: "rgba(255,255,255,0.06)", color: "#E2E8F0", borderRadius: 12, padding: 14, fontFamily: "Cairo_400Regular" },
+  button: { backgroundColor: "#1D4ED8", borderRadius: 12, padding: 14, alignItems: "center" },
+  buttonText: { color: "#FFFFFF", fontWeight: "700", fontFamily: "Cairo_700Bold" },
+  row: { backgroundColor: "rgba(255,255,255,0.06)", borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  rowTitle: { color: "#E2E8F0", fontWeight: "600", fontFamily: "Cairo_600SemiBold" },
+  rowSub: { color: "#94A3B8", marginTop: 2, fontFamily: "Cairo_400Regular" },
+  del: { color: "#F87171", marginTop: 6, fontFamily: "Cairo_400Regular" },
 })

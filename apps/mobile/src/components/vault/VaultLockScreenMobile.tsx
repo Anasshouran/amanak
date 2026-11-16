@@ -93,6 +93,20 @@ export function VaultLockScreenMobile({
       keyboardShouldPersistTaps="handled"
     >
       <View style={{ gap: tokens.space[3], alignItems: "center" }}>
+        <View
+          style={{
+            width: 88,
+            height: 88,
+            borderRadius: 44,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "rgba(46,204,113,0.15)",
+            borderWidth: 2,
+            borderColor: "rgba(46,204,113,0.5)",
+          }}
+        >
+          <Text style={{ fontSize: 44 }}>🛡️</Text>
+        </View>
         <Text style={{ color: tokens.c.textStrong, fontWeight: "700", fontSize: tokens.size.lg, textAlign: align }}>
           {t("vault.locked.title")}
         </Text>
